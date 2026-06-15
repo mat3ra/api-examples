@@ -51,7 +51,7 @@ notebooks:
       - emfs:/drive/packages/watchdog-2.3.1-py3-none-any.whl
   - name: specific_examples
     packages_pyodide:
-      - mat3ra-standata
+      - mat3ra-standata==2026.5.15.post0
 #      - mat3ra-notebooks-utils[utils_standata]
   - name: api
     packages_pyodide:
@@ -73,7 +73,7 @@ notebooks:
       - jinja2
       - emfs:/drive/packages/pydantic_core-2.18.2-py3-none-any.whl
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
-      - mat3ra-standata
+      - mat3ra-standata==2026.5.15.post0
       - mat3ra-ide
       - mat3ra-api-client
       - requests
