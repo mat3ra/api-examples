@@ -3,6 +3,16 @@ from typing import Dict, List, Optional
 
 from mat3ra.wode import Workflow
 
+FORTRAN_NUMBER_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[de][+-]?\d+)?$", re.IGNORECASE)
+
+
+def _format_fortran_value(value: object) -> str:
+    if isinstance(value, bool):
+        return f".{str(value).lower()}."
+    if isinstance(value, str) and not FORTRAN_NUMBER_PATTERN.match(value):
+        return repr(value)
+    return str(value)
+
 
 def patch_workflow_qe_input(
     workflow: Workflow,
@@ -22,18 +32,23 @@ def patch_workflow_qe_input(
     Example:
         patch_workflow_qe_input(workflow, {"system": {"vdw_corr": "d3_grimme"}}, ["pw_relax"])
     """
-    f90 = lambda value: (  # noqa: E731
-        f".{str(value).lower()}." if isinstance(value, bool) else repr(value) if isinstance(value, str) else str(value)
-    )
+    # TODO: remove the dict handling when WA is updated, and use latest Standata/Wode/Ade here
     for subworkflow in workflow.subworkflows:
         for unit_name in unit_names:
             if not (unit := subworkflow.get_unit_by_name(name=unit_name)):
                 continue
             for input_item in getattr(unit, "input", []):
-                template = input_item.template
-                if input_name not in (None, template.name):
+                if isinstance(input_item, dict):
+                    template_name = input_item.get("name")
+                    content = input_item.get("content")
+                else:
+                    template = input_item.template
+                    template_name = template.name
+                    content = template.content
+
+                if input_name not in (None, template_name):
                     continue
-                content = template.content
+
                 for section, updates in parameters.items():
                     name = section.lstrip("&")
                     match = re.search(rf"(?ims)(^&{re.escape(name)}\s*\n)(.*?)(^/\s*$)", content)
@@ -41,9 +56,14 @@ def patch_workflow_qe_input(
                         raise ValueError(f"Namelist '&{name.upper()}' not found.")
                     header, body, footer = match.groups()
                     for key, value in updates.items():
-                        line, pattern = f"    {key} = {f90(value)}", rf"(?im)^\s*{re.escape(key)}\s*=.*$"
+                        line = f"    {key} = {_format_fortran_value(value)}"
+                        pattern = rf"(?im)^\s*{re.escape(key)}\s*=.*$"
                         body = re.sub(pattern, line, body) if re.search(pattern, body) else f"{body.rstrip()}\n{line}\n"
                     content = content[: match.start()] + header + body + footer + content[match.end() :]
-                template.set_content(content)
+
+                if isinstance(input_item, dict):
+                    input_item["content"] = content
+                else:
+                    template.set_content(content)
             subworkflow.set_unit(unit)
     return workflow
