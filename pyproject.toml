@@ -17,10 +17,11 @@ jupyterlite = [
   "matplotlib>=3.4.1",
   "plotly>=5.18",
   "ipython>=8.0",
+  "ipywidgets>=8.0",
 ]
 utils_standata = [
   "mat3ra-utils",
-  "mat3ra-standata",
+  "mat3ra-standata==2026.5.15.post0",
 ]
 api = [
   "mat3ra-api-client",
@@ -34,19 +35,23 @@ materials = [
   "mat3ra-notebooks-utils[auxilary]",
   "mat3ra-notebooks-utils[utils_standata]",
   "pymatgen==2024.4.13",
+  "pymatgen-analysis-defects<=2024.4.23",
   "mat3ra-made>=2026.4.2.post0",
+  "mat3ra-periodic-table"
 ]
 workflows = [
   "mat3ra-notebooks-utils[materials]",
-  "mat3ra-mode",
-  "mat3ra-wode",
-  "mat3ra-ade>=2026.5.29.post0",
+  "mat3ra-esse==2026.4.29.post0",
+  "mat3ra-mode==2026.3.4.post0",
+  "mat3ra-wode==2026.5.23.post0",
+  "mat3ra-ade==2026.4.29.post0",
   "mat3ra-prode",
   "mat3ra-ide",
   "mat3ra-notebooks-utils[api]"
 ]
 all = [
-  "mat3ra-notebooks-utils[workflows]"
+  "mat3ra-notebooks-utils[workflows]",
+  "mat3ra-notebooks-utils[jupyterlite]",
 ]
 
 # Install all above dependencies in colab
