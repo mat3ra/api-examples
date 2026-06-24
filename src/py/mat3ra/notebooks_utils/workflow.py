@@ -32,23 +32,16 @@ def patch_workflow_qe_input(
     Example:
         patch_workflow_qe_input(workflow, {"system": {"vdw_corr": "d3_grimme"}}, ["pw_relax"])
     """
-    # TODO: remove the dict handling when WA is updated, and use latest Standata/Wode/Ade here
     for subworkflow in workflow.subworkflows:
         for unit_name in unit_names:
             if not (unit := subworkflow.get_unit_by_name(name=unit_name)):
                 continue
             for input_item in getattr(unit, "input", []):
-                if isinstance(input_item, dict):
-                    template_name = input_item.get("name")
-                    content = input_item.get("content")
-                else:
-                    template = input_item.template
-                    template_name = template.name
-                    content = template.content
+                template = input_item.template
+                template_name = template.name
+                content = template.content
 
                 if input_name not in (None, template_name):
-                    continue
-                if content is None:
                     continue
 
                 for section, updates in parameters.items():
@@ -63,9 +56,6 @@ def patch_workflow_qe_input(
                         body = re.sub(pattern, line, body) if re.search(pattern, body) else f"{body.rstrip()}\n{line}\n"
                     content = content[: match.start()] + header + body + footer + content[match.end() :]
 
-                if isinstance(input_item, dict):
-                    input_item["content"] = content
-                else:
-                    template.set_content(content)
+                template.set_content(content)
             subworkflow.set_unit(unit)
     return workflow
