@@ -36,7 +36,7 @@ def visualize_properties(results, width=900, title="Properties", extra_config=No
     js = get_viewer_js(
         data_json=results_json,
         div_id=div_id,
-        bundle_url="https://exabyte-io.github.io/prove/main.js",
+        bundle_url="https://mat3ra.github.io/prove/main.js",
         render_function="renderResults",
         data_var_name="results",
         extra_config_json=extra_config_json,

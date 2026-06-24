@@ -55,10 +55,10 @@ def get_wave_viewer(material, div_id, width, height, title):
     js = get_viewer_js(
         data_json=material.to_json(),
         div_id=div_id,
-        bundle_url="https://exabyte-io.github.io/wave.js/main.js",
+        bundle_url="https://mat3ra.github.io/wave.js/main.js",
         render_function="renderThreeDEditor",
         data_var_name="materialConfig",
-        css_url="https://exabyte-io.github.io/wave.js/main.css",
+        css_url="https://mat3ra.github.io/wave.js/main.css",
     )
     return html, js
 

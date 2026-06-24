@@ -29,6 +29,7 @@ notebooks:
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
       - pymatgen-analysis-defects<=2024.4.23
       - mat3ra-periodic-table
+      - mat3ra-esse==2026.4.29.post0
       - mat3ra-made>=2025.12.29.post0
   # packages below are used when made is installed from GH wheel (made should be installed from below)
   #    - https://exabyte-io.github.io/made/mat3ra_made-0.1.dev1+ge64d360b8-py3-none-any.whl
@@ -77,8 +78,9 @@ notebooks:
       - mat3ra-ide
       - mat3ra-api-client
       - requests
-      - mat3ra-ade
-      - mat3ra-wode
+      - mat3ra-ade==2026.4.29.post0
+      - mat3ra-mode==2026.3.4.post0
+      - mat3ra-wode==2026.5.23.post0
       - mat3ra-prode
   - name: torch
     packages_pyodide:
