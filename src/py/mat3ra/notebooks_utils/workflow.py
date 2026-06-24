@@ -48,6 +48,8 @@ def patch_workflow_qe_input(
 
                 if input_name not in (None, template_name):
                     continue
+                if content is None:
+                    continue
 
                 for section, updates in parameters.items():
                     name = section.lstrip("&")
