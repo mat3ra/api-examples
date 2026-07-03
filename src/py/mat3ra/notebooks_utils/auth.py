@@ -27,9 +27,9 @@ async def authenticate(force=False, globals_dict=None):
         await authenticate_jupyterlite(data_from_host)
     elif ACCESS_TOKEN_ENV_VAR not in os.environ or force:
         oidc_url = get_oidc_base_url()
-        cached = not force and load_token(oidc_url)
+        cached = None if force else await load_token(oidc_url)
         if cached:
             store_token_data_in_environment(cached)
         else:
             token_data = await authenticate_oidc(show_popup=show_device_flow_popup)
-            save_token(oidc_url, token_data)
+            await save_token(oidc_url, token_data)

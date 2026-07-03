@@ -1,49 +1,35 @@
-"""Persist OIDC tokens across notebook kernels (localStorage or file)."""
+"""Persist OIDC tokens across notebook kernels."""
 
-import json
-import os
 import time
+from typing import Optional
 
 from .primitive.environment import is_pyodide_environment
 
-_USE_BROWSER = is_pyodide_environment()
-if _USE_BROWSER:
-    import js  # type: ignore
+if is_pyodide_environment():
+    from .pyodide.api import token_store as _storage
+else:
+    from .core.api import token_store as _storage  # type: ignore[no-redef]
 
-_FILE_PATH = os.path.join(os.path.expanduser("~"), ".mat3ra", "oidc_token_cache.json")
-_LOCAL_STORAGE_KEY = "mat3ra_oidc_token_cache"
 _EXPIRY_BUFFER = 60  # seconds before actual expiry to consider token stale
 
 
-def save_token(oidc_url: str, token_data: dict) -> None:
-    token_data["expires_at"] = time.time() + token_data.get("expires_in", 3600)
-    cache = _read_cache()
-    cache[oidc_url] = token_data
-    _write_cache(cache)
+async def save_token(oidc_url: str, token_data: dict) -> None:
+    token_cache_entry = dict(token_data)
+    token_cache_entry["expires_at"] = time.time() + token_cache_entry.get("expires_in", 3600)
+
+    token_cache = await _storage.read()
+    token_cache[oidc_url] = token_cache_entry
+    await _storage.write(token_cache)
 
 
-def load_token(oidc_url: str):
-    data = _read_cache().get(oidc_url)
-    if data and data.get("expires_at", 0) > time.time() + _EXPIRY_BUFFER:
-        return data
-    return None
+async def load_token(oidc_url: str) -> Optional[dict]:
+    token_cache_entry = (await _storage.read()).get(oidc_url)
 
+    if not token_cache_entry:
+        return None
 
-def _read_cache() -> dict:
-    if _USE_BROWSER:
-        return json.loads(js.localStorage.getItem(_LOCAL_STORAGE_KEY) or "{}")
-    try:
-        with open(_FILE_PATH) as f:
-            return json.load(f)
-    except Exception:
-        return {}
+    expires_at = token_cache_entry.get("expires_at", 0)
+    if expires_at <= time.time() + _EXPIRY_BUFFER:
+        return None
 
-
-def _write_cache(cache: dict) -> None:
-    if _USE_BROWSER:
-        js.localStorage.setItem(_LOCAL_STORAGE_KEY, json.dumps(cache))
-    else:
-        os.makedirs(os.path.dirname(_FILE_PATH), mode=0o700, exist_ok=True)
-        with open(_FILE_PATH, "w") as f:
-            json.dump(cache, f)
-        os.chmod(_FILE_PATH, 0o600)
+    return token_cache_entry
