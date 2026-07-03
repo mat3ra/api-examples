@@ -3,11 +3,12 @@ import os
 
 from mat3ra.api_client import ACCESS_TOKEN_ENV_VAR
 
-from .core.api.auth import authenticate_oidc
+from .core.api.auth import authenticate_oidc, get_oidc_base_url, store_token_data_in_environment
 from .io import get_data
 from .ipython.ui import show_device_flow_popup
 from .primitive.environment import ENVIRONMENT, EnvironmentsEnum
 from .pyodide.api.auth import authenticate_jupyterlite
+from .token_store import load_token, save_token
 
 REFRESH_TOKEN_ENV_VAR = "OIDC_REFRESH_TOKEN"
 
@@ -25,4 +26,10 @@ async def authenticate(force=False, globals_dict=None):
     if data_from_host:
         await authenticate_jupyterlite(data_from_host)
     elif ACCESS_TOKEN_ENV_VAR not in os.environ or force:
-        await authenticate_oidc(show_popup=show_device_flow_popup)
+        oidc_url = get_oidc_base_url()
+        cached = not force and load_token(oidc_url)
+        if cached:
+            store_token_data_in_environment(cached)
+        else:
+            token_data = await authenticate_oidc(show_popup=show_device_flow_popup)
+            save_token(oidc_url, token_data)
