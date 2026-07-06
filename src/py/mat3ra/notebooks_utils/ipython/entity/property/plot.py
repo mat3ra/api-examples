@@ -3,7 +3,30 @@
 import plotly.graph_objects as go
 from pymatgen.analysis.phase_diagram import PDPlotter, PhaseDiagram
 
+# Layout
+FIGURE_HEIGHT = 900
+FIGURE_WIDTH = 1000
+FIGURE_MARGIN = 80
+FIGURE_TITLE = "Phase Diagram (Convex Hull)"
+
+# Colors (dark theme)
+BACKGROUND_COLOR = "#1e1e1e"
+TEXT_COLOR_PRIMARY = "#FFFFFF"
+TEXT_COLOR_UNSTABLE = "#FF6666"
+TEXT_COLOR_SECONDARY = "#aaa"
+LINE_COLOR = "#555"
+GRID_COLOR = "#333"
+
+# Typography
+FONT_FAMILY = "Arial Black"
+FONT_SIZE_TITLE = 22
+FONT_SIZE_LABEL_STABLE = 16
+FONT_SIZE_LABEL_UNSTABLE = 14
+FONT_SIZE_LEGEND = 14
 TEXT_SHADOW = "2px 2px 4px rgba(0,0,0,0.8), " "-2px -2px 4px rgba(0,0,0,0.8), " "0px 0px 8px rgba(0,0,0,0.9)"
+
+# Markers
+MARKER_SIZE = 20
 
 
 def plot_convex_hull(phase_diagram: PhaseDiagram, show_unstable: float = 0.2) -> go.Figure:
@@ -33,43 +56,34 @@ def plot_convex_hull(phase_diagram: PhaseDiagram, show_unstable: float = 0.2) ->
             labels.append(f"<b>{formula}</b><br>{energy_status}")
         trace.text = tuple(labels)
         trace.mode = "markers+text"
-        trace.marker.size = 20
+        trace.marker.size = MARKER_SIZE
         if trace.name == "Stable":
             trace.textposition = "top center"
-            trace.textfont = dict(size=16, color="#FFFFFF", family="Arial Black", shadow=TEXT_SHADOW)
+            trace.textfont = dict(
+                size=FONT_SIZE_LABEL_STABLE, color=TEXT_COLOR_PRIMARY, family=FONT_FAMILY, shadow=TEXT_SHADOW
+            )
         else:
             trace.textposition = "bottom center"
-            trace.textfont = dict(size=14, color="#FF6666", family="Arial Black", shadow=TEXT_SHADOW)
+            trace.textfont = dict(
+                size=FONT_SIZE_LABEL_UNSTABLE, color=TEXT_COLOR_UNSTABLE, family=FONT_FAMILY, shadow=TEXT_SHADOW
+            )
+
+    axis_style = dict(
+        title=dict(font=dict(size=FONT_SIZE_TITLE, color=TEXT_COLOR_PRIMARY)),
+        linecolor=LINE_COLOR,
+        gridcolor=GRID_COLOR,
+        tickfont=dict(color=TEXT_COLOR_SECONDARY),
+    )
 
     fig.update_layout(
-        height=900,
-        width=1000,
-        title=dict(text="Phase Diagram (Convex Hull)", font=dict(size=22, color="white")),
-        margin=dict(l=80, r=80, t=80, b=80),
-        paper_bgcolor="#1e1e1e",
-        plot_bgcolor="#1e1e1e",
-        ternary=dict(
-            bgcolor="#1e1e1e",
-            aaxis=dict(
-                title=dict(font=dict(size=22, color="white")),
-                linecolor="#555",
-                gridcolor="#333",
-                tickfont=dict(color="#aaa"),
-            ),
-            baxis=dict(
-                title=dict(font=dict(size=22, color="white")),
-                linecolor="#555",
-                gridcolor="#333",
-                tickfont=dict(color="#aaa"),
-            ),
-            caxis=dict(
-                title=dict(font=dict(size=22, color="white")),
-                linecolor="#555",
-                gridcolor="#333",
-                tickfont=dict(color="#aaa"),
-            ),
-        ),
-        legend=dict(font=dict(size=14, color="white")),
+        height=FIGURE_HEIGHT,
+        width=FIGURE_WIDTH,
+        title=dict(text=FIGURE_TITLE, font=dict(size=FONT_SIZE_TITLE, color=TEXT_COLOR_PRIMARY)),
+        margin=dict(l=FIGURE_MARGIN, r=FIGURE_MARGIN, t=FIGURE_MARGIN, b=FIGURE_MARGIN),
+        paper_bgcolor=BACKGROUND_COLOR,
+        plot_bgcolor=BACKGROUND_COLOR,
+        ternary=dict(bgcolor=BACKGROUND_COLOR, aaxis=axis_style, baxis=axis_style, caxis=axis_style),
+        legend=dict(font=dict(size=FONT_SIZE_LEGEND, color=TEXT_COLOR_PRIMARY)),
     )
 
     return fig
