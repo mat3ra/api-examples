@@ -1,4 +1,4 @@
-"""IndexedDB-based OIDC token cache for Pyodide Web Workers."""
+"""IndexedDB-based OIDC token cache storage for Pyodide Web Workers."""
 
 import json
 
