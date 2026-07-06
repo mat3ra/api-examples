@@ -3,23 +3,27 @@
 Pure computation — no API calls, no display.
 """
 
-from typing import Dict, List, Union
+from typing import Dict, List, TypedDict
 
 import pandas as pd
-from mat3ra.esse.models.properties_directory.non_scalar.phase_stability_entries import PhaseStabilityEntrySchema
 from pymatgen.analysis.phase_diagram import PhaseDiagram
 from pymatgen.core import Composition
 from pymatgen.entries.computed_entries import ComputedEntry
 
-# Accept both Pydantic models and plain dicts for convenience
-PhaseStabilityEntry = Union[PhaseStabilityEntrySchema, Dict]
+
+class PhaseStabilityEntry(TypedDict):
+    material_id: str
+    formula: str
+    composition: Dict[str, int]
+    n_atoms: int
+    total_energy: float
 
 
 def build_convex_hull(entries_data: List[PhaseStabilityEntry]) -> PhaseDiagram:
     """Build a pymatgen PhaseDiagram from phase stability entries.
 
     Args:
-        entries_data: List of PhaseStabilityEntry (Pydantic model or dict).
+        entries_data: List of dicts with composition, total_energy, and optional material_id.
 
     Returns:
         pymatgen PhaseDiagram object.
