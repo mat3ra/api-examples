@@ -1,4 +1,5 @@
 """Unit tests for convex hull (phase stability) analysis."""
+
 from typing import List
 
 from mat3ra.notebooks_utils.core.entity.property.analysis import (
