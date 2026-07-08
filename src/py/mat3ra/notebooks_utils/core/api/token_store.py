@@ -10,7 +10,7 @@ async def read() -> dict:
     try:
         with open(_FILE_PATH) as f:
             return json.load(f)
-    except FileNotFoundError:
+    except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
 
