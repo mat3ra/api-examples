@@ -7,8 +7,11 @@ _FILE_PATH = os.path.join(os.path.expanduser("~"), ".mat3ra", "oidc_token_cache.
 
 
 async def read() -> dict:
-    with open(_FILE_PATH) as f:
-        return json.load(f)
+    try:
+        with open(_FILE_PATH) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
 
 
 async def write(cache: dict) -> None:
