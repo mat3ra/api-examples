@@ -10,6 +10,7 @@ from pymatgen.analysis.phase_diagram import PhaseDiagram
 from pymatgen.core import Composition
 from pymatgen.entries.computed_entries import ComputedEntry
 
+# TODO: move this to Prode
 
 class PhaseStabilityEntry(TypedDict):
     material_id: str
