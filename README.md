@@ -77,6 +77,7 @@ Workflow notebooks that run simulations.
 | [Band Structure (HSE)](other/materials_designer/workflows/band_structure_hse.ipynb) | Band structure with the HSE hybrid functional. |
 | [Convergence](other/materials_designer/workflows/convergence.ipynb) | General convergence study. |
 | [Surface Energy](other/materials_designer/workflows/surface_energy.ipynb) | Calculate surface formation energy. |
+| [Interfacial Energy](other/materials_designer/workflows/interfacial_energy.ipynb) | Calculate interfacial energy γ at a heterostructure. |
 | [Valence Band Offset](other/materials_designer/workflows/valence_band_offset.ipynb) | Determine the valence band offset at an interface. |
 
 ### `notebooks_utils` — Python Utility Package
