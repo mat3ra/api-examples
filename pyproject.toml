@@ -73,6 +73,7 @@ tests = [
   "pytest-cov",
   "mat3ra-wode",
   "mat3ra-standata",
+  "pymatgen==2024.4.13"
 ]
 docs = [
   "mkdocs>=1.4.3",
