@@ -30,8 +30,8 @@ materials = [
   # ase >=3.25.0 is required for supercell to be generated,
   # otherwise on 3.21.1 we encountered negative number of atoms during supercell generation
   "ase>=3.25.0",
-  # numpy <=2.0.0 is required for pymatgen 2024.4.13
-  "numpy<=2.0.0",
+  # version of numpy is required for pymatgen 2024.4.13
+  "numpy<=1.26.4",
   "mat3ra-notebooks-utils[auxilary]",
   "mat3ra-notebooks-utils[utils_standata]",
   "pymatgen==2024.4.13",
@@ -72,7 +72,6 @@ tests = [
   "pytest-asyncio",
   "pytest-cov",
   "mat3ra-wode",
-  "mat3ra-standata",
   "mat3ra-notebooks-utils[materials]",
 ]
 docs = [
