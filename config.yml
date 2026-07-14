@@ -20,7 +20,7 @@ notebooks:
       - uncertainties==3.1.6
       - ase==3.25.0
       - ipywidgets
-      - plotly>=5.18
+      - plotly==5.24.1
       - nbformat>=4.2.0
       - emfs:/drive/packages/pymatgen-2024.4.13-py3-none-any.whl
       - emfs:/drive/packages/spglib-2.0.2-py3-none-any.whl
@@ -53,6 +53,10 @@ notebooks:
     packages_pyodide:
       - mat3ra-standata
 #      - mat3ra-notebooks-utils[utils_standata]
+  - name: analyze_convex_hull
+    packages_pyodide:
+      - tqdm
+      - palettable
   - name: api
     packages_pyodide:
       - annotated_types>=0.6.0
