@@ -1,15 +1,13 @@
 from typing import Any, Dict, List
 
-from mat3ra.api_client import APIClient
 
-
-def get_or_create_material(api_client: APIClient, material, owner_id: str) -> dict:
+def get_or_create_material(api_client: Any, material, owner_id: str) -> dict:
     """
     Returns an existing material from the collection if one with the same structural hash
     exists under the given owner, otherwise creates a new one.
 
     Args:
-        api_client (APIClient): API client instance carrying the authorization context.
+        api_client: API client instance carrying the authorization context.
         material: mat3ra-made Material object (must have a .hash property).
         owner_id (str): Account ID under which to search and create.
 
@@ -37,7 +35,7 @@ def _index_in_set(material: Dict[str, Any], set_id: str) -> float:
     return float("inf")
 
 
-def find_material_set(api_client: APIClient, owner_id: str, material_set_name: str) -> Dict[str, Any]:
+def find_material_set(api_client: Any, owner_id: str, material_set_name: str) -> Dict[str, Any]:
     """
     Find a materials entity set by name (case-insensitive substring match).
     """
@@ -54,7 +52,7 @@ def find_material_set(api_client: APIClient, owner_id: str, material_set_name: s
 
 
 def list_materials_by_set(
-    api_client: APIClient,
+    api_client: Any,
     owner_id: str,
     material_set_name: str,
 ) -> List[Dict[str, Any]]:
