@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 def get_or_create_material(api_client: Any, material, owner_id: str) -> dict:
@@ -108,38 +108,64 @@ def _move_materials_into_set(api_client: Any, material_set_id: str, materials: L
         )
 
 
-def create_ordered_materials_set(
+ORDERED_ENTITY_SET_TYPE = "ordered"
+UNORDERED_ENTITY_SET_TYPE = "unordered"
+
+
+def _find_existing_materials_set(api_client: Any, owner_id: str, material_set_name: str) -> Optional[Dict[str, Any]]:
+    try:
+        return find_material_set(api_client, owner_id, material_set_name)
+    except ValueError:
+        return None
+
+
+def get_or_create_materials_set(
     api_client: Any,
     owner_id: str,
     material_set_name: str,
     materials: List[Any],
+    is_ordered: bool = False,
 ) -> Dict[str, Any]:
     """
-    Create an ordered materials set and move members in path order.
+    Reuse an existing materials set by name, or create one, then move members into it.
 
-    Move order is first → intermediates → last so the platform can assign
-    ascending `inSet.index` values that `list_materials_by_set` reads.
+    For `is_ordered=True`, members are moved in list order so the platform can
+    assign ascending `inSet.index` values (e.g. NEB path). For unordered sets,
+    membership is a bag (e.g. convex hull, EOS series).
 
     Args:
         api_client: API client instance carrying the authorization context.
-        owner_id: Account ID under which to create the set.
-        material_set_name: Name for the new ordered set.
-        materials: At least two materials (dict responses or Made objects with `.id`).
+        owner_id: Account ID under which to find or create the set.
+        material_set_name: Name of the set to reuse or create.
+        materials: Materials to include (dict responses or Made objects with `.id`).
+        is_ordered: Whether path order (`inSet.index`) matters for this set.
 
     Returns:
-        The created materials set document.
+        The existing or newly created materials set document.
 
     Raises:
-        ValueError: If fewer than two materials are provided.
+        ValueError: If materials are empty, or ordered set has fewer than two members.
     """
-    if len(materials) < 2:
-        raise ValueError("Ordered NEB set needs at least first and last materials.")
-    set_config = {
-        "name": material_set_name,
-        "owner": {"_id": owner_id},
-        "entitySetType": "ordered",
-    }
-    materials_set = api_client.materials.create_set(set_config)
+    if not materials:
+        raise ValueError("Materials set needs at least one material.")
+    if is_ordered and len(materials) < 2:
+        raise ValueError("Ordered materials set needs at least two materials.")
+
+    materials_set = _find_existing_materials_set(api_client, owner_id, material_set_name)
+    if materials_set is None:
+        entity_set_type = ORDERED_ENTITY_SET_TYPE if is_ordered else UNORDERED_ENTITY_SET_TYPE
+        set_config = {
+            "name": material_set_name,
+            "owner": {"_id": owner_id},
+            "entitySetType": entity_set_type,
+        }
+        materials_set = api_client.materials.create_set(set_config)
+        print(f"✅ Materials set '{materials_set['name']}' " f"({entity_set_type}, {materials_set['_id']})")
+    else:
+        print(
+            f"♻️  Reusing existing materials set '{materials_set['name']}' "
+            f"({materials_set.get('entitySetType')}, {materials_set['_id']})"
+        )
+
     _move_materials_into_set(api_client, materials_set["_id"], materials)
-    print(f"✅ Ordered materials set '{materials_set['name']}' ({materials_set['_id']})")
     return materials_set
