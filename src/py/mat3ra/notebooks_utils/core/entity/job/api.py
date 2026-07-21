@@ -1,5 +1,5 @@
 import urllib.request
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from mat3ra.api_client import APIClient, JobEndpoints
 
@@ -37,6 +37,14 @@ def get_jobs_statuses_by_ids(endpoint: JobEndpoints, job_ids: List[str]) -> List
     return [job["status"] for job in jobs]
 
 
+def _materials_set_reference(materials_set: Dict[str, Any]) -> Dict[str, str]:
+    return {
+        "_id": materials_set["_id"],
+        "cls": "Material",
+        "slug": materials_set.get("slug") or materials_set.get("name") or "",
+    }
+
+
 def create_job(
     api_client: APIClient,
     materials: List[dict],
@@ -45,6 +53,7 @@ def create_job(
     owner_id: str,
     prefix: str,
     compute: Optional[dict] = None,
+    materials_set: Optional[Dict[str, Any]] = None,
 ) -> Union[dict, List[dict]]:
     """
     Creates jobs using pre-serialised material and workflow dicts.
@@ -57,6 +66,8 @@ def create_job(
         owner_id (str): Account ID.
         prefix (str): Job name prefix.
         compute (dict, optional): Compute configuration dict.
+        materials_set (dict, optional): Ordered/unordered materials set document
+            (same contract as the job designer `_materialsSet`).
 
     Returns:
         dict | list[dict]: Created job(s).
@@ -74,6 +85,9 @@ def create_job(
 
     if is_multimaterial:
         config["_materials"] = [{"_id": m["_id"]} for m in materials]
+
+    if materials_set is not None:
+        config["_materialsSet"] = _materials_set_reference(materials_set)
 
     if compute:
         config["compute"] = compute

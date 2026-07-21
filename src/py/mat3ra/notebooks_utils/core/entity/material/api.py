@@ -1,3 +1,4 @@
+import re
 from typing import Any, Dict, List, Optional
 
 
@@ -54,7 +55,7 @@ def find_material_set(api_client: Any, owner_id: str, material_set_name: str) ->
         {
             "owner._id": owner_id,
             "isEntitySet": True,
-            "name": {"$regex": material_set_name, "$options": "i"},
+            "name": {"$regex": re.escape(material_set_name), "$options": "i"},
         }
     )
     if not material_sets:

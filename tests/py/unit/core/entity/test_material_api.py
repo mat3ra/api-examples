@@ -1,3 +1,4 @@
+import re
 from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
@@ -63,9 +64,11 @@ def test_find_material_set_returns_first_match():
         {
             "owner._id": OWNER_ID,
             "isEntitySet": True,
-            "name": {"$regex": MATERIAL_SET_NAME, "$options": "i"},
+            "name": {"$regex": re.escape(MATERIAL_SET_NAME), "$options": "i"},
         }
     )
+    assert "+" in MATERIAL_SET_NAME
+    assert re.escape(MATERIAL_SET_NAME) != MATERIAL_SET_NAME
 
 
 def test_find_material_set_raises_when_missing():
