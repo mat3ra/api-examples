@@ -2,6 +2,7 @@ import re
 from typing import Dict, List, Optional
 
 from mat3ra.wode import Workflow
+from mat3ra.wode.context.providers import PointsGridDataProvider
 
 FORTRAN_NUMBER_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[de][+-]?\d+)?$", re.IGNORECASE)
 
@@ -58,4 +59,20 @@ def patch_workflow_qe_input(
 
                 template.set_content(content)
             subworkflow.set_unit(unit)
+    return workflow
+
+
+def apply_scf_kgrid(workflow: Workflow, scf_kgrid=None, *, first_only: bool = False) -> Workflow:
+    """Attach an edited SCF k-grid context to pw_scf units."""
+    if scf_kgrid is None:
+        return workflow
+    context = PointsGridDataProvider(dimensions=scf_kgrid, isEdited=True).get_context_item_data()
+    for subworkflow in workflow.subworkflows:
+        if "pw_scf" not in [unit.name for unit in subworkflow.units]:
+            continue
+        unit = subworkflow.get_unit_by_name(name="pw_scf")
+        unit.add_context(context)
+        subworkflow.set_unit(unit)
+        if first_only:
+            break
     return workflow
