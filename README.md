@@ -160,7 +160,7 @@ In order to run or edit the examples:
 
 3. Optionally, for local Jupyter without OIDC, set legacy API token values in [settings.json](src/py/mat3ra/notebooks_utils/core/api/settings.json). See [Get Authentication Params](examples/system/get_authentication_params.ipynb) for details. API tokens can also be generated in [Account Preferences](https://docs.mat3ra.com/accounts/ui/preferences/api/) on the platform.
 
-NOTE: The Materials Project API key should be set in `settings.json` and obtained from [https://legacy.materialsproject.org/open](https://legacy.materialsproject.org/open).
+NOTE: The Materials Project API key should be set in `settings.json` and obtained from [https://next-gen.materialsproject.org/api](https://next-gen.materialsproject.org/api).
 
 
 ## Contribute
