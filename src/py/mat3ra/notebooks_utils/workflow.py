@@ -62,15 +62,25 @@ def patch_workflow_qe_input(
     return workflow
 
 
-def apply_scf_kgrid(workflow: Workflow, scf_kgrid=None, *, first_only: bool = False) -> Workflow:
-    """Attach an edited SCF k-grid context to pw_scf units."""
+def apply_scf_kgrid(
+    workflow: Workflow, scf_kgrid=None, *, unit_name: str = "pw_scf", first_only: bool = False
+) -> Workflow:
+    """
+    Attaches an edited SCF k-grid context to units named `unit_name`.
+
+    Args:
+        workflow: Workflow with subworkflows.
+        scf_kgrid: K-grid dimensions, e.g. [4, 4, 1]. If None, the workflow is returned unchanged.
+        unit_name: Name of the unit to attach the k-grid context to.
+        first_only: If True, only patch the first matching subworkflow.
+    """
     if scf_kgrid is None:
         return workflow
     context = PointsGridDataProvider(dimensions=scf_kgrid, isEdited=True).get_context_item_data()
     for subworkflow in workflow.subworkflows:
-        if "pw_scf" not in [unit.name for unit in subworkflow.units]:
+        if unit_name not in [unit.name for unit in subworkflow.units]:
             continue
-        unit = subworkflow.get_unit_by_name(name="pw_scf")
+        unit = subworkflow.get_unit_by_name(name=unit_name)
         unit.add_context(context)
         subworkflow.set_unit(unit)
         if first_only:

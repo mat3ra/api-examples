@@ -71,6 +71,37 @@ def update_property_holder_value(client: APIClient, property_holder_id: str, val
     return client.properties.update(property_holder_id, {"$set": {"data.value": value}})
 
 
+def find_total_energy_for_material(client: APIClient, material_id: str) -> Optional[dict]:
+    """
+    Find the best-precision total_energy property for a material. Mirrors the
+    platform's "Resolve Total Energies for Elemental Materials" subworkflow,
+    which queries properties directly by material and selects by precision --
+    no job lookup involved.
+
+    Properties are keyed by the material's `exabyteId`, not its platform `_id`,
+    so the material is fetched first to resolve that field.
+
+    Args:
+        client (APIClient): API client instance.
+        material_id (str): Material _id to look up the total_energy property for.
+
+    Returns:
+        The best-precision total_energy property, or None if none exists.
+    """
+    material = client.materials.get(material_id)
+    exabyte_id = material.get("exabyteId")
+    if not exabyte_id:
+        return None
+    properties = client.properties.list(
+        query={
+            "exabyteId": exabyte_id,
+            "slug": "total_energy",
+        },
+        projection={"sort": {"precision.value": -1}, "limit": 1},
+    )
+    return properties[0] if properties else None
+
+
 def get_property_by_subworkflow_and_unit_indicies(
     endpoint: PropertiesEndpoints, property_name: str, job: dict, subworkflow_index: int, unit_index: int
 ) -> dict:

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Tuple, Union
 
 import ase.build
 import ase.constraints
@@ -7,9 +7,6 @@ import pymatgen.core.surface
 import pymatgen.io.ase
 import pymatgen.symmetry.analyzer
 from mat3ra.made.material import Material
-from mat3ra.made.tools.analyze.interface_material import (
-    get_interface_bulk_crystal as get_interface_bulk_crystal_from_build_metadata,
-)
 from mat3ra.made.tools.analyze.slab import SlabMaterialAnalyzer
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
 
@@ -113,6 +110,7 @@ def get_slab_area(a_vector: np.ndarray, b_vector: np.ndarray) -> float:
 
 
 def get_slab_bulk_crystal(slab_material: Material) -> dict:
+    """Gets the bulk crystal a slab was built from, as recorded in its build metadata."""
     slab_with_metadata = MaterialWithBuildMetadata.create(slab_material.to_dict())
     crystal = SlabMaterialAnalyzer(material=slab_with_metadata).build_configuration.atomic_layers.crystal
     if crystal is None:
@@ -120,46 +118,12 @@ def get_slab_bulk_crystal(slab_material: Material) -> dict:
     return crystal if isinstance(crystal, dict) else crystal.to_dict()
 
 
-def get_interface_bulk_crystal(interface_material: Material, part: str = "substrate") -> dict:
-    interface_with_metadata = MaterialWithBuildMetadata.create(interface_material.to_dict())
-    return get_interface_bulk_crystal_from_build_metadata(interface_with_metadata, part=part)
-
-
-def get_bulk_material(api_client: Any, slab_material: Material, owner_id: str):
-    slab_dict = slab_material.to_dict()
-    metadata = slab_dict.get("metadata") or {}
-
-    if metadata.get("bulkId") is not None:
-        bulk_query = {"_id": metadata["bulkId"]}
-    else:
-        bulk_query = resolve_bulk_query_from_crystal(get_slab_bulk_crystal(slab_material))
-
-    bulk_material_response = find_owned_material(api_client, bulk_query, owner_id)
-
-    if bulk_material_response is None:
-        raise ValueError(
-            "The bulk material resolved from slab metadata is not present on the platform. "
-            "Run the Total Energy notebook for that bulk material first, then rerun this notebook."
-        )
-
-    print(f"Found exact bulk material: {bulk_material_response['_id']}")
-    return bulk_query, bulk_material_response, Material.create(bulk_material_response)
-
-
 def resolve_bulk_query_from_crystal(bulk_crystal: dict) -> dict:
-    if bulk_crystal.get("_id") is not None:
-        return {"_id": bulk_crystal["_id"]}
-    if bulk_crystal.get("scaledHash") is not None:
-        return {"scaledHash": bulk_crystal["scaledHash"]}
-    if bulk_crystal.get("hash") is not None:
-        return {"hash": bulk_crystal["hash"]}
+    """Builds a materials.list query that resolves a bulk crystal to a platform material."""
+    for key in ("scaledHash", "hash", "_id"):
+        if bulk_crystal.get(key) is not None:
+            return {key: bulk_crystal[key]}
     try:
         return {"hash": Material.create(bulk_crystal).hash}
     except Exception as exc:
         raise ValueError("Could not resolve a bulk query from crystal metadata.") from exc
-
-
-def find_owned_material(api_client: Any, bulk_query: dict, owner_id: str) -> Optional[Any]:
-    matches = api_client.materials.list(bulk_query)
-    owned = next((item for item in matches if item.get("owner", {}).get("_id") == owner_id), None)
-    return owned or (matches[0] if matches else None)
