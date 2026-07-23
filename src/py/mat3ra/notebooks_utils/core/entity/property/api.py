@@ -71,7 +71,7 @@ def update_property_holder_value(client: APIClient, property_holder_id: str, val
     return client.properties.update(property_holder_id, {"$set": {"data.value": value}})
 
 
-def find_total_energy_for_material(client: APIClient, material_id: str, source: str = "my_account") -> Optional[dict]:
+def find_total_energy_for_material(client: APIClient, material_id: str, source: str = "public") -> Optional[dict]:
     """
     Find the best-precision total_energy property for a material. Mirrors the
     platform's "Resolve Total Energies for Elemental Materials" subworkflow,
