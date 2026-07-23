@@ -57,4 +57,5 @@ def test_apply_scf_kgrid_updates_pw_scf_context():
         for subworkflow in workflow.subworkflows
         if subworkflow.get_unit_by_name(name="pw_scf")
     )
-    assert any(item.get("name") == "kgrid" or "dimensions" in item for item in unit.context)
+    kgrid_item = next(item for item in unit.context if item.get("name") == "kgrid")
+    assert kgrid_item["data"]["dimensions"] == SCF_KGRID
