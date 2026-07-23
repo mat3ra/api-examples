@@ -13,4 +13,6 @@ jobs:
       - name: Link Checker
         uses: lycheeverse/lychee-action@v1.8.0
         with:
+          # materialsproject.org blocks automated requests (Cloudflare 403)
+          args: --verbose --no-progress --exclude 'materialsproject\.org' './**/*.md' './**/*.html'
           fail: true
