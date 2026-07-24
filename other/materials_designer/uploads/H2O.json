@@ -1,0 +1,62 @@
+{
+  "name": "H2O",
+  "basis": {
+    "elements": [
+      {
+        "id": 0,
+        "value": "O"
+      },
+      {
+        "id": 1,
+        "value": "H"
+      },
+      {
+        "id": 2,
+        "value": "H"
+      }
+    ],
+    "coordinates": [
+      {
+        "id": 0,
+        "value": [
+          0.0,
+          0.5,
+          0.0
+        ]
+      },
+      {
+        "id": 1,
+        "value": [
+          0.043139,
+          0.431029,
+          0.043078
+        ]
+      },
+      {
+        "id": 2,
+        "value": [
+          0.036635,
+          0.576406,
+          0.035949
+        ]
+      }
+    ],
+    "units": "crystal",
+    "labels": [],
+    "constraints": []
+  },
+  "lattice": {
+    "a": 10.58354,
+    "b": 10.58354,
+    "c": 12.70025,
+    "alpha": 90.0,
+    "beta": 90.0,
+    "gamma": 90.0,
+    "units": {
+      "length": "angstrom",
+      "angle": "degree"
+    },
+    "type": "TRI"
+  },
+  "isNonPeriodic": true
+}
