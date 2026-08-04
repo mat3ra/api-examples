@@ -200,16 +200,17 @@ def get_or_create_materials_set(
         The existing or newly created materials set document.
 
     Raises:
-        ValueError: If materials are empty, or ordered set has fewer than two members.
+        ValueError: If materials are empty, if an ordered set has fewer than two members,
+            or if an existing set of that name has the opposite `entitySetType`.
     """
     if not materials:
         raise ValueError("Materials set needs at least one material.")
     if is_ordered and len(materials) < 2:
         raise ValueError("Ordered materials set needs at least two materials.")
 
+    entity_set_type = ORDERED_ENTITY_SET_TYPE if is_ordered else UNORDERED_ENTITY_SET_TYPE
     materials_set = _find_existing_materials_set(api_client, owner_id, material_set_name)
     if materials_set is None:
-        entity_set_type = ORDERED_ENTITY_SET_TYPE if is_ordered else UNORDERED_ENTITY_SET_TYPE
         set_config = {
             "name": material_set_name,
             "owner": {"_id": owner_id},
@@ -218,9 +219,16 @@ def get_or_create_materials_set(
         materials_set = api_client.materials.create_set(set_config)
         print(f"✅ Materials set '{materials_set['name']}' " f"({entity_set_type}, {materials_set['_id']})")
     else:
+        existing_entity_set_type = materials_set.get("entitySetType")
+        if existing_entity_set_type != entity_set_type:
+            raise ValueError(
+                f"Materials set '{materials_set['name']}' already exists as "
+                f"'{existing_entity_set_type}', but '{entity_set_type}' was requested. "
+                f"Reusing it would silently drop path order — rename the set or fix its type."
+            )
         print(
             f"♻️  Reusing existing materials set '{materials_set['name']}' "
-            f"({materials_set.get('entitySetType')}, {materials_set['_id']})"
+            f"({existing_entity_set_type}, {materials_set['_id']})"
         )
 
     _move_materials_into_set(api_client, materials_set["_id"], materials)

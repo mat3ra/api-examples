@@ -155,6 +155,21 @@ def test_get_or_create_materials_set_reuses_when_found():
     )
 
 
+def test_get_or_create_materials_set_rejects_reuse_with_mismatched_type():
+    unordered_set = {**ENTITY_SET, "entitySetType": "unordered"}
+    client = _client_with_list_responses([[unordered_set]])
+
+    with pytest.raises(ValueError, match="already exists as 'unordered'"):
+        get_or_create_materials_set(
+            client,
+            OWNER_ID,
+            MATERIAL_SET_NAME,
+            [MATERIAL_INITIAL, MATERIAL_FINAL],
+            is_ordered=True,
+        )
+    client.materials.move_to_set.assert_not_called()
+
+
 def test_get_or_create_materials_set_ordered_requires_two_materials():
     client = MagicMock()
 
