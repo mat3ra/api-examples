@@ -1,10 +1,12 @@
 import pytest
-from mat3ra.notebooks_utils.workflow import patch_workflow_qe_input
+from mat3ra.notebooks_utils.workflow import apply_scf_kgrid, patch_workflow_qe_input
 from mat3ra.standata.workflows import WorkflowStandata
 from mat3ra.wode.workflows import Workflow
 
 FIXED_CELL_RELAXATION = "fixed_cell_relaxation.json"
 RELAX_UNIT_NAMES = ["pw_relax"]
+SURFACE_ENERGY_WORKFLOW = "surface_energy.json"
+SCF_KGRID = [4, 4, 1]
 
 
 def _relax_workflow():
@@ -40,3 +42,20 @@ def test_patch_workflow_qe_input(parameters, present, absent, error):
         assert text in content
     for text in absent:
         assert text not in content
+
+
+def _surface_workflow():
+    config = WorkflowStandata.filter_by_application("espresso").get_by_name_first_match(SURFACE_ENERGY_WORKFLOW)
+    return Workflow.create(config)
+
+
+def test_apply_scf_kgrid_updates_pw_scf_context():
+    workflow = _surface_workflow()
+    apply_scf_kgrid(workflow, scf_kgrid=SCF_KGRID, first_only=True)
+    unit = next(
+        subworkflow.get_unit_by_name(name="pw_scf")
+        for subworkflow in workflow.subworkflows
+        if subworkflow.get_unit_by_name(name="pw_scf")
+    )
+    kgrid_item = next(item for item in unit.context if item.get("name") == "kgrid")
+    assert kgrid_item["data"]["dimensions"] == SCF_KGRID
