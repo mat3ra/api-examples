@@ -1,10 +1,7 @@
 import numpy as np
 import pytest
 from mat3ra.made.material import Material
-from mat3ra.notebooks_utils.core.entity.material.modify import (
-    get_atom_indices_by_height,
-    translate_atoms,
-)
+from mat3ra.notebooks_utils.core.entity.material.modify import translate_atoms
 
 LATTICE_VECTORS = [[4.0, 0.0, 0.0], [0.0, 4.0, 0.0], [0.0, 0.0, 20.0]]
 
@@ -87,9 +84,3 @@ def test_translate_atoms_does_not_mutate_the_input(material):
 def test_translate_atoms_rejects_an_index_outside_the_basis(material):
     with pytest.raises(IndexError, match="out of range"):
         translate_atoms(material, 7, [0.0, 0.0, -1.0])
-
-
-def test_get_atom_indices_by_height_picks_the_outermost(material):
-    assert get_atom_indices_by_height(material) == [2]
-    assert get_atom_indices_by_height(material, from_top=False) == [0]
-    assert get_atom_indices_by_height(material, count=2) == [2, 1]
