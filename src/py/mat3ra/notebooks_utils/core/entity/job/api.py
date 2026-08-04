@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional, Union
 
 from mat3ra.api_client import APIClient, JobEndpoints
 
+MATERIALS_SET_ENTITY_CLASS = "Material"
+
 
 def save_files(job_id: str, job_endpoint: JobEndpoints, filename_on_cloud: str, filename_on_disk: str) -> None:
     """
@@ -38,10 +40,29 @@ def get_jobs_statuses_by_ids(endpoint: JobEndpoints, job_ids: List[str]) -> List
 
 
 def _materials_set_reference(materials_set: Dict[str, Any]) -> Dict[str, str]:
+    """
+    Builds the `_materialsSet` reference a job config expects.
+
+    Mirrors what the job designer sends: the set's ID, the entity class it holds,
+    and a slug. The platform resolves members from the ID, so `slug` is only a
+    label — falling back to `name` keeps it readable when the response omits it.
+
+    Args:
+        materials_set (dict): Materials set document.
+
+    Returns:
+        dict: The `_materialsSet` reference.
+
+    Raises:
+        KeyError: If the set document carries neither `slug` nor `name`.
+    """
+    slug = materials_set.get("slug") or materials_set.get("name")
+    if not slug:
+        raise KeyError(f"Materials set {materials_set['_id']} has neither 'slug' nor 'name'.")
     return {
         "_id": materials_set["_id"],
-        "cls": "Material",
-        "slug": materials_set.get("slug") or materials_set.get("name") or "",
+        "cls": MATERIALS_SET_ENTITY_CLASS,
+        "slug": slug,
     }
 
 

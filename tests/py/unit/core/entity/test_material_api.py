@@ -7,6 +7,7 @@ from mat3ra.notebooks_utils.core.entity.material.api import (
     find_material_set,
     get_or_create_materials_set,
     list_materials_by_set,
+    list_materials_in_set,
 )
 
 OWNER_ID = "account-1"
@@ -76,6 +77,30 @@ def test_find_material_set_raises_when_missing():
 
     with pytest.raises(ValueError, match="No material set matching"):
         find_material_set(client, OWNER_ID, MATERIAL_SET_NAME)
+
+
+def test_find_material_set_rejects_unordered_when_order_required():
+    client = _client_with_list_responses([[{**ENTITY_SET, "entitySetType": "unordered"}]])
+
+    with pytest.raises(ValueError, match="is 'unordered', not 'ordered'"):
+        find_material_set(client, OWNER_ID, MATERIAL_SET_NAME, require_ordered=True)
+
+
+def test_list_materials_by_set_rejects_unordered_when_order_required():
+    client = _client_with_list_responses([[{**ENTITY_SET, "entitySetType": "unordered"}]])
+
+    with pytest.raises(ValueError, match="is 'unordered', not 'ordered'"):
+        list_materials_by_set(client, OWNER_ID, MATERIAL_SET_NAME, require_ordered=True)
+    assert client.materials.list.call_count == 1
+
+
+def test_list_materials_in_set_does_not_re_resolve_the_set():
+    client = _client_with_list_responses([SET_MEMBER_MATERIALS_OUT_OF_ORDER])
+
+    materials = list_materials_in_set(client, OWNER_ID, ENTITY_SET)
+
+    assert [material["_id"] for material in materials] == EXPECTED_ORDERED_IDS
+    client.materials.list.assert_called_once_with({"owner._id": OWNER_ID, "inSet._id": MATERIAL_SET_ID})
 
 
 @pytest.mark.parametrize(
