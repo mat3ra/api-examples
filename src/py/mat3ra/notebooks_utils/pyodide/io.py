@@ -3,8 +3,6 @@ import json
 import os
 from typing import Any, Dict, Optional, Union
 
-from IPython.display import Javascript, display
-
 from ..core.io import set_data_python
 from ..primitive.logger import log
 
@@ -30,6 +28,33 @@ async def read_from_url_pyodide(url: str, as_bytes: bool = False) -> Union[str, 
     return await response.string()
 
 
+def send_data_pyodide(payload: Dict[str, Any]):
+    """Send a complete bridge payload from either in-page Pyodide or JupyterLite."""
+    serialized_data = json.dumps(payload)
+
+    try:
+        from js import JSON, sendDataToHost  # type: ignore
+
+        sendDataToHost(JSON.parse(serialized_data))
+    except (ImportError, AttributeError):
+        # JupyterLite kernels run in a worker where the host page is not directly accessible. Keep
+        # the display-based data_bridge extension path for that environment, and import IPython only
+        # when it is actually needed.
+        from IPython.display import Javascript, display
+
+        js_code = f"""
+          (function() {{
+              if (window.sendDataToHost) {{
+                  window.sendDataToHost({serialized_data});
+                  console.log('Data sent to host:', {serialized_data});
+              }} else {{
+                  console.error('sendDataToHost function is not defined on the window object.');
+              }}
+          }})();
+          """
+        display(Javascript(js_code))
+
+
 def set_data_pyodide(key: str, value: Any):
     """
     Take a Python object, serialize it to JSON, and send it to the host environment
@@ -39,18 +64,7 @@ def set_data_pyodide(key: str, value: Any):
         key (str): The name under which data will be sent.
         value (Any): The value to send to the host environment.
     """
-    serialized_data = json.dumps({key: value})
-    js_code = f"""
-      (function() {{
-          if (window.sendDataToHost) {{
-              window.sendDataToHost({serialized_data});
-              console.log('Data sent to host:', {serialized_data});
-          }} else {{
-              console.error('sendDataToHost function is not defined on the window object.');
-          }}
-      }})();
-      """
-    display(Javascript(js_code))
+    send_data_pyodide({key: value})
     log(f"Data for {key} sent to host.")
     set_data_python(key, value)
 
