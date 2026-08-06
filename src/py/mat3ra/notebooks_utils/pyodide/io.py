@@ -3,10 +3,14 @@ import json
 import os
 from typing import Any, Dict, Optional, Union
 
-from IPython.display import Javascript, display
-
 from ..core.io import set_data_python
 from ..primitive.logger import log
+
+try:
+    from IPython.display import Javascript, display
+except ImportError:
+    Javascript = None
+    display = None
 
 try:
     from js import JSON, sendDataToHost  # type: ignore
@@ -47,6 +51,9 @@ def send_data_pyodide(payload: Dict[str, Any]):
     if JSON is not None and sendDataToHost is not None:
         sendDataToHost(JSON.parse(serialized_data))
         return
+
+    if Javascript is None or display is None:
+        raise RuntimeError("IPython is required to send data from JupyterLite")
 
     display(Javascript(f"window.sendDataToHost({serialized_data});"))
 

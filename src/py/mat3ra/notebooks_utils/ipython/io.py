@@ -1,6 +1,10 @@
 import json
 
-from IPython.display import Javascript, display
+try:
+    from IPython.display import Javascript, display
+except ImportError:
+    Javascript = None
+    display = None
 
 
 def download_content_to_file(content: dict, filename: str):
@@ -11,6 +15,9 @@ def download_content_to_file(content: dict, filename: str):
         content (dict): The content to download.
         filename (str): The name of the file to download.
     """
+    if Javascript is None or display is None:
+        raise RuntimeError("IPython is required to download content from a notebook")
+
     if isinstance(content, dict):
         content_str = json.dumps(content, indent=4)
     else:
