@@ -4,6 +4,8 @@ import re
 import sys
 from typing import List, Tuple, Union
 
+import yaml  # type: ignore
+
 from ...primitive.environment import ENVIRONMENT
 from ...primitive.logger import log
 
@@ -35,11 +37,6 @@ def get_config_yml_file_path(config_file_path: str) -> str:
 
 async def read_config_into_dict(config_file_path: str) -> dict:
     with open(get_config_yml_file_path(config_file_path), "r") as f:
-        # import micropip  # type: ignore
-        #
-        # await micropip.install("pyyaml")
-        import yaml  # type: ignore
-
         requirements_dict = yaml.safe_load(f)
 
     return requirements_dict
@@ -114,8 +111,12 @@ def package_has_version_specifier(pkg: str) -> bool:
     return any(op in spec for op in VERSION_SPECIFIERS)
 
 
-def should_reinstall_package(pkg: str, profile_changed: bool) -> bool:
-    return profile_changed and package_has_version_specifier(pkg) and not is_url_package(remove_nodeps_prefix(pkg))
+def should_reinstall_package(pkg: str, previous_packages: List[str]) -> bool:
+    package_name = get_package_name(pkg)
+    if not package_name or not package_has_version_specifier(pkg) or is_url_package(remove_nodeps_prefix(pkg)):
+        return False
+    previous_spec = next((item for item in previous_packages if get_package_name(item) == package_name), None)
+    return previous_spec is not None and previous_spec != pkg
 
 
 def get_package_name(pkg: str) -> Union[str, None]:
@@ -187,17 +188,18 @@ async def install_packages_pyodide(notebook_name_pattern: str, verbose: bool = T
     packages = await get_package_list_from_config(get_config_yml_file_path(""), notebook_name_pattern)
     requirements_hash = str(hash(json.dumps(packages)))
     previous_hash = os.environ.get("requirements_hash")
-    profile_changed = previous_hash is not None and previous_hash != requirements_hash
+    previous_packages = json.loads(os.environ.get("requirements_packages", "[]"))
     if should_install_packages(previous_hash, requirements_hash):
         for pkg in packages:
             await install_package_pyodide(
                 pkg,
                 verbose,
-                reinstall=should_reinstall_package(pkg, profile_changed),
+                reinstall=should_reinstall_package(pkg, previous_packages),
             )
         if verbose:
             log("Packages installed successfully.", force_verbose=verbose)
         os.environ["requirements_hash"] = requirements_hash
+        os.environ["requirements_packages"] = json.dumps(packages)
     else:
         if verbose:
             log("Packages are already installed.", force_verbose=verbose)

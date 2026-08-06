@@ -11,6 +11,8 @@ notebooks:
   - name: made
     packages_pyodide:
       - lzma
+      - sqlite3
+      - ssl
       - annotated_types>=0.6.0
       - networkx==3.2.1
       - monty==2023.11.3
