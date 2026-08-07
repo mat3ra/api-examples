@@ -7,7 +7,7 @@ from mat3ra.made.material import Material
 from mat3ra.made.tools.build_components import MaterialWithBuildMetadata
 from mat3ra.utils.array import convert_to_array_if_not
 
-from ....io import get_data, set_data
+from ....io import get_data, send_data, set_data
 from ....primitive.enums import SeverityLevelEnum
 from ....primitive.logger import log
 from ....settings import UPLOADS_FOLDER
@@ -62,6 +62,40 @@ def set_materials(materials: List[Any], folder_path: str = UPLOADS_FOLDER):
         f"Successfully sent {len(materials)} materials to the environment.",
         SeverityLevelEnum.INFO,
     )
+
+
+def sync_materials(globals_dict: dict, sync_scope: str = "python-repl") -> None:
+    """Send the complete set of public Material bindings owned by a REPL sync scope.
+
+    Lists, tuples, and dictionary values are inspected one level deep. The host-provided input
+    bindings are deliberately excluded so merely running a cell does not echo all inputs back.
+    """
+    reserved_names = {"materials_in", "material"}
+    entities = []
+
+    for name, value in globals_dict.items():
+        if name.startswith("_") or name in reserved_names:
+            continue
+
+        if isinstance(value, Material):
+            materials = [value]
+        elif isinstance(value, (list, tuple)):
+            materials = [item for item in value if isinstance(item, Material)]
+        elif isinstance(value, dict):
+            materials = [item for item in value.values() if isinstance(item, Material)]
+        else:
+            continue
+
+        for material in materials:
+            entities.append(
+                {
+                    "type": "material",
+                    "name": name,
+                    "config": json.loads(material.to_json()),
+                }
+            )
+
+    send_data({"syncScope": sync_scope, "entities": entities})
 
 
 def load_materials_from_folder(folder_path: Optional[str] = None, verbose: bool = True) -> List[Any]:
