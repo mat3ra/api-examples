@@ -8,6 +8,30 @@ default:
     packages_pyodide:
       - mat3ra-notebooks-utils
 notebooks:
+  # Materials Designer REPL: `made` minus ipywidgets/plotly/nbformat, which it never renders (~7s).
+  # Not named `made-repl` — names are regexes matched inside the request, so that would also match
+  # `made` and merge both lists. Profiles can only add packages, never subtract.
+  - name: repl
+    packages_pyodide:
+      - lzma
+      - sqlite3
+      - ssl
+      - annotated_types>=0.6.0
+      - networkx==3.2.1
+      - monty==2023.11.3
+      - scipy==1.11.2
+      - tabulate==0.9.0
+      - sympy==1.12
+      - uncertainties==3.1.6
+      - ase==3.25.0
+      - emfs:/drive/packages/pymatgen-2024.4.13-py3-none-any.whl
+      - emfs:/drive/packages/spglib-2.0.2-py3-none-any.whl
+      - emfs:/drive/packages/ruamel.yaml-0.17.32-py3-none-any.whl
+      - emfs:/drive/packages/pydantic_core-2.18.2-py3-none-any.whl
+      - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
+      - pymatgen-analysis-defects<=2024.4.23
+      - mat3ra-periodic-table
+      - mat3ra-made
   - name: made
     packages_pyodide:
       - lzma
