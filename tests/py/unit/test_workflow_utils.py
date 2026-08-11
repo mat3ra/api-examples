@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 from mat3ra.notebooks_utils.workflow import apply_scf_kgrid, patch_workflow_qe_input
 from mat3ra.standata.workflows import WorkflowStandata
@@ -49,9 +51,17 @@ def _surface_workflow():
     return Workflow.create(config)
 
 
+def _material_stub(number_of_atoms=2, reciprocal_vector_ratios=[1.0, 1.0, 0.5]):
+    """Stands in for `mat3ra.made.Material`, whose import needs scipy."""
+    return SimpleNamespace(
+        basis=SimpleNamespace(number_of_atoms=number_of_atoms),
+        lattice=SimpleNamespace(reciprocal_vector_ratios=reciprocal_vector_ratios),
+    )
+
+
 def test_apply_scf_kgrid_updates_pw_scf_context():
     workflow = _surface_workflow()
-    apply_scf_kgrid(workflow, scf_kgrid=SCF_KGRID, first_only=True)
+    apply_scf_kgrid(workflow, scf_kgrid=SCF_KGRID, first_only=True, material=_material_stub())
     unit = next(
         subworkflow.get_unit_by_name(name="pw_scf")
         for subworkflow in workflow.subworkflows
@@ -59,3 +69,6 @@ def test_apply_scf_kgrid_updates_pw_scf_context():
     )
     kgrid_item = next(item for item in unit.context if item.get("name") == "kgrid")
     assert kgrid_item["data"]["dimensions"] == SCF_KGRID
+    # KPPRA is per reciprocal atom, and the ratios come from the lattice -- both via `material`.
+    assert kgrid_item["data"]["gridMetricValue"] == 4 * 4 * 1 * 2
+    assert kgrid_item["data"]["reciprocalVectorRatios"] == [1.0, 1.0, 0.5]

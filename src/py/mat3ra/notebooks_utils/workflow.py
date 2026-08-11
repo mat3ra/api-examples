@@ -63,7 +63,7 @@ def patch_workflow_qe_input(
 
 
 def apply_scf_kgrid(
-    workflow: Workflow, scf_kgrid=None, *, unit_name: str = "pw_scf", first_only: bool = False
+    workflow: Workflow, scf_kgrid=None, *, material=None, unit_name: str = "pw_scf", first_only: bool = False
 ) -> Workflow:
     """
     Attaches an edited SCF k-grid context to units named `unit_name`.
@@ -71,12 +71,14 @@ def apply_scf_kgrid(
     Args:
         workflow: Workflow with subworkflows.
         scf_kgrid: K-grid dimensions, e.g. [4, 4, 1]. If None, the workflow is returned unchanged.
+        material: Material the grid applies to. KPPRA is per reciprocal atom and the reciprocal
+            vector ratios come from the lattice, so both are derived from it.
         unit_name: Name of the unit to attach the k-grid context to.
         first_only: If True, only patch the first matching subworkflow.
     """
     if scf_kgrid is None:
         return workflow
-    context = PointsGridDataProvider(dimensions=scf_kgrid, isEdited=True).get_context_item_data()
+    context = PointsGridDataProvider(material=material, dimensions=scf_kgrid, isEdited=True).get_context_item_data()
     for subworkflow in workflow.subworkflows:
         if unit_name not in [unit.name for unit in subworkflow.units]:
             continue
