@@ -86,6 +86,7 @@ forcefields = [
   # WARNING: mattersim will automatically upgrade numpy and pymatgen
   # This WILL conflict with base project dependencies
   # Use this optional dependency ONLY in isolated environments
+  "mace-torch>= 0.3.15",
   "fairchem-core>=0.3.0",
 ]
 all_dev = [

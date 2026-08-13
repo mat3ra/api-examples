@@ -40,26 +40,24 @@ def patch_mace_tools():
         print(f"⚠ MACE tools patches skipped: {exc}")
 
 
-# Two MACE foundation model families are bundled under packages/models. They are named here after the
-# chemistry they were trained on, rather than after the upstream acronyms:
-#   "inorganic" - MACE-MP-0, trained on Materials Project crystal trajectories. MIT licensed.
-#   "organic"   - MACE-OFF23 ("Organic Force Field"), trained on organic molecules.
-#                 Academic Software License, which does not permit commercial use.
+# MACE foundation model families bundled under packages/models, keyed by their published names:
+#   MACE-MP-0   - trained on Materials Project crystal trajectories (MPtrj). MIT licensed.
+#   MACE-OFF23  - trained on organic molecules (SPICE). Academic Software License, no commercial use.
+# Further families exist upstream (MACE-MPA-0, MACE-OMAT-0, MACE-MDP, MACE-ANI-CC, ...); add them here
+# once their checkpoints are bundled.
 MODEL_PATHS_MAP = {
-    "inorganic": {
+    "MACE-MP-0": {
         "small": "/drive/packages/models/2023-12-10-mace-128-L0_energy_epoch-249.model",
         "medium": "/drive/packages/models/2023-12-03-mace-128-L1_epoch-199.model",
         "large": "/drive/packages/models/MACE_MPtrj_2022.9.model",
     },
-    "organic": {
+    "MACE-OFF23": {
         "small": "/drive/packages/models/MACE-OFF23_small.model",
         "medium": "/drive/packages/models/MACE-OFF23_medium.model",
         "large": "/drive/packages/models/MACE-OFF23_large.model",
     },
 }
-# Published name of each family, for labelling plots and saved results
-MODEL_FAMILY_LABELS = {"inorganic": "MACE-MP-0", "organic": "MACE-OFF23"}
-DEFAULT_MODEL_FAMILY = "inorganic"
+DEFAULT_MODEL_FAMILY = "MACE-MP-0"
 
 
 def get_model_path(family: str, model: str) -> str:
@@ -95,7 +93,7 @@ def create_mace_calculator(
 
     Args:
         model (str): Model size: "small", "medium" or "large".
-        family (str): "inorganic" for crystals and surfaces, "organic" for molecules.
+        family (str): "MACE-MP-0" for crystals and surfaces, "MACE-OFF23" for molecules.
     """
     get_model_path(family, model)  # same validation in both environments
 
@@ -110,7 +108,7 @@ def create_mace_calculator(
         )
 
     mace_calculators = import_module("mace.calculators")
-    foundation_model = {"inorganic": mace_calculators.mace_mp, "organic": mace_calculators.mace_off}[family]
+    foundation_model = {"MACE-MP-0": mace_calculators.mace_mp, "MACE-OFF23": mace_calculators.mace_off}[family]
     return foundation_model(
         model=model,
         dispersion=dispersion,
