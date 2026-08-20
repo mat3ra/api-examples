@@ -71,6 +71,9 @@ tests = [
   "pytest",
   "pytest-asyncio",
   "pytest-cov",
+  # notebooks_utils.io imports IPython eagerly (via pyodide.io), so anything reaching it for
+  # get_data/set_data - core.entity.material.io, for one - needs IPython importable under test.
+  "ipython>=8.0",
   "mat3ra-notebooks-utils[workflows]",
 ]
 docs = [
