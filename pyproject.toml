@@ -44,7 +44,7 @@ workflows = [
   "mat3ra-esse",
   "mat3ra-mode",
   # SOF-7990: repoint to the released version once wode publishes.
-  "mat3ra-wode @ git+https://github.com/mat3ra/wode.git@e80eb1627c1ebfb29f764503cc28bdb08f323a53",
+  "mat3ra-wode @ git+https://github.com/mat3ra/wode.git@d5239d3cf1f260b4b29ee2063773e283f293fb7d",
   "mat3ra-ade",
   "mat3ra-prode",
   "mat3ra-ide",
