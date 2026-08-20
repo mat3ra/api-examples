@@ -1,7 +1,7 @@
 import inspect
 import json
 import os
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build_components import MaterialWithBuildMetadata
@@ -64,6 +64,28 @@ def set_materials(materials: List[Any], folder_path: str = UPLOADS_FOLDER):
     )
 
 
+def _create_material_or_none(config: Dict[str, Any]) -> Optional[Any]:
+    """
+    Builds a material from a config, or returns None when the config is not one.
+
+    The folder holds whatever the user put there — a data file a script reads is as likely as a
+    material — so a config no material class accepts is skipped instead of failing the whole load.
+    Build metadata is preferred per file, so one plain material does not strip it from the rest.
+
+    Args:
+        config (dict): Parsed contents of a JSON file from the folder.
+
+    Returns:
+        Material | MaterialWithBuildMetadata | None: The material, or None if the config is not one.
+    """
+    for material_cls in (MaterialWithBuildMetadata, Material):
+        try:
+            return material_cls.create(config)
+        except Exception:
+            continue
+    return None
+
+
 def load_materials_from_folder(folder_path: Optional[str] = None, verbose: bool = True) -> List[Any]:
     """
     Load materials from the specified folder or from the UPLOADS_FOLDER by default.
@@ -84,7 +106,6 @@ def load_materials_from_folder(folder_path: Optional[str] = None, verbose: bool 
 
     data_from_host = []
     try:
-        index = 0
         for filename in sorted(os.listdir(folder_path)):
             if filename.endswith(".json"):
                 file_path = os.path.join(folder_path, filename)
@@ -98,18 +119,23 @@ def load_materials_from_folder(folder_path: Optional[str] = None, verbose: bool 
                         force_verbose=verbose,
                     )
                     continue
-                name = os.path.splitext(filename)[0]
-                log(f"{index}: {name}", SeverityLevelEnum.INFO, force_verbose=verbose)
-                index += 1
-                data_from_host.append(data)
+                data_from_host.append((os.path.splitext(filename)[0], data))
     except FileNotFoundError:
         log(f"No data found in the '{folder_path}' folder.", SeverityLevelEnum.ERROR, force_verbose=verbose)
         return []
 
-    try:
-        materials = [MaterialWithBuildMetadata.create(item) for item in data_from_host]
-    except Exception:
-        materials = [Material.create(item) for item in data_from_host]
+    materials: List[Any] = []
+    for name, item in data_from_host:
+        material = _create_material_or_none(item)
+        if material is None:
+            log(
+                f"Skipping '{name}.json': not a material.",
+                SeverityLevelEnum.WARNING,
+                force_verbose=verbose,
+            )
+            continue
+        log(f"{len(materials)}: {name}", SeverityLevelEnum.INFO, force_verbose=verbose)
+        materials.append(material)
 
     if materials:
         log(
