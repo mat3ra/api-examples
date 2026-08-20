@@ -4,9 +4,11 @@ from typing import Dict, List
 from mat3ra.api_client import APIClient
 from mat3ra.api_client.endpoints import BaseEndpoint
 
-# The execution unit writes its own `script.py` and `requirements.txt` after the IO unit has
-# fetched the uploaded files, so anything uploaded under those names is overwritten before it runs.
-RESERVED_FILENAMES = ("script.py", "requirements.txt")
+# All of these land in the job's working directory after the IO unit has fetched the uploaded
+# files, so an upload under any of them is overwritten before the user's script runs: the execution
+# unit renders `script.py` and `requirements.txt`, and the runner it renders writes `material.json`
+# and `settings.json`. Keep in step with CUSTOM_SCRIPT_RUNNER in ../workflow/api.py.
+RESERVED_FILENAMES = ("script.py", "requirements.txt", "material.json", "settings.json")
 
 
 def _files_endpoint(api_client: APIClient) -> BaseEndpoint:

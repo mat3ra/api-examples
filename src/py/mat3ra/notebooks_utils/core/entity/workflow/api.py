@@ -40,6 +40,8 @@ def copy_bank_workflow_by_system_name(endpoint: BankWorkflowEndpoints, system_na
 
 
 # Written by the runner into the job's working directory, next to the files the IO unit fetched.
+# The filenames it writes are also listed in RESERVED_FILENAMES in ../file/api.py, which refuses an
+# upload that would be overwritten by them; change both together.
 CUSTOM_SCRIPT_RUNNER = '''import json
 
 with open("material.json", "w") as file:
