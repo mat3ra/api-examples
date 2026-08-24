@@ -61,7 +61,7 @@ cat > material.json <<'MATERIAL_JSON_EOF'
 {{ MATERIAL | default({}) | tojson }}
 MATERIAL_JSON_EOF
 
-. user_script.sh
+. ./user_script.sh
 """
 
 
