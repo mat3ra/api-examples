@@ -79,3 +79,11 @@ def test_object_storage_basename_is_the_name_the_script_opens():
     nested = {**CLOUD_FILE, "key": "my-account/assets/radii.json"}
 
     assert to_object_storage_input(nested)["basename"] == "radii.json"
+
+
+def test_object_storage_pathname_targets_a_subdirectory():
+    """A pathname of "pseudo" fetches the file into <work_dir>/pseudo — where QE's pseudo_dir points."""
+    item = to_object_storage_input(CLOUD_FILE, pathname="pseudo")
+
+    assert item["pathname"] == "pseudo"
+    assert item["basename"] == "user_script.py"
