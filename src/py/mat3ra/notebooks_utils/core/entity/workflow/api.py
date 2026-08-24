@@ -52,6 +52,19 @@ with open("user_script.py") as file:
 '''
 
 
+# The shell twin of CUSTOM_SCRIPT_RUNNER: rendered as `hello_world.sh` (the shell flavor's input
+# name), it writes the job's material next to the uploaded files and hands control to the user's
+# script. The script is *sourced*, not run in a subshell, so `module` stays available - rupy runs
+# the runner the same way. Also listed in RESERVED_FILENAMES in ../file/api.py.
+CUSTOM_SCRIPT_RUNNER_SH = """#!/bin/bash
+cat > material.json <<'MATERIAL_JSON_EOF'
+{{ MATERIAL | default({}) | tojson }}
+MATERIAL_JSON_EOF
+
+. user_script.sh
+"""
+
+
 def set_execution_unit_input(unit: dict, template_name: str, content: str) -> None:
     """
     Replaces one input file of an execution unit with fixed content.
