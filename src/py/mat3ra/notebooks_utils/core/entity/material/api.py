@@ -144,8 +144,11 @@ def list_materials_in_set(api_client: APIClient, owner_id: str, material_set: Di
     that already have one do not re-query for it.
     """
     material_set_id = material_set["_id"]
-    matches = api_client.materials.list({"owner._id": owner_id, "inSet._id": material_set_id})
-    members = [material for material in matches if not material.get("isEntitySet")]
+    # isEntitySet belongs in the query for the same reason owner does: the server truncates, so a
+    # response-side filter can drop real members along with the set document.
+    members = api_client.materials.list(
+        {"owner._id": owner_id, "inSet._id": material_set_id, "isEntitySet": {"$ne": True}}
+    )
     return sorted(members, key=lambda material: _index_in_set(material, material_set_id))
 
 
