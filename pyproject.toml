@@ -21,7 +21,7 @@ jupyterlite = [
 ]
 utils_standata = [
   "mat3ra-utils",
-  "mat3ra-standata @ https://github.com/mat3ra/standata/releases/download/wip-95d5034/mat3ra_standata-2026.8.18.post1.dev2%2Bg95d50348-py3-none-any.whl",
+  "mat3ra-standata @ https://github.com/mat3ra/standata/releases/download/wip-95d5034/mat3ra_standata-2026.8.18.post1.dev2+g95d50348-py3-none-any.whl",
 ]
 api = [
   "mat3ra-api-client",
