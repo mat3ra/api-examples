@@ -73,7 +73,10 @@ def _require_material_for_owner(api_client: APIClient, query: dict, owner_id: st
     # Owner belongs in the query, not in a filter over the response: the server truncates, and the
     # account's own material is routinely absent from a page full of other owners' hash twins.
     matches = api_client.materials.list({**query, "owner._id": owner_id})
-    material_response = next(iter(matches), None)
+    # Keep the owner check as a guard, matching list_materials_in_set: if the query is ignored, the
+    # first match is some other account's hash twin -- the exact incident this resolver exists to
+    # prevent -- and the "not present for this account" error below would never be raised.
+    material_response = next((item for item in matches if item.get("owner", {}).get("_id") == owner_id), None)
     if material_response is None:
         raise ValueError(
             "The bulk material resolved from metadata is not present on the platform for this account. "
