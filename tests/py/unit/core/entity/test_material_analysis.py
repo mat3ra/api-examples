@@ -15,13 +15,13 @@ SILICON = Materials.get_by_name_first_match("Silicon")
     [
         (
             {"scaledHash": "scaled-hash-value", "hash": "hash-value", "_id": "material-id"},
-            {"scaledHash": "scaled-hash-value"},
+            {"_id": "material-id"},
         ),
-        ({"hash": "hash-value", "_id": "material-id"}, {"hash": "hash-value"}),
-        ({"_id": "material-id"}, {"_id": "material-id"}),
+        ({"scaledHash": "scaled-hash-value", "hash": "hash-value"}, {"hash": "hash-value"}),
+        ({"scaledHash": "scaled-hash-value"}, {"scaledHash": "scaled-hash-value"}),
     ],
 )
-def test_resolve_bulk_query_prefers_scaled_hash_then_hash_then_id(extra_keys, expected):
+def test_resolve_bulk_query_prefers_id_then_hash_then_scaled_hash(extra_keys, expected):
     assert resolve_bulk_query_from_crystal({**SILICON, **extra_keys}) == expected
 
 
