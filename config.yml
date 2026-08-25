@@ -51,7 +51,7 @@ notebooks:
       - emfs:/drive/packages/watchdog-2.3.1-py3-none-any.whl
   - name: specific_examples
     packages_pyodide:
-      - emfs:/drive/packages/mat3ra_standata-2026.8.18.post1.dev2+g95d50348-py3-none-any.whl
+      - emfs:/drive/packages/mat3ra_standata-2026.8.18.post1.dev6+g4f3e917f-py3-none-any.whl
       - pyyaml
       - pandas
       - typer
@@ -80,7 +80,7 @@ notebooks:
       - jinja2
       - emfs:/drive/packages/pydantic_core-2.18.2-py3-none-any.whl
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
-      - emfs:/drive/packages/mat3ra_standata-2026.8.18.post1.dev2+g95d50348-py3-none-any.whl
+      - emfs:/drive/packages/mat3ra_standata-2026.8.18.post1.dev6+g4f3e917f-py3-none-any.whl
       - pyyaml
       - pandas
       - typer
