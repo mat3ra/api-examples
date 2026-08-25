@@ -36,8 +36,6 @@ materials = [
   "mat3ra-notebooks-utils[utils_standata]",
   "pymatgen==2024.4.13",
   "pymatgen-analysis-defects<=2024.4.23",
-  # TEMPORARY [SOF-8034]: WIP wheel built from made#297 by build-wheel.yml. Revert to the
-  # bare "mat3ra-made" once made#297 merges and publishes to PyPI.
   "mat3ra-made @ https://mat3ra.github.io/made/mat3ra_made-0.1.dev1+g536f0ff28-py3-none-any.whl",
   "mat3ra-periodic-table"
 ]

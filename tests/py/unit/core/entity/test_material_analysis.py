@@ -41,8 +41,6 @@ def test_slab_bulk_crystal_is_the_material_the_slab_was_built_from():
     conventional = CrystalLatticePlanesMaterialAnalyzer(
         material=primitive, miller_indices=(0, 0, 1)
     ).material_with_conventional_lattice
-    # Without this the test would pass against broken code if the standata entry ever became the
-    # conventional cell -- the two hashes have to differ for the assertion below to mean anything.
     assert conventional.hash != primitive.hash
 
     slab = create_slab(crystal=primitive, miller_indices=(0, 0, 1), number_of_layers=3)
