@@ -71,7 +71,7 @@ def update_property_holder_value(client: APIClient, property_holder_id: str, val
     return client.properties.update(property_holder_id, {"$set": {"data.value": value}})
 
 
-def find_total_energy_for_material(client: APIClient, material_id: str, source: str = "public") -> Optional[dict]:
+def find_total_energy_for_material(client: APIClient, material_id: str, source: str = "my_account") -> Optional[dict]:
     """
     Find the best-precision total_energy property for a material. Mirrors the
     platform's "Resolve Total Energies for Elemental Materials" subworkflow,
@@ -84,7 +84,11 @@ def find_total_energy_for_material(client: APIClient, material_id: str, source: 
     Args:
         client (APIClient): API client instance.
         material_id (str): Material _id to look up the total_energy property for.
-        source (str): Source of the total energy property: `public`, `my_account` or `curators`.
+        source (str): Source of the total energy property: `my_account` (default), `curators` or
+            `public`. Defaults to `my_account` because the caller subtracts this energy from its own
+            slab or interface SCF, and only an energy it computed itself is guaranteed to share the
+            cutoff, k-grid and pseudopotentials. `group` pins the code and functional, not the
+            convergence, so `public` can return a well-formed number that is invalid to subtract.
 
     Returns:
         The best-precision total_energy property, or None if none exists.
