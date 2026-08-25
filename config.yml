@@ -29,7 +29,8 @@ notebooks:
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
       - pymatgen-analysis-defects<=2024.4.23
       - mat3ra-periodic-table
-      - mat3ra-made
+      # TEMPORARY [SOF-8034]: WIP wheel from made#297. Revert to `- mat3ra-made` on release.
+      - https://mat3ra.github.io/made/mat3ra_made-0.1.dev1+g536f0ff28-py3-none-any.whl
   # packages below are used when made is installed from GH wheel (made should be installed from below)
   #    - https://exabyte-io.github.io/made/mat3ra_made-0.1.dev1+ge64d360b8-py3-none-any.whl
   #    - mat3ra-code
