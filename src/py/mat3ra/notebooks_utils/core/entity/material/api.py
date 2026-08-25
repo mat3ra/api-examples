@@ -70,8 +70,10 @@ def get_bulk_material_by_crystal(api_client: APIClient, bulk_crystal: Material, 
 
 
 def _require_material_for_owner(api_client: APIClient, query: dict, owner_id: str) -> Material:
-    matches = api_client.materials.list(query)
-    material_response = next((item for item in matches if item.get("owner", {}).get("_id") == owner_id), None)
+    # Owner belongs in the query, not in a filter over the response: the server truncates, and the
+    # account's own material is routinely absent from a page full of other owners' hash twins.
+    matches = api_client.materials.list({**query, "owner._id": owner_id})
+    material_response = next(iter(matches), None)
     if material_response is None:
         raise ValueError(
             "The bulk material resolved from metadata is not present on the platform for this account. "
