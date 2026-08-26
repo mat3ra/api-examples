@@ -1,6 +1,5 @@
-from types import SimpleNamespace
-
 import pytest
+from mat3ra.made.material import Material
 from mat3ra.notebooks_utils.workflow import apply_scf_kgrid, patch_workflow_qe_input
 from mat3ra.standata.workflows import WorkflowStandata
 from mat3ra.wode.workflows import Workflow
@@ -52,10 +51,27 @@ def _surface_workflow():
 
 
 def _material_stub(number_of_atoms=2, reciprocal_vector_ratios=[1.0, 1.0, 0.5]):
-    """Stands in for `mat3ra.made.Material`, whose import needs scipy."""
-    return SimpleNamespace(
-        basis=SimpleNamespace(number_of_atoms=number_of_atoms),
-        lattice=SimpleNamespace(reciprocal_vector_ratios=reciprocal_vector_ratios),
+    """A real `Material` whose orthorhombic lattice yields the requested ratios."""
+    a, b, c = (2.0 / ratio for ratio in reciprocal_vector_ratios)
+    return Material.create(
+        {
+            "name": "test",
+            "lattice": {
+                "a": a,
+                "b": b,
+                "c": c,
+                "alpha": 90,
+                "beta": 90,
+                "gamma": 90,
+                "type": "ORC",
+                "units": {"length": "angstrom", "angle": "degree"},
+            },
+            "basis": {
+                "elements": [{"id": i, "value": "Si"} for i in range(number_of_atoms)],
+                "coordinates": [{"id": i, "value": [i * 0.1] * 3} for i in range(number_of_atoms)],
+                "units": "crystal",
+            },
+        }
     )
 
 
