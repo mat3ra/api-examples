@@ -29,11 +29,11 @@ notebooks:
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
       - pymatgen-analysis-defects<=2024.4.23
       - mat3ra-periodic-table
-      # Installing made from a GH wheel means its deps are not resolved for us -- mat3ra-code and
-      # mat3ra-esse have to be listed explicitly, per the note this replaces.
-      - https://mat3ra.github.io/made/mat3ra_made-0.1.dev1+g536f0ff28-py3-none-any.whl
-      - mat3ra-code
-      - mat3ra-esse
+      - mat3ra-made
+  # packages below are used when made is installed from GH wheel (made should be installed from below)
+  #    - https://exabyte-io.github.io/made/mat3ra_made-0.1.dev1+ge64d360b8-py3-none-any.whl
+  #    - mat3ra-code
+  #    - mat3ra-esse
   - name: import_material_from_jarvis_db_entry.ipynb
     packages_pyodide:
       - express-py==2024.2.2.post2
@@ -51,10 +51,7 @@ notebooks:
       - emfs:/drive/packages/watchdog-2.3.1-py3-none-any.whl
   - name: specific_examples
     packages_pyodide:
-      - emfs:/drive/packages/mat3ra_standata-2026.8.18.post1.dev6+g4f3e917f-py3-none-any.whl
-      - pyyaml
-      - pandas
-      - typer
+      - mat3ra-standata
 #      - mat3ra-notebooks-utils[utils_standata]
   - name: analyze_convex_hull
     packages_pyodide:
@@ -80,10 +77,7 @@ notebooks:
       - jinja2
       - emfs:/drive/packages/pydantic_core-2.18.2-py3-none-any.whl
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
-      - emfs:/drive/packages/mat3ra_standata-2026.8.18.post1.dev6+g4f3e917f-py3-none-any.whl
-      - pyyaml
-      - pandas
-      - typer
+      - mat3ra-standata
       - mat3ra-ide
       - mat3ra-api-client
       - requests
