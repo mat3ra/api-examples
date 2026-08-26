@@ -43,8 +43,7 @@ workflows = [
   "mat3ra-notebooks-utils[materials]",
   "mat3ra-esse",
   "mat3ra-mode",
-  # SOF-7990: repoint to the released version once wode publishes.
-  "mat3ra-wode @ git+https://github.com/mat3ra/wode.git@a5107ccb29343c84934affe5461a601b101d4397",
+  "mat3ra-wode",
   "mat3ra-ade",
   "mat3ra-prode",
   "mat3ra-ide",
