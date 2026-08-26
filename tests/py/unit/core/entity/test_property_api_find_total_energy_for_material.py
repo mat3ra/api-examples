@@ -22,7 +22,7 @@ def _client():
     return client
 
 
-def test_find_total_energy_for_material_defaults_to_public_scope():
+def test_find_total_energy_for_material_defaults_to_my_account_scope():
     client = _client()
 
     result = find_total_energy_for_material(client, MATERIAL_ID)
@@ -32,6 +32,7 @@ def test_find_total_energy_for_material_defaults_to_public_scope():
         query={
             "exabyteId": EXABYTE_ID,
             "slug": "total_energy",
+            "owner._id": OWNER_ACCOUNT_ID,
         },
         projection={"sort": {"precision.value": -1}, "limit": 1},
     )

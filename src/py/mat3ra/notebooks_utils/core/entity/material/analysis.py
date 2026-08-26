@@ -120,7 +120,7 @@ def get_slab_bulk_crystal(slab_material: Material) -> dict:
 
 def resolve_bulk_query_from_crystal(bulk_crystal: dict) -> dict:
     """Builds a materials.list query that resolves a bulk crystal to a platform material."""
-    for key in ("scaledHash", "hash", "_id"):
+    for key in ("_id", "hash", "scaledHash"):
         if bulk_crystal.get(key) is not None:
             return {key: bulk_crystal[key]}
     try:
