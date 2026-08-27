@@ -100,7 +100,9 @@ def test_list_materials_in_set_does_not_re_resolve_the_set():
     materials = list_materials_in_set(client, OWNER_ID, ENTITY_SET)
 
     assert [material["_id"] for material in materials] == EXPECTED_ORDERED_IDS
-    client.materials.list.assert_called_once_with({"owner._id": OWNER_ID, "inSet._id": MATERIAL_SET_ID})
+    client.materials.list.assert_called_once_with(
+        {"owner._id": OWNER_ID, "inSet._id": MATERIAL_SET_ID, "isEntitySet": {"$ne": True}}
+    )
 
 
 @pytest.mark.parametrize(
@@ -119,6 +121,7 @@ def test_list_materials_by_set_orders_by_inset_index(members, expected_ids):
     assert client.materials.list.call_args_list[1].args[0] == {
         "owner._id": OWNER_ID,
         "inSet._id": MATERIAL_SET_ID,
+        "isEntitySet": {"$ne": True},
     }
 
 

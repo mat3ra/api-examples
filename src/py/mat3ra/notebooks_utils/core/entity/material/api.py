@@ -70,8 +70,8 @@ def get_bulk_material_by_crystal(api_client: APIClient, bulk_crystal: Material, 
 
 
 def _require_material_for_owner(api_client: APIClient, query: dict, owner_id: str) -> Material:
-    matches = api_client.materials.list(query)
-    material_response = next((item for item in matches if item.get("owner", {}).get("_id") == owner_id), None)
+    matches = api_client.materials.list({**query, "owner._id": owner_id})
+    material_response = next(iter(matches), None)
     if material_response is None:
         raise ValueError(
             "The bulk material resolved from metadata is not present on the platform for this account. "
@@ -142,7 +142,9 @@ def list_materials_in_set(api_client: APIClient, owner_id: str, material_set: Di
     that already have one do not re-query for it.
     """
     material_set_id = material_set["_id"]
-    matches = api_client.materials.list({"owner._id": owner_id, "inSet._id": material_set_id})
+    matches = api_client.materials.list(
+        {"owner._id": owner_id, "inSet._id": material_set_id, "isEntitySet": {"$ne": True}}
+    )
     members = [material for material in matches if not material.get("isEntitySet")]
     return sorted(members, key=lambda material: _index_in_set(material, material_set_id))
 
