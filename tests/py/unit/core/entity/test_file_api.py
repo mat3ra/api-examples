@@ -85,3 +85,70 @@ def test_upload_refuses_the_shell_runner_name():
     """hello_world.sh is what the shell workflow's runner lands as - an upload would be clobbered."""
     with pytest.raises(ValueError, match="hello_world.sh"):
         upload_files(None, {"hello_world.sh": "echo hi"}, "account")
+
+
+def test_bytes_go_through_a_signed_put_url(monkeypatch):
+    """Bytes never enter a JSON body: the helper asks for a putObject URL and PUTs the content."""
+    from mat3ra.notebooks_utils.core.entity.file import api as file_api
+
+    calls: list = []
+    puts: list = []
+    endpoint = MagicMock()
+    endpoint.get_headers.return_value = {}
+
+    def request(method, path, data=None, headers=None):
+        calls.append((method, path, json.loads(data)))
+        return [
+            {
+                "key": "user-abc/model.pt",
+                "signedUrl": "https://s3/put?sig",
+                "bucket": "b",
+                "region": "r",
+                "provider": "aws",
+            }
+        ]
+
+    endpoint.request.side_effect = request
+    monkeypatch.setattr(file_api, "_files_endpoint", lambda client: endpoint)
+    monkeypatch.setattr(file_api, "_put", lambda url, data: puts.append((url, data)))
+
+    client = MagicMock()
+    client.auth.account_id = "acc"
+    client.auth.auth_token = "tok"
+    [record] = upload_files(client, {"model.pt": b"\x00\x01binary"}, "acc")
+
+    assert calls == [
+        ("POST", "files/signed-urls", {"names": ["model.pt"], "operation": "putObject", "accountId": "acc"})
+    ]
+    assert puts == [("https://s3/put?sig", b"\x00\x01binary")]
+    assert record == {
+        "name": "model.pt",
+        "key": "user-abc/model.pt",
+        "size": 8,
+        "bucket": "b",
+        "region": "r",
+        "provider": "aws",
+    }
+    assert to_object_storage_input(record)["objectData"]["NAME"] == "user-abc/model.pt"
+
+
+def test_text_still_travels_in_the_body(monkeypatch):
+    from mat3ra.notebooks_utils.core.entity.file import api as file_api
+
+    endpoint = MagicMock()
+    endpoint.get_headers.return_value = {}
+    endpoint.request.return_value = {
+        "key": "user-abc/a.txt",
+        "size": 2,
+        "bucket": "b",
+        "region": "r",
+        "provider": "aws",
+        "name": "a.txt",
+    }
+    monkeypatch.setattr(file_api, "_files_endpoint", lambda client: endpoint)
+    client = MagicMock()
+    client.auth.account_id = "acc"
+    client.auth.auth_token = "tok"
+    upload_files(client, {"a.txt": "hi"}, "acc")
+    method, path = endpoint.request.call_args[0][:2]
+    assert (method, path) == ("POST", "files")
