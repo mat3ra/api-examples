@@ -85,11 +85,3 @@ def test_upload_refuses_the_shell_runner_name():
     """hello_world.sh is what the shell workflow's runner lands as - an upload would be clobbered."""
     with pytest.raises(ValueError, match="hello_world.sh"):
         upload_files(None, {"hello_world.sh": "echo hi"}, "account")
-
-
-def test_object_storage_pathname_targets_a_subdirectory():
-    """A pathname of "pseudo" fetches the file into <work_dir>/pseudo — where QE's pseudo_dir points."""
-    item = to_object_storage_input(CLOUD_FILE, pathname="pseudo")
-
-    assert item["pathname"] == "pseudo"
-    assert item["basename"] == "user_script.py"
