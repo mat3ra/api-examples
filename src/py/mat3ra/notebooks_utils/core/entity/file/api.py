@@ -3,6 +3,7 @@ from typing import Dict, List, Union
 
 from mat3ra.api_client import APIClient
 from mat3ra.api_client.endpoints import BaseEndpoint
+from mat3ra.notebooks_utils.primitive.environment import is_pyodide_environment
 
 # All of these land in the job's working directory after the IO unit has fetched the uploaded
 # files, so an upload under any of them is overwritten before the user's script runs: the execution
@@ -89,15 +90,17 @@ def _upload_bytes(endpoint: BaseEndpoint, headers: dict, name: str, content: byt
 
 def _put(url: str, data: bytes) -> None:
     """PUTs bytes to a signed URL - from the browser in JupyterLite, from the process elsewhere."""
-    try:
-        from js import XMLHttpRequest  # type: ignore[import-not-found]
-        from pyodide.ffi import to_js  # type: ignore[import-not-found]
-    except ImportError:
+    if not is_pyodide_environment():
         from urllib.request import Request, urlopen
 
-        with urlopen(Request(url, data=data, method="PUT")) as response:
+        put = Request(url, data=data, method="PUT")
+        put.add_header("Content-Type", "application/octet-stream")
+        with urlopen(put) as response:
             response.read()
         return
+
+    from js import XMLHttpRequest  # type: ignore[import-not-found]
+    from pyodide.ffi import to_js  # type: ignore[import-not-found]
 
     request = XMLHttpRequest.new()
     request.open("PUT", url, False)
