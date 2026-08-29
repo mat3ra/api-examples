@@ -8,8 +8,19 @@ _idb = run_js(
     """
 (function() {
     const open = () => new Promise(resolve => {
-        const req = indexedDB.open("mat3ra", 1);
-        req.onupgradeneeded = () => req.result.createObjectStore("tokens");
+        const req = indexedDB.open("mat3ra", 2);
+        req.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains("tokens")) {
+                db.createObjectStore("tokens");
+            }
+            if (!db.objectStoreNames.contains("wheel_manifest")) {
+                db.createObjectStore("wheel_manifest");
+            }
+            if (!db.objectStoreNames.contains("wheel_data")) {
+                db.createObjectStore("wheel_data");
+            }
+        };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => resolve(null);
     });
