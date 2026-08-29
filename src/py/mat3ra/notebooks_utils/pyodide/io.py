@@ -3,10 +3,25 @@ import json
 import os
 from typing import Any, Dict, Optional, Union
 
-from IPython.display import Javascript, display
-
 from ..core.io import set_data_python
 from ..primitive.logger import log
+
+try:
+    from IPython.display import Javascript, display
+except ImportError:
+    Javascript = None
+    display = None
+
+try:
+    from js import JSON, sendDataToHost  # type: ignore
+except ImportError:
+    JSON = None
+    sendDataToHost = None
+
+try:
+    from pyodide.http import pyfetch  # type: ignore
+except ImportError:
+    pyfetch = None
 
 
 async def read_from_url_pyodide(url: str, as_bytes: bool = False) -> Union[str, bytes]:
@@ -20,14 +35,27 @@ async def read_from_url_pyodide(url: str, as_bytes: bool = False) -> Union[str, 
     Returns:
         str or bytes: The content.
     """
-    # `http` is a Pyodide module that will be installed in the Pyodide environment by default.
-    from pyodide.http import pyfetch  # type: ignore
+    if pyfetch is None:
+        raise RuntimeError("pyfetch is available only in Pyodide")
 
-    # Per https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
     response = await pyfetch(url)
     if as_bytes:
         return await response.bytes()
     return await response.string()
+
+
+def send_data_pyodide(payload: Dict[str, Any]):
+    """Send a bridge payload to the host application."""
+    serialized_data = json.dumps(payload)
+
+    if JSON is not None and sendDataToHost is not None:
+        sendDataToHost(JSON.parse(serialized_data))
+        return
+
+    if Javascript is None or display is None:
+        raise RuntimeError("IPython is required to send data from JupyterLite")
+
+    display(Javascript(f"window.sendDataToHost({serialized_data});"))
 
 
 def set_data_pyodide(key: str, value: Any):
@@ -39,18 +67,7 @@ def set_data_pyodide(key: str, value: Any):
         key (str): The name under which data will be sent.
         value (Any): The value to send to the host environment.
     """
-    serialized_data = json.dumps({key: value})
-    js_code = f"""
-      (function() {{
-          if (window.sendDataToHost) {{
-              window.sendDataToHost({serialized_data});
-              console.log('Data sent to host:', {serialized_data});
-          }} else {{
-              console.error('sendDataToHost function is not defined on the window object.');
-          }}
-      }})();
-      """
-    display(Javascript(js_code))
+    send_data_pyodide({key: value})
     log(f"Data for {key} sent to host.")
     set_data_python(key, value)
 

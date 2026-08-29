@@ -4,7 +4,7 @@ from .core.io import get_data_python, read_from_url_python, set_data_python
 from .ipython.io import download_content_to_file
 from .primitive.enums import EnvironmentsEnum
 from .primitive.environment import ENVIRONMENT
-from .pyodide.io import get_data_pyodide, read_from_url_pyodide, set_data_pyodide
+from .pyodide.io import get_data_pyodide, read_from_url_pyodide, send_data_pyodide, set_data_pyodide
 from .settings import UPLOADS_FOLDER
 
 
@@ -37,6 +37,12 @@ def set_data(key: str, value: Any, folder_path: str = UPLOADS_FOLDER):
         set_data_python(key, value, folder_path=folder_path)
 
 
+def send_data(payload: Dict[str, Any]):
+    """Send a complete bridge payload. This operation is meaningful only in Pyodide."""
+    if ENVIRONMENT == EnvironmentsEnum.PYODIDE:
+        send_data_pyodide(payload)
+
+
 async def read_from_url(url: str, as_bytes: bool = False) -> Union[str, bytes]:
     """
     Read content from a URL, routing to the pyodide or Python implementation.
@@ -53,4 +59,4 @@ async def read_from_url(url: str, as_bytes: bool = False) -> Union[str, bytes]:
     return read_from_url_python(url, as_bytes)
 
 
-__all__ = ["download_content_to_file", "get_data", "read_from_url", "set_data"]
+__all__ = ["download_content_to_file", "get_data", "read_from_url", "send_data", "set_data"]
