@@ -1,0 +1,28 @@
+# ----------------------------------------------------------------- #
+#                                                                   #
+#  Example Python package requirements for the Mat3ra platform      #
+#                                                                   #
+#  Will be used as follows:                                         #
+#                                                                   #
+#    1. A runtime directory for this calculation is created         #
+#    2. This list is used to populate a Python virtual environment  #
+#    3. The virtual environment is activated                        #
+#    4. The Python process running the script included within this  #
+#       job is started                                              #
+#                                                                   #
+#  For more information visit:                                      #
+#   - https://pip.pypa.io/en/stable/reference/pip_install           #
+#   - https://virtualenv.pypa.io/en/stable/                         #
+#                                                                   #
+#  Adjust the list to include your preferred packages.              #
+#                                                                   #
+# ----------------------------------------------------------------- #
+
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch>=2.10.0
+torchvision>=0.25.0
+torchaudio
+nvalchemi-toolkit[mace]
+matplotlib
+numpy
+mat3ra-made[tools]
