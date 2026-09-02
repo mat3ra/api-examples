@@ -77,7 +77,12 @@ notebooks:
       - jinja2
       - emfs:/drive/packages/pydantic_core-2.18.2-py3-none-any.whl
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
-      - mat3ra-standata
+      # TEMPORARY (SOF-8004): the custom_script workflows are not in a published standata yet, so
+      # JupyterLite micropips a branch-built wheel from packages/. Revert to `mat3ra-standata`
+      # once standata#150 is released.
+      - emfs:/drive/packages/mat3ra_standata-2026.8.27.post1.dev7+g43e360bb-py3-none-any.whl
+      # The results cell of the custom calculation notebooks builds a DataFrame.
+      - pandas
       - mat3ra-ide
       - mat3ra-api-client
       - requests
