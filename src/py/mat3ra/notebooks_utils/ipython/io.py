@@ -1,7 +1,5 @@
 import json
 
-from IPython.display import Javascript, display
-
 
 def download_content_to_file(content: dict, filename: str):
     """
@@ -11,6 +9,8 @@ def download_content_to_file(content: dict, filename: str):
         content (dict): The content to download.
         filename (str): The name of the file to download.
     """
+    from IPython.display import Javascript, display
+
     if isinstance(content, dict):
         content_str = json.dumps(content, indent=4)
     else:

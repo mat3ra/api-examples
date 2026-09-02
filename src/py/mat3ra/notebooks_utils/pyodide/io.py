@@ -3,8 +3,6 @@ import json
 import os
 from typing import Any, Dict, Optional, Union
 
-from IPython.display import Javascript, display
-
 from ..core.io import set_data_python
 from ..primitive.logger import log
 
@@ -39,6 +37,11 @@ def set_data_pyodide(key: str, value: Any):
         key (str): The name under which data will be sent.
         value (Any): The value to send to the host environment.
     """
+    # Imported here, like `pyodide.http` above: this module sits on the `notebooks_utils.io`
+    # import chain, which a plain Python environment reaches too, and IPython is only installed
+    # there in the `jupyterlite` extra.
+    from IPython.display import Javascript, display
+
     serialized_data = json.dumps({key: value})
     js_code = f"""
       (function() {{
