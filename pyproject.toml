@@ -71,7 +71,9 @@ tests = [
   "pytest",
   "pytest-asyncio",
   "pytest-cov",
-  "mat3ra-notebooks-utils[workflows]",
+  # `all`, not `workflows`: the tests import `notebooks_utils.io`, which re-exports
+  # `download_content_to_file` from the IPython-backed module, so they need the jupyterlite extra too.
+  "mat3ra-notebooks-utils[all]",
 ]
 docs = [
   "mkdocs>=1.4.3",
