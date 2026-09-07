@@ -5,6 +5,12 @@ from mat3ra.api_client import APIClient
 from mat3ra.api_client.endpoints import BaseEndpoint
 from mat3ra.notebooks_utils.primitive.environment import is_pyodide_environment
 
+if is_pyodide_environment():
+    from js import XMLHttpRequest  # type: ignore[import-not-found]
+    from pyodide.ffi import to_js  # type: ignore[import-not-found]
+else:
+    from urllib.request import Request, urlopen
+
 
 def _files_endpoint(api_client: APIClient) -> BaseEndpoint:
     """
@@ -78,16 +84,11 @@ def _upload_bytes(endpoint: BaseEndpoint, headers: dict, name: str, content: byt
 def _put(url: str, data: bytes) -> None:
     """PUTs bytes to a signed URL - from the browser in JupyterLite, from the process elsewhere."""
     if not is_pyodide_environment():
-        from urllib.request import Request, urlopen
-
         put = Request(url, data=data, method="PUT")
         put.add_header("Content-Type", "application/octet-stream")
         with urlopen(put) as response:
             response.read()
         return
-
-    from js import XMLHttpRequest  # type: ignore[import-not-found]
-    from pyodide.ffi import to_js  # type: ignore[import-not-found]
 
     request = XMLHttpRequest.new()
     request.open("PUT", url, False)
