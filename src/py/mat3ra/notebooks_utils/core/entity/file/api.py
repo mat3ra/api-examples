@@ -5,11 +5,8 @@ from mat3ra.api_client import APIClient
 from mat3ra.api_client.endpoints import BaseEndpoint
 from mat3ra.notebooks_utils.primitive.environment import is_pyodide_environment
 
-# All of these land in the job's working directory after the IO unit has fetched the uploaded
-# files, so an upload under any of them is overwritten before the user's script runs: the execution
-# unit renders `script.py` and `requirements.txt`, and the runner it renders writes `material.json`.
-# Keep in step with CUSTOM_SCRIPT_RUNNER / CUSTOM_SCRIPT_RUNNER_SH in ../workflow/api.py.
-# `hello_world.sh` is the on-disk name of the shell runner (the shell flavor's input name).
+# The workflow writes these into the job's working directory, so an upload under any of them is
+# overwritten before the user's script runs. Keep in step with the runners in ../workflow/api.py.
 RESERVED_FILENAMES = ("script.py", "requirements.txt", "material.json", "hello_world.sh")
 
 

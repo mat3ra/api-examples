@@ -39,9 +39,7 @@ def copy_bank_workflow_by_system_name(endpoint: BankWorkflowEndpoints, system_na
     return endpoint.copy(bank_workflow_id, account_id)["_id"]
 
 
-# Written by the runner into the job's working directory, next to the files the IO unit fetched.
-# The filename it writes is also listed in RESERVED_FILENAMES in ../file/api.py, which refuses an
-# upload that would be overwritten by it; change both together.
+# The filenames written here are also in RESERVED_FILENAMES in ../file/api.py; change both together.
 CUSTOM_SCRIPT_RUNNER = '''import json
 
 with open("material.json", "w") as file:
@@ -52,10 +50,8 @@ with open("user_script.py") as file:
 '''
 
 
-# The shell twin of CUSTOM_SCRIPT_RUNNER: rendered as `hello_world.sh` (the shell flavor's input
-# name), it writes the job's material next to the uploaded files and hands control to the user's
-# script. The script is *sourced*, not run in a subshell, so `module` stays available - rupy runs
-# the runner the same way. Also listed in RESERVED_FILENAMES in ../file/api.py.
+# The shell twin, rendered as `hello_world.sh`. The user's script is *sourced*, not run in a
+# subshell, so `module` stays available - rupy runs the runner the same way.
 CUSTOM_SCRIPT_RUNNER_SH = """#!/bin/bash
 cat > material.json <<'MATERIAL_JSON_EOF'
 {{ MATERIAL | default({}) | tojson }}
