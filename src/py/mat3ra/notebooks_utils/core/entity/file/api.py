@@ -35,10 +35,9 @@ def upload_files(api_client: APIClient, files: Dict[str, Union[str, bytes]], acc
     """
     Uploads files to the account's object storage ("Dropbox") folder.
 
-    Text travels inside the request body (`POST /files`). Bytes - a model checkpoint, an archive,
-    anything that is not UTF-8 text or is large - go through a URL the platform signs for the
-    purpose (`POST /files/signed-urls`) and are PUT to storage directly, so neither the JSON body
-    limit nor the text encoding applies.
+    A `str` travels inside the request body (`POST /files`), which bounds its size. `bytes` go
+    through a URL the platform signs for the purpose (`POST /files/signed-urls`) and are PUT to
+    storage directly, with no size limit - which is why the notebooks read asset files as bytes.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
