@@ -39,7 +39,6 @@ def copy_bank_workflow_by_system_name(endpoint: BankWorkflowEndpoints, system_na
     return endpoint.copy(bank_workflow_id, account_id)["_id"]
 
 
-# The filenames written here are also in RESERVED_FILENAMES in ../file/api.py; change both together.
 CUSTOM_SCRIPT_RUNNER = '''import json
 
 with open("material.json", "w") as file:

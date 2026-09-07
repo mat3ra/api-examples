@@ -5,10 +5,6 @@ from mat3ra.api_client import APIClient
 from mat3ra.api_client.endpoints import BaseEndpoint
 from mat3ra.notebooks_utils.primitive.environment import is_pyodide_environment
 
-# The workflow writes these into the job's working directory, so an upload under any of them is
-# overwritten before the user's script runs. Keep in step with the runners in ../workflow/api.py.
-RESERVED_FILENAMES = ("script.py", "requirements.txt", "material.json", "hello_world.sh")
-
 
 def _files_endpoint(api_client: APIClient) -> BaseEndpoint:
     """
@@ -48,13 +44,7 @@ def upload_files(api_client: APIClient, files: Dict[str, Union[str, bytes]], acc
         list[dict]: One cloud file record per upload, with `key`, `size`, `bucket`, `region`
             and `provider`.
 
-    Raises:
-        ValueError: If a file name collides with one the execution unit writes itself.
     """
-    reserved = [name for name in files if name.split("/")[-1] in RESERVED_FILENAMES]
-    if reserved:
-        raise ValueError(f"Rename {reserved}: {RESERVED_FILENAMES} are written by the workflow itself.")
-
     endpoint = _files_endpoint(api_client)
     headers = endpoint.get_headers(api_client.auth.account_id or "", api_client.auth.auth_token or "")
 

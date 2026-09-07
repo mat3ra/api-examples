@@ -78,7 +78,6 @@ notebooks:
       - emfs:/drive/packages/pydantic_core-2.18.2-py3-none-any.whl
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
       - mat3ra-standata
-      - pandas
       - mat3ra-ide
       - mat3ra-api-client
       - requests
