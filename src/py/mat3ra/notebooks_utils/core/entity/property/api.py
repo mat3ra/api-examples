@@ -71,9 +71,11 @@ def update_property_holder_value(client: APIClient, property_holder_id: str, val
     return client.properties.update(property_holder_id, {"$set": {"data.value": value}})
 
 
-def find_total_energy_for_material(client: APIClient, material_id: str, source: str = "my_account") -> Optional[dict]:
+def find_property_for_material(
+    client: APIClient, material_id: str, property_name: str, source: str = "my_account"
+) -> Optional[dict]:
     """
-    Find the best-precision total_energy property for a material. Mirrors the
+    Find the best-precision property of the given name for a material. Mirrors the
     platform's "Resolve Total Energies for Elemental Materials" subworkflow,
     which queries properties directly by material and selects by precision --
     no job lookup involved.
@@ -83,18 +85,19 @@ def find_total_energy_for_material(client: APIClient, material_id: str, source: 
 
     Args:
         client (APIClient): API client instance.
-        material_id (str): Material _id to look up the total_energy property for.
-        source (str): Source of the total energy property: `my_account` (default), `curators` or
+        material_id (str): Material _id to look up the property for.
+        property_name (str): Property name, e.g. `total_energy` or `band_gaps`.
+        source (str): Source of the property: `my_account` (default), `curators` or
             `public`.
 
     Returns:
-        The best-precision total_energy property, or None if none exists.
+        The best-precision property holder, or None if none exists.
     """
     material = client.materials.get(material_id)
     exabyte_id = material.get("exabyteId")
     if not exabyte_id:
         return None
-    query = {"exabyteId": exabyte_id, "slug": "total_energy"}
+    query = {"exabyteId": exabyte_id, "slug": property_name}
     if source == "curators":
         query["owner.slug"] = "curators"
     elif source == "my_account":
@@ -106,6 +109,11 @@ def find_total_energy_for_material(client: APIClient, material_id: str, source: 
         projection={"sort": {"precision.value": -1}, "limit": 1},
     )
     return properties[0] if properties else None
+
+
+def find_total_energy_for_material(client: APIClient, material_id: str, source: str = "my_account") -> Optional[dict]:
+    """Find the best-precision total_energy property for a material -- `find_property_for_material` for the details."""
+    return find_property_for_material(client, material_id, "total_energy", source)
 
 
 def get_property_by_subworkflow_and_unit_indicies(
