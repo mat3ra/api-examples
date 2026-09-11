@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Sequence
 
 import numpy as np
 from mat3ra.made.material import Material
-from mat3ra.made.tools.analyze.other import get_closest_site_id_from_coordinate_and_element
+from mat3ra.made.tools.analyze.utils import minimum_image_distances
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
 from mat3ra.made.tools.modify import interface_displace_part
 
@@ -12,21 +12,63 @@ from .surface_sites import SurfaceSiteAnalyzer
 NEIGHBOUR_STRETCH = 1.3  # atoms further apart than this times the closest pair are not one site
 
 
-def get_atom_indices(material: Material, element: Optional[str] = None) -> List[int]:
-    """Indices of the atoms of `element` (all atoms when None), in basis order."""
-    return [i for i, e in enumerate(material.basis.elements.values) if element is None or e == element]
+def _pbc_distances_from(material: Material, coordinate: Sequence[float], use_cartesian_coordinates: bool) -> np.ndarray:
+    """Distance from a point to every atom in Angstrom, minimum-image (made's convention)."""
+    crystal = material.clone()
+    crystal.to_crystal()
+    vectors = np.array(material.lattice.vector_arrays, dtype=float)
+    point = np.array(coordinate, dtype=float)
+    if use_cartesian_coordinates:
+        point = point @ np.linalg.inv(vectors)
+    fractional = np.vstack([point, np.array(crystal.coordinates_array, dtype=float)])
+    return minimum_image_distances(fractional, vectors)[0, 1:]
+
+
+def get_atom_indices(
+    material: Material,
+    element: Optional[str] = None,
+    coordinate: Optional[Sequence[float]] = None,
+    radius: Optional[float] = None,
+    use_cartesian_coordinates: bool = False,
+) -> List[int]:
+    """
+    Indices of atoms, filtered the way a person points at them: by `element`, and by lying within
+    `radius` Angstrom of `coordinate` (crystal unless `use_cartesian_coordinates`), periodic images
+    included. With a coordinate, nearest first; otherwise basis order. Check the result with
+    `describe_atoms` before using it.
+    """
+    indices = [i for i, e in enumerate(material.basis.elements.values) if element is None or e == element]
+    if coordinate is None:
+        return indices
+    distances = _pbc_distances_from(material, coordinate, use_cartesian_coordinates)
+    indices.sort(key=lambda i: distances[i])
+    return [i for i in indices if radius is None or distances[i] <= radius]
 
 
 def get_atom_index(
-    material: Material, element: str, near: Sequence[float], use_cartesian_coordinates: bool = False
+    material: Material,
+    element: str,
+    coordinate: Sequence[float],
+    radius: float = 1.0,
+    use_cartesian_coordinates: bool = False,
 ) -> int:
     """
-    The index of the `element` atom closest to `near` — the way a human points at an atom:
-    "the Mo near (0.25, 0.25, 0.5)". Coordinates are crystal unless `use_cartesian_coordinates`.
+    The one `element` atom within `radius` Angstrom of `coordinate` — "the Mo near (0.25, 0.25, 0.5)".
+    The nearest is returned when several qualify.
+
+    Raises:
+        ValueError: when none qualifies, saying how far the nearest atom of that element is.
     """
-    return int(
-        get_closest_site_id_from_coordinate_and_element(material, list(near), element, use_cartesian_coordinates)
+    found = get_atom_indices(material, element, coordinate, radius, use_cartesian_coordinates)
+    if found:
+        return found[0]
+    candidates = get_atom_indices(material, element, coordinate, None, use_cartesian_coordinates)
+    distances = _pbc_distances_from(material, coordinate, use_cartesian_coordinates)
+    nearest = distances[candidates[0]] if candidates else None
+    detail = (
+        f"; the nearest {element} is {nearest:.2f} A away" if nearest is not None else f"; no {element} in the material"
     )
+    raise ValueError(f"No {element} within {radius} A of {list(coordinate)}{detail}")
 
 
 def describe_atoms(material: Material, indices: Optional[Sequence[int]] = None) -> List[Dict]:

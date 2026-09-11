@@ -70,11 +70,23 @@ def test_get_atom_indices_by_element():
     assert get_atom_indices(mos2) == [0, 1, 2]
 
 
+def test_get_atom_indices_within_a_radius_of_a_coordinate_nearest_first():
+    mos2 = Material.create(MOS2)
+    assert get_atom_indices(mos2, "S", coordinate=[0.6667, 0.3333, 0.45], radius=1.0) == [1]
+    assert get_atom_indices(mos2, "S", coordinate=[0.6667, 0.3333, 0.45], radius=3.0) == [1, 2]
+    assert get_atom_indices(mos2, "S", coordinate=[0.6667, 0.3333, 0.45], radius=0.1) == []
+
+
 def test_get_atom_index_points_at_the_element_near_a_coordinate():
     mos2 = Material.create(MOS2)
-    assert get_atom_index(mos2, "Mo", near=[0.25, 0.75, 0.5]) == 0
-    assert get_atom_index(mos2, "S", near=[0.6, 0.3, 0.4]) == 1
-    assert get_atom_index(mos2, "S", near=[0.6, 0.3, 0.6]) == 2
+    assert get_atom_index(mos2, "Mo", coordinate=[0.25, 0.75, 0.5], radius=1.0) == 0
+    assert get_atom_index(mos2, "S", coordinate=[0.6, 0.3, 0.42], radius=1.0) == 1
+    assert get_atom_index(mos2, "S", coordinate=[0.6, 0.3, 0.58], radius=1.0) == 2
+
+
+def test_get_atom_index_says_how_far_the_nearest_is_when_none_qualifies():
+    with pytest.raises(ValueError, match=r"No Mo within 0.5 A .* nearest Mo is 1\.\d\d A away"):
+        get_atom_index(Material.create(MOS2), "Mo", coordinate=[0.0, 0.0, 0.5], radius=0.5)
 
 
 def test_describe_atoms_shows_what_was_chosen():
