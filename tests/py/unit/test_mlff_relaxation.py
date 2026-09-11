@@ -1,5 +1,3 @@
-from typing import Final
-
 import numpy as np
 import pytest
 from ase.calculators.emt import EMT
@@ -9,10 +7,10 @@ from mat3ra.notebooks_utils.mlff.relaxation import relax_material
 
 from .fixtures_gr_ni import GRAPHENE_NICKEL_CARBON_DISPLACED, GRAPHENE_NICKEL_TOP_HCP
 
-MATERIAL: Final = Material.create(GRAPHENE_NICKEL_TOP_HCP)
-CARBON_DISPLACED: Final = Material.create(GRAPHENE_NICKEL_CARBON_DISPLACED)
-CALCULATOR: Final = EMT()
-RELAX: Final = {"fmax": 0.1, "max_steps": 50, "logfile": None}
+MATERIAL = Material.create(GRAPHENE_NICKEL_TOP_HCP)
+CARBON_DISPLACED = Material.create(GRAPHENE_NICKEL_CARBON_DISPLACED)
+CALCULATOR = EMT()
+RELAX = {"fmax": 0.1, "max_steps": 50, "logfile": None}
 
 CASES = [
     # (material, fixed_atom_indices, along_z_only, xy_unchanged)
