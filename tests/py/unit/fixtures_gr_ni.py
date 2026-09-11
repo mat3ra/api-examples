@@ -1,4 +1,5 @@
 """Graphene on Ni(111), 1x1, carbons atop and over the hcp hollow (labels: 0 substrate, 1 film)."""
+from copy import deepcopy
 from typing import Any, Dict
 
 GRAPHENE_NICKEL_TOP_HCP: Dict[str, Any] = {
@@ -26,3 +27,8 @@ GRAPHENE_NICKEL_TOP_HCP: Dict[str, Any] = {
         "type": "HEX",
     },
 }
+
+# GRAPHENE_NICKEL_TOP_HCP with one carbon shifted 0.05 in fractional x, off its site: the only
+# fixture with an in-plane force for a relaxation to constrain.
+GRAPHENE_NICKEL_CARBON_DISPLACED: Dict[str, Any] = deepcopy(GRAPHENE_NICKEL_TOP_HCP)
+GRAPHENE_NICKEL_CARBON_DISPLACED["basis"]["coordinates"][3]["value"][0] -= 0.05
