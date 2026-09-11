@@ -26,21 +26,3 @@ GRAPHENE_NICKEL_TOP_HCP: Dict[str, Any] = {
         "type": "HEX",
     },
 }
-SQUARE_NET: Dict[str, Any] = {
-    "name": "square net",
-    "basis": {
-        "elements": [{"id": 0, "value": "Cu"}, {"id": 1, "value": "Cu"}],
-        "coordinates": [{"id": 0, "value": [0.5, 0.5, 0.1]}, {"id": 1, "value": [0.0, 0.0, 0.2]}],
-        "units": "crystal",
-    },
-    "lattice": {
-        "a": 2.5,
-        "b": 2.5,
-        "c": 15.0,
-        "alpha": 90,
-        "beta": 90,
-        "gamma": 90,
-        "units": {"length": "angstrom", "angle": "degree"},
-        "type": "TET",
-    },
-}

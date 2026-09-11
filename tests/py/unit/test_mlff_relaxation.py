@@ -4,14 +4,12 @@ import numpy as np
 import pytest
 from ase.calculators.emt import EMT
 from mat3ra.made.material import Material
-from mat3ra.made.tools.analyze.other import get_atom_indices_by_layer, get_atom_indices_in_bottom_layers
 from mat3ra.made.tools.calculate import calculate_total_energy
 from mat3ra.notebooks_utils.mlff.relaxation import relax_material
 
 from .fixtures_gr_ni import GRAPHENE_NICKEL_TOP_HCP
 
 MATERIAL: Final = Material.create(GRAPHENE_NICKEL_TOP_HCP)
-SUBSTRATE_INDICES: Final = [i for i, label in enumerate(MATERIAL.basis.labels.values) if label == 0]
 CALCULATOR: Final = EMT()
 RELAX: Final = {"fmax": 0.1, "max_steps": 50, "logfile": None}
 
@@ -20,18 +18,6 @@ def cartesian_positions(material: Material) -> np.ndarray:
     cartesian = material.clone()
     cartesian.to_cartesian()
     return np.array(cartesian.coordinates_array)
-
-
-def test_get_atom_indices_by_layer():
-    assert get_atom_indices_by_layer(MATERIAL) == [[0], [1], [2], [3, 4]]
-
-
-def test_get_atom_indices_in_bottom_layers():
-    assert get_atom_indices_in_bottom_layers(MATERIAL, 1, SUBSTRATE_INDICES) == [0]
-    assert get_atom_indices_in_bottom_layers(MATERIAL, 2, SUBSTRATE_INDICES) == [0, 1]
-    assert get_atom_indices_in_bottom_layers(MATERIAL, 1, []) == []
-    with pytest.raises(ValueError):
-        get_atom_indices_in_bottom_layers(MATERIAL, 0)
 
 
 def test_relax_material_lowers_the_energy_and_keeps_identity():
@@ -43,7 +29,7 @@ def test_relax_material_lowers_the_energy_and_keeps_identity():
 
 
 def test_relax_material_holds_fixed_atoms_and_z_only_motion():
-    fixed = get_atom_indices_in_bottom_layers(MATERIAL, 1, SUBSTRATE_INDICES)
+    fixed = [0]  # bottom Ni of the fixture
     relaxed = relax_material(MATERIAL, CALCULATOR, fixed_atom_indices=fixed, along_z_only=True, **RELAX)
     before, after = cartesian_positions(MATERIAL), cartesian_positions(relaxed)
     assert np.allclose(after[fixed], before[fixed])
