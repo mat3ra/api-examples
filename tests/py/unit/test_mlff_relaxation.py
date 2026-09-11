@@ -2,13 +2,24 @@ import numpy as np
 import pytest
 from ase.calculators.emt import EMT
 from mat3ra.made.material import Material
+from mat3ra.made.tools.analyze.other import get_closest_site_id_from_coordinate_and_element
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab import SlabBuilder, SlabConfiguration
 from mat3ra.made.tools.calculate import calculate_total_energy
-from mat3ra.made.tools.helpers import create_interface_zsl_between_slabs
+from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
+from mat3ra.made.tools.helpers import (
+    SurfaceSiteAnalyzer,
+    create_interface_zsl_between_slabs,
+    get_atom_indices_by_layer,
+    get_film_site_occupation,
+)
+from mat3ra.made.tools.modify import interface_displace_part, interface_get_part
 from mat3ra.notebooks_utils.mlff.relaxation import relax_material
 from mat3ra.standata.materials import Materials
 
-# Built the same way as optimization_interface_film_xy_position_graphene_nickel.ipynb, cells 1.2-2.3.
+# Built the same way as optimization_interface_film_xy_position_graphene_nickel.ipynb, cells 1.2-2.3,
+# then put on the atop_hcp registry the way the SIMULATION notebook's cell 7 does — the ZSL search's
+# cell choice is not pinned across environments, so the fixture asserts the registry it lands on
+# instead of assuming the one the builder happens to return.
 _substrate = Material.create(Materials.get_by_name_first_match("Nickel"))
 _film = Material.create(Materials.get_by_name_first_match("Graphene"))
 _substrate_slab = SlabBuilder().get_material(
@@ -31,7 +42,7 @@ _film_slab = SlabBuilder().get_material(
         use_conventional_cell=True,
     )
 )
-MATERIAL = create_interface_zsl_between_slabs(
+_base_interface = create_interface_zsl_between_slabs(
     substrate_slab=_substrate_slab,
     film_slab=_film_slab,
     gap=2.58,
@@ -43,8 +54,27 @@ MATERIAL = create_interface_zsl_between_slabs(
     max_angle_tol=0.02,
     reduce_result_cell_to_primitive=True,
 )
-BOTTOM_NI = 0  # lowest z among the substrate's Ni
-DISPLACED_CARBON = 4  # a film C; the only fixture with an in-plane force for a relaxation to constrain
+_substrate_part = interface_get_part(_base_interface, part=InterfacePartsEnum.SUBSTRATE)
+_film_part = interface_get_part(_base_interface, part=InterfacePartsEnum.FILM)
+_film_indices = [
+    i for i, label in enumerate(_base_interface.basis.labels.values) if label == InterfacePartsEnum.FILM.value
+]
+
+_surface = SurfaceSiteAnalyzer(material=_substrate_part)
+_film_cartesian = _film_part.clone()
+_film_cartesian.to_cartesian()
+_film_z = float(np.mean([c[2] for c in _film_part.coordinates_array]))
+_anchor = get_closest_site_id_from_coordinate_and_element(_film_part, [1 / 3, 2 / 3, _film_z], "C")
+_anchor_xy = np.array(_film_cartesian.coordinates_array[_anchor][:2])
+
+MATERIAL = interface_displace_part(
+    _base_interface, displacement=list(_surface.get_displacement_to_site(_anchor_xy, "atop"))
+)
+_occupied = get_film_site_occupation(MATERIAL, _surface)
+assert set(_occupied.values()) == {"atop", "hcp"}, f"registry drifted: {_occupied}"
+
+BOTTOM_NI = get_atom_indices_by_layer(MATERIAL)[0]
+DISPLACED_CARBON = _film_indices[_anchor]
 
 CARBON_DISPLACED = MATERIAL.clone()
 _coordinates = CARBON_DISPLACED.coordinates_array
@@ -57,9 +87,9 @@ RELAX = {"fmax": 0.1, "max_steps": 50, "logfile": None}
 CASES = [
     # (material, fixed_atom_indices, along_z_only, xy_unchanged)
     (MATERIAL, [], False, True),
-    (MATERIAL, [BOTTOM_NI], True, True),
-    (CARBON_DISPLACED, [BOTTOM_NI], False, False),  # in-plane force free to act: the carbon drifts back
-    (CARBON_DISPLACED, [BOTTOM_NI], True, True),  # same force, held to z: the carbon cannot drift
+    (MATERIAL, BOTTOM_NI, True, True),
+    (CARBON_DISPLACED, BOTTOM_NI, False, False),  # in-plane force free to act: the carbon drifts back
+    (CARBON_DISPLACED, BOTTOM_NI, True, True),  # same force, held to z: the carbon cannot drift
 ]
 
 

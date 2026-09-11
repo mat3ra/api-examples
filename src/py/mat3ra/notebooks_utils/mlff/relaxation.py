@@ -4,13 +4,14 @@ from ase.constraints import FixAtoms, FixedLine
 from ase.optimize import BFGS
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import to_ase
+from mat3ra.made.tools.third_party import ASECalculator
 
 Z_DIRECTION = [0, 0, 1]
 
 
 def relax_material(
     material: Material,
-    calculator,
+    calculator: ASECalculator,
     fmax: float = 0.05,
     max_steps: int = 300,
     fixed_atom_indices: Optional[Sequence[int]] = None,
@@ -21,15 +22,12 @@ def relax_material(
     Relax atomic positions with an ASE calculator (e.g. from `create_mlff_calculator`) at fixed
     cell, optionally holding atoms fixed or allowing motion along z only.
 
-    Holding the deepest substrate layers fixed is the usual slab protocol (they stand in for bulk);
-    z-only motion keeps an adsorbed film in its registry, which an unconstrained relaxation can lose.
-
     Args:
         material: The structure to relax; labels and build metadata are preserved in the result.
         calculator: Any ASE calculator.
         fmax: Force convergence criterion, eV/Angstrom.
         max_steps: Optimizer step limit.
-        fixed_atom_indices: Atoms held fixed, e.g. from `get_atom_indices_in_bottom_layers`.
+        fixed_atom_indices: Atoms held fixed.
         along_z_only: Restrict every atom's motion to the z direction.
         logfile: ASE optimizer log target; "-" is stdout, None silences it.
 
