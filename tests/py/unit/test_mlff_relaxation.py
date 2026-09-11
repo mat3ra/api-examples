@@ -2,22 +2,64 @@ import numpy as np
 import pytest
 from ase.calculators.emt import EMT
 from mat3ra.made.material import Material
+from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab import SlabBuilder, SlabConfiguration
 from mat3ra.made.tools.calculate import calculate_total_energy
+from mat3ra.made.tools.helpers import create_interface_zsl_between_slabs
 from mat3ra.notebooks_utils.mlff.relaxation import relax_material
+from mat3ra.standata.materials import Materials
 
-from .fixtures_gr_ni import GRAPHENE_NICKEL_CARBON_DISPLACED, GRAPHENE_NICKEL_TOP_HCP
+# Built the same way as optimization_interface_film_xy_position_graphene_nickel.ipynb, cells 1.2-2.3.
+_substrate = Material.create(Materials.get_by_name_first_match("Nickel"))
+_film = Material.create(Materials.get_by_name_first_match("Graphene"))
+_substrate_slab = SlabBuilder().get_material(
+    SlabConfiguration.from_parameters(
+        material_or_dict=_substrate,
+        miller_indices=(1, 1, 1),
+        number_of_layers=4,
+        vacuum=0.0,
+        termination_top_formula=None,
+        use_conventional_cell=True,
+    )
+)
+_film_slab = SlabBuilder().get_material(
+    SlabConfiguration.from_parameters(
+        material_or_dict=_film,
+        miller_indices=(0, 0, 1),
+        number_of_layers=1,
+        vacuum=0.0,
+        termination_bottom_formula=None,
+        use_conventional_cell=True,
+    )
+)
+MATERIAL = create_interface_zsl_between_slabs(
+    substrate_slab=_substrate_slab,
+    film_slab=_film_slab,
+    gap=2.58,
+    vacuum=20.0,
+    match_id=0,
+    max_area=350,
+    max_area_ratio_tol=0.09,
+    max_length_tol=0.05,
+    max_angle_tol=0.02,
+    reduce_result_cell_to_primitive=True,
+)
+BOTTOM_NI = 0  # lowest z among the substrate's Ni
+DISPLACED_CARBON = 4  # a film C; the only fixture with an in-plane force for a relaxation to constrain
 
-MATERIAL = Material.create(GRAPHENE_NICKEL_TOP_HCP)
-CARBON_DISPLACED = Material.create(GRAPHENE_NICKEL_CARBON_DISPLACED)
+CARBON_DISPLACED = MATERIAL.clone()
+_coordinates = CARBON_DISPLACED.coordinates_array
+_coordinates[DISPLACED_CARBON][0] -= 0.05
+CARBON_DISPLACED.set_coordinates(_coordinates)
+
 CALCULATOR = EMT()
 RELAX = {"fmax": 0.1, "max_steps": 50, "logfile": None}
 
 CASES = [
     # (material, fixed_atom_indices, along_z_only, xy_unchanged)
     (MATERIAL, [], False, True),
-    (MATERIAL, [0], True, True),  # bottom Ni of the fixture, no in-plane force to constrain
-    (CARBON_DISPLACED, [0], False, False),  # in-plane force free to act: the carbon drifts back
-    (CARBON_DISPLACED, [0], True, True),  # same force, held to z: the carbon cannot drift
+    (MATERIAL, [BOTTOM_NI], True, True),
+    (CARBON_DISPLACED, [BOTTOM_NI], False, False),  # in-plane force free to act: the carbon drifts back
+    (CARBON_DISPLACED, [BOTTOM_NI], True, True),  # same force, held to z: the carbon cannot drift
 ]
 
 

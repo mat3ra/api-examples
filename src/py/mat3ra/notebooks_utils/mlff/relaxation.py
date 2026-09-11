@@ -1,33 +1,11 @@
 from typing import Optional, Sequence
 
-import numpy as np
 from ase.constraints import FixAtoms, FixedLine
 from ase.optimize import BFGS
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import to_ase
 
 Z_DIRECTION = [0, 0, 1]
-
-
-def _constraints(atom_count: int, fixed_atom_indices: Optional[Sequence[int]], along_z_only: bool) -> list:
-    constraints: list = []
-    if fixed_atom_indices:
-        constraints.append(FixAtoms(indices=list(fixed_atom_indices)))
-    if along_z_only:
-        constraints.append(FixedLine(list(range(atom_count)), direction=Z_DIRECTION))
-    return constraints
-
-
-def _with_positions(material: Material, positions: np.ndarray) -> Material:
-    """A copy of the material with new cartesian positions and everything else — name, labels,
-    lattice, build metadata, units — as it was."""
-    relaxed = material.clone()
-    was_in_crystal_units = relaxed.basis.is_in_crystal_units
-    relaxed.to_cartesian()
-    relaxed.set_coordinates(positions.tolist())
-    if was_in_crystal_units:
-        relaxed.to_crystal()
-    return relaxed
 
 
 def relax_material(
@@ -59,11 +37,22 @@ def relax_material(
         RuntimeError: when the optimizer stops before the forces fall below `fmax`.
     """
     atoms = to_ase(material)
-    constraints = _constraints(len(atoms), fixed_atom_indices, along_z_only)
+    constraints = []
+    if fixed_atom_indices:
+        constraints.append(FixAtoms(indices=list(fixed_atom_indices)))
+    if along_z_only:
+        constraints.append(FixedLine(list(range(len(atoms))), direction=Z_DIRECTION))
     if constraints:
         atoms.set_constraint(constraints)
     atoms.calc = calculator
     converged = BFGS(atoms, logfile=logfile).run(fmax=fmax, steps=max_steps)
     if not converged:
         raise RuntimeError(f"Relaxation of '{material.name}' did not reach fmax={fmax} eV/A within {max_steps} steps.")
-    return _with_positions(material, atoms.positions)
+
+    relaxed = material.clone()
+    was_in_crystal_units = relaxed.basis.is_in_crystal_units
+    relaxed.to_cartesian()
+    relaxed.set_coordinates(atoms.positions.tolist())
+    if was_in_crystal_units:
+        relaxed.to_crystal()
+    return relaxed
