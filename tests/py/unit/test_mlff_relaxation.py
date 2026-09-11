@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from ase.calculators.emt import EMT
 from mat3ra.made.material import Material
+from mat3ra.made.tools.analyze.other import get_atom_indices_by_layer, get_atom_indices_in_bottom_layers
 from mat3ra.made.tools.calculate import calculate_total_energy
-from mat3ra.notebooks_utils.material.layers import get_atom_indices_by_layer, get_atom_indices_in_bottom_layers
 from mat3ra.notebooks_utils.mlff.relaxation import relax_material
 
 from .fixtures_gr_ni import GRAPHENE_NICKEL_TOP_HCP

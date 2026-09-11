@@ -30,10 +30,11 @@ notebooks:
       - pymatgen-analysis-defects<=2024.4.23
       - mat3ra-periodic-table
       - mat3ra-made
-  # packages below are used when made is installed from GH wheel (made should be installed from below)
-  #    - https://exabyte-io.github.io/made/mat3ra_made-0.1.dev1+ge64d360b8-py3-none-any.whl
-  #    - mat3ra-code
-  #    - mat3ra-esse
+      # made's own requirements, listed so a made wheel registered in the bundle (a pre-release
+      # build) resolves them the same way the PyPI package would
+      - mat3ra-code
+      - mat3ra-esse
+      - mat3ra-utils
   - name: import_material_from_jarvis_db_entry.ipynb
     packages_pyodide:
       - express-py==2024.2.2.post2
