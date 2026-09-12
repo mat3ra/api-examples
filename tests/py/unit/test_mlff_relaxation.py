@@ -45,10 +45,6 @@ MATERIAL = create_interface_zsl_between_slabs(
     reduce_result_cell_to_primitive=True,
 )
 
-# BOTTOM_NI and DISPLACED_CARBON are derived from the built structure, not pinned: the ZSL search's
-# cell choice is not pinned across environments (an unpinned transitive resolves a different match),
-# so a fixture that requires the registry ZSL happens to return is not something a test can rely on;
-# an index fixed to what one environment returns can point at the wrong atom in another.
 _cartesian = MATERIAL.clone()
 _cartesian.to_cartesian()
 _ni_indices = [i for i, e in enumerate(_cartesian.basis.elements.values) if e == "Ni"]
