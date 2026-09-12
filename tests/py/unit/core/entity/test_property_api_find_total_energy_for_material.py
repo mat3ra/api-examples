@@ -124,3 +124,18 @@ def test_find_property_for_material_queries_by_property_name(property_name):
         },
         projection={"sort": {"precision.value": -1}, "limit": 1},
     )
+
+
+def test_find_property_for_material_scopes_my_account_to_an_explicit_owner():
+    client = _client()
+
+    find_property_for_material(client, MATERIAL_ID, "band_gaps", owner_id="org-account")
+
+    client.properties.list.assert_called_once_with(
+        query={
+            "exabyteId": EXABYTE_ID,
+            "slug": "band_gaps",
+            "owner._id": "org-account",
+        },
+        projection={"sort": {"precision.value": -1}, "limit": 1},
+    )

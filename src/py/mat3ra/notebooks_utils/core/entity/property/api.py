@@ -72,7 +72,11 @@ def update_property_holder_value(client: APIClient, property_holder_id: str, val
 
 
 def find_property_for_material(
-    client: APIClient, material_id: str, property_name: str, source: str = "my_account"
+    client: APIClient,
+    material_id: str,
+    property_name: str,
+    source: str = "my_account",
+    owner_id: Optional[str] = None,
 ) -> Optional[dict]:
     """
     Find the best-precision property of the given name for a material. Mirrors the
@@ -89,6 +93,9 @@ def find_property_for_material(
         property_name (str): Property name, e.g. `total_energy` or `band_gaps`.
         source (str): Source of the property: `my_account` (default), `curators` or
             `public`.
+        owner_id (str, optional): Account the `my_account` scope resolves to. Properties inherit their
+            job's owner, so pass the account the jobs were created under -- an organization's, when
+            working on its behalf. Defaults to the caller's personal account.
 
     Returns:
         The best-precision property holder, or None if none exists.
@@ -101,7 +108,7 @@ def find_property_for_material(
     if source == "curators":
         query["owner.slug"] = "curators"
     elif source == "my_account":
-        query["owner._id"] = client.my_account.id
+        query["owner._id"] = owner_id or client.my_account.id
     elif source != "public":
         raise ValueError(f"Invalid source: {source!r}. Expected 'public', 'curators', or 'my_account'.")
     properties = client.properties.list(
