@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from mat3ra.notebooks_utils.core.entity.property.api import find_total_energy_for_material
+from mat3ra.notebooks_utils.core.entity.property.api import find_property_for_material, find_total_energy_for_material
 
 MATERIAL_ID = "material-a"
 EXABYTE_ID = "exabyte-a"
@@ -108,3 +108,34 @@ def test_find_total_energy_for_material_returns_none_when_material_has_no_exabyt
 
     client.properties.list.assert_not_called()
     assert result is None
+
+
+@pytest.mark.parametrize("property_name", ["total_energy", "band_gaps"])
+def test_find_property_for_material_queries_by_property_name(property_name):
+    client = _client()
+
+    find_property_for_material(client, MATERIAL_ID, property_name)
+
+    client.properties.list.assert_called_once_with(
+        query={
+            "exabyteId": EXABYTE_ID,
+            "slug": property_name,
+            "owner._id": OWNER_ACCOUNT_ID,
+        },
+        projection={"sort": {"precision.value": -1}, "limit": 1},
+    )
+
+
+def test_find_property_for_material_scopes_my_account_to_an_explicit_owner():
+    client = _client()
+
+    find_property_for_material(client, MATERIAL_ID, "band_gaps", owner_id="org-account")
+
+    client.properties.list.assert_called_once_with(
+        query={
+            "exabyteId": EXABYTE_ID,
+            "slug": "band_gaps",
+            "owner._id": "org-account",
+        },
+        projection={"sort": {"precision.value": -1}, "limit": 1},
+    )
