@@ -71,7 +71,7 @@ tests = [
   "pytest",
   "pytest-asyncio",
   "pytest-cov",
-  "mat3ra-notebooks-utils[workflows]",
+  "mat3ra-notebooks-utils[all]",
 ]
 docs = [
   "mkdocs>=1.4.3",
