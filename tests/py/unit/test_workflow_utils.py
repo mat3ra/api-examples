@@ -1,6 +1,6 @@
 import pytest
 from mat3ra.made.material import Material
-from mat3ra.notebooks_utils.workflow import apply_scf_kgrid, patch_workflow_qe_input
+from mat3ra.notebooks_utils.workflow import apply_planewave_cutoffs, apply_scf_kgrid, patch_workflow_qe_input
 from mat3ra.standata.workflows import WorkflowStandata
 from mat3ra.wode.workflows import Workflow
 
@@ -88,3 +88,13 @@ def test_apply_scf_kgrid_updates_pw_scf_context():
     # KPPRA is per reciprocal atom, and the ratios come from the lattice -- both via `material`.
     assert kgrid_item["data"]["gridMetricValue"] == 4 * 4 * 1 * 2
     assert kgrid_item["data"]["reciprocalVectorRatios"] == [1.0, 1.0, 0.5]
+
+
+@pytest.mark.parametrize("wavefunction,density", [(40, 200), (60, 480)])
+def test_apply_planewave_cutoffs_updates_pw_relax_context(wavefunction, density):
+    workflow = _relax_workflow()
+    apply_planewave_cutoffs(workflow, wavefunction, density, unit_name="pw_relax")
+    unit = workflow.subworkflows[0].get_unit_by_name(name="pw_relax")
+    cutoffs_item = next(item for item in unit.context if item.get("name") == "cutoffs")
+    assert cutoffs_item["data"]["wavefunction"] == float(wavefunction)
+    assert cutoffs_item["data"]["density"] == float(density)
