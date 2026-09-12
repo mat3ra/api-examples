@@ -84,7 +84,6 @@ def load_materials_from_folder(folder_path: Optional[str] = None, verbose: bool 
 
     data_from_host = []
     try:
-        index = 0
         for filename in sorted(os.listdir(folder_path)):
             if filename.endswith(".json"):
                 file_path = os.path.join(folder_path, filename)
@@ -98,18 +97,18 @@ def load_materials_from_folder(folder_path: Optional[str] = None, verbose: bool 
                         force_verbose=verbose,
                     )
                     continue
-                name = os.path.splitext(filename)[0]
-                log(f"{index}: {name}", SeverityLevelEnum.INFO, force_verbose=verbose)
-                index += 1
-                data_from_host.append(data)
+                data_from_host.append((os.path.splitext(filename)[0], data))
     except FileNotFoundError:
         log(f"No data found in the '{folder_path}' folder.", SeverityLevelEnum.ERROR, force_verbose=verbose)
         return []
 
-    try:
-        materials = [MaterialWithBuildMetadata.create(item) for item in data_from_host]
-    except Exception:
-        materials = [Material.create(item) for item in data_from_host]
+    materials: List[Any] = []
+    for name, config in data_from_host:
+        if not MaterialWithBuildMetadata.is_valid(config):
+            log(f"Skipping '{name}.json': not a material.", SeverityLevelEnum.WARNING, force_verbose=verbose)
+            continue
+        log(f"{len(materials)}: {name}", SeverityLevelEnum.INFO, force_verbose=verbose)
+        materials.append(MaterialWithBuildMetadata.create(config))
 
     if materials:
         log(
@@ -142,11 +141,9 @@ def load_material_from_folder(folder_path: str, name: str, verbose: bool = True)
         if filename.endswith(".json") and name_lower in os.path.splitext(filename)[0].lower():
             with open(os.path.join(folder_path, filename), "r") as file:
                 data = json.load(file)
-            try:
+            if MaterialWithBuildMetadata.is_valid(data):
                 resulting_material = MaterialWithBuildMetadata.create(data)
-            except Exception:
-                resulting_material = Material.create(data)
-            break
+                break
 
     if not resulting_material:
         materials = load_materials_from_folder(folder_path, verbose=verbose)
