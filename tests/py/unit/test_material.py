@@ -1,7 +1,7 @@
 import pytest
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
-from mat3ra.notebooks_utils.material import label_interface_parts
+from mat3ra.notebooks_utils.core.entity.material.interface import label_interface_parts
 from mat3ra.standata.materials import Materials
 
 TIN = Material.create(Materials.get_by_name_first_match("Titanium_Nitride"))
