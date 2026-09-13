@@ -3,7 +3,9 @@ from typing import Any, Dict, List, Optional
 
 from mat3ra.api_client import APIClient
 from mat3ra.made.material import Material
+from mat3ra.prode import PropertyName
 
+from ..property.api import get_properties_for_job
 from .analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
 
 ORDERED_ENTITY_SET_TYPE = "ordered"
@@ -30,6 +32,14 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
     created = api_client.materials.create(material.to_dict(), owner_id=owner_id)
     print(f"✅ Material created: {created['_id']}")
     return created
+
+
+def get_final_structure_for_job(api_client: APIClient, job_id: str) -> Material:
+    """Fetch the relaxed structure a job reported as its `final_structure` property."""
+    properties = get_properties_for_job(api_client, job_id, PropertyName.non_scalar.final_structure.value)
+    if not properties:
+        raise RuntimeError(f"Job {job_id} reported no 'final_structure'")
+    return Material.create(api_client.materials.get(properties[-1]["materialId"]))
 
 
 def get_bulk_material(api_client: APIClient, slab_material: Material, owner_id: str) -> Material:
