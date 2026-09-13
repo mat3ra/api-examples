@@ -1,4 +1,4 @@
-"""Unit tests for find_total_energy_for_material."""
+"""Unit tests for core.entity.property.api."""
 
 from unittest.mock import MagicMock
 
