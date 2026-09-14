@@ -2,72 +2,42 @@ import numpy as np
 import pytest
 from ase.calculators.emt import EMT
 from mat3ra.made.material import Material
-from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab import SlabBuilder, SlabConfiguration
 from mat3ra.made.tools.calculate import calculate_total_energy
-from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
-from mat3ra.made.tools.helpers import create_interface_zsl_between_slabs
+from mat3ra.made.tools.helpers import create_slab, get_atom_indices_by_layer
 from mat3ra.notebooks_utils.relaxation import relax_material
 from mat3ra.standata.materials import Materials
 
-# Built the same way as optimization_interface_film_xy_position_graphene_nickel.ipynb, cells 1.2-2.3,
-# except max_area: 100 finds the same 6-atom match as the notebook's 350 (verified) an order of
-# magnitude faster — this test only needs a deterministic small interface, not the notebook's margin.
-_substrate = Material.create(Materials.get_by_name_first_match("Nickel"))
-_film = Material.create(Materials.get_by_name_first_match("Graphene"))
-_substrate_slab = SlabBuilder().get_material(
-    SlabConfiguration.from_parameters(
-        material_or_dict=_substrate,
-        miller_indices=(1, 1, 1),
-        number_of_layers=4,
-        vacuum=0.0,
-        termination_top_formula=None,
-        use_conventional_cell=True,
-    )
+# A plain slab, not an interface: relax_material's contract is about constraints (fixed atoms,
+# along_z_only, non-convergence), not about Gr/Ni physics, and the interface path is already
+# covered by scripts/verify_fast_tier.py and by made's own tests. Ni(100), not (111): its surface
+# relaxation force (~0.12 eV/A) already exceeds RELAX's fmax, so no displacement is needed to give
+# case 0 a real force to relax.
+MATERIAL = create_slab(
+    crystal=Material.create(Materials.get_by_name_first_match("Nickel")),
+    miller_indices=(1, 0, 0),
+    number_of_layers=4,
+    vacuum=10.0,
 )
-_film_slab = SlabBuilder().get_material(
-    SlabConfiguration.from_parameters(
-        material_or_dict=_film,
-        miller_indices=(0, 0, 1),
-        number_of_layers=1,
-        vacuum=0.0,
-        termination_bottom_formula=None,
-        use_conventional_cell=True,
-    )
-)
-MATERIAL = create_interface_zsl_between_slabs(
-    substrate_slab=_substrate_slab,
-    film_slab=_film_slab,
-    gap=2.58,
-    vacuum=20.0,
-    match_id=0,
-    max_area=100,
-    max_area_ratio_tol=0.09,
-    max_length_tol=0.05,
-    max_angle_tol=0.02,
-    reduce_result_cell_to_primitive=True,
-)
+_layers = get_atom_indices_by_layer(MATERIAL)
+BOTTOM_LAYER = _layers[0]
+DISPLACED_ATOM = _layers[-1][0]
 
 _cartesian = MATERIAL.clone()
 _cartesian.to_cartesian()
-_ni_indices = [i for i, e in enumerate(_cartesian.basis.elements.values) if e == "Ni"]
-BOTTOM_NI = min(_ni_indices, key=lambda i: _cartesian.coordinates_array[i][2])
-DISPLACED_CARBON = next(
-    i for i, label in enumerate(MATERIAL.basis.labels.values) if label == InterfacePartsEnum.FILM.value
-)
-
-CARBON_DISPLACED = MATERIAL.clone()
-_coordinates = CARBON_DISPLACED.coordinates_array
-_coordinates[DISPLACED_CARBON][0] -= 0.05
-CARBON_DISPLACED.set_coordinates(_coordinates)
+_coordinates = _cartesian.coordinates_array
+_coordinates[DISPLACED_ATOM][0] += 0.3
+_cartesian.set_coordinates(_coordinates)
+_cartesian.to_crystal()
+DISPLACED = _cartesian
 
 CALCULATOR = EMT()
 RELAX = {"fmax": 0.1, "max_steps": 50, "logfile": None}
 
 CASES = [
     # (material, fixed_atom_indices, along_z_only, xy_unchanged)
-    (MATERIAL, [BOTTOM_NI], True, True),
-    (CARBON_DISPLACED, [BOTTOM_NI], False, False),  # in-plane force free to act: the carbon drifts back
-    (CARBON_DISPLACED, [BOTTOM_NI], True, True),  # same force, held to z: the carbon cannot drift
+    (MATERIAL, BOTTOM_LAYER, True, True),
+    (DISPLACED, BOTTOM_LAYER, False, False),  # in-plane force free to act: the atom drifts back
+    (DISPLACED, BOTTOM_LAYER, True, True),  # same force, held to z: the atom cannot drift
 ]
 
 
