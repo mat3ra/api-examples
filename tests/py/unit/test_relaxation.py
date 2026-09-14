@@ -6,10 +6,12 @@ from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab import Sla
 from mat3ra.made.tools.calculate import calculate_total_energy
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
 from mat3ra.made.tools.helpers import create_interface_zsl_between_slabs
-from mat3ra.notebooks_utils.mlff.relaxation import relax_material
+from mat3ra.notebooks_utils.relaxation import relax_material
 from mat3ra.standata.materials import Materials
 
-# Built the same way as optimization_interface_film_xy_position_graphene_nickel.ipynb, cells 1.2-2.3.
+# Built the same way as optimization_interface_film_xy_position_graphene_nickel.ipynb, cells 1.2-2.3,
+# except max_area: 100 finds the same 6-atom match as the notebook's 350 (verified) an order of
+# magnitude faster — this test only needs a deterministic small interface, not the notebook's margin.
 _substrate = Material.create(Materials.get_by_name_first_match("Nickel"))
 _film = Material.create(Materials.get_by_name_first_match("Graphene"))
 _substrate_slab = SlabBuilder().get_material(
@@ -38,7 +40,7 @@ MATERIAL = create_interface_zsl_between_slabs(
     gap=2.58,
     vacuum=20.0,
     match_id=0,
-    max_area=350,
+    max_area=100,
     max_area_ratio_tol=0.09,
     max_length_tol=0.05,
     max_angle_tol=0.02,
