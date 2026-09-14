@@ -3,7 +3,7 @@ import pytest
 from ase.calculators.emt import EMT
 from mat3ra.made.material import Material
 from mat3ra.made.tools.calculate import calculate_total_energy
-from mat3ra.made.tools.helpers import create_slab, get_atom_indices_by_layer
+from mat3ra.made.tools.helpers import create_slab
 from mat3ra.notebooks_utils.relaxation import relax_material
 from mat3ra.standata.materials import Materials
 
@@ -18,12 +18,13 @@ MATERIAL = create_slab(
     number_of_layers=4,
     vacuum=10.0,
 )
-_layers = get_atom_indices_by_layer(MATERIAL)
-BOTTOM_LAYER = _layers[0]
-DISPLACED_ATOM = _layers[-1][0]
 
 _cartesian = MATERIAL.clone()
 _cartesian.to_cartesian()
+_z = [c[2] for c in _cartesian.coordinates_array]
+BOTTOM_LAYER = [i for i, z in enumerate(_z) if z - min(_z) < 0.5]
+DISPLACED_ATOM = max(range(len(_z)), key=lambda i: _z[i])
+
 _coordinates = _cartesian.coordinates_array
 _coordinates[DISPLACED_ATOM][0] += 0.3
 _cartesian.set_coordinates(_coordinates)
