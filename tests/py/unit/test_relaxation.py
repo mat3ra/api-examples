@@ -9,9 +9,13 @@ from mat3ra.standata.materials import Materials
 
 # A plain slab, not an interface: relax_material's contract is about constraints (fixed atoms,
 # along_z_only, non-convergence), not about Gr/Ni physics, and the interface path is already
-# covered by scripts/verify_fast_tier.py and by made's own tests. Ni(100), not (111): its surface
-# relaxation force (~0.12 eV/A) already exceeds RELAX's fmax, so no displacement is needed to give
-# case 0 a real force to relax.
+# covered end to end by other/materials_designer/specific_examples/
+# optimization_interface_film_xy_position_graphene_nickel_SIMULATION.ipynb and by made's own tests.
+# The top atom is displaced deliberately (not left at its built position) so every case tests the
+# contract against a real, comfortable force margin rather than however close standata's Ni
+# lattice constant happens to sit to EMT's own equilibrium.
+LAYER_TOLERANCE = 0.5  # Angstrom: heights closer than this belong to the same layer
+
 MATERIAL = create_slab(
     crystal=Material.create(Materials.get_by_name_first_match("Nickel")),
     miller_indices=(1, 0, 0),
@@ -22,23 +26,30 @@ MATERIAL = create_slab(
 _cartesian = MATERIAL.clone()
 _cartesian.to_cartesian()
 _z = [c[2] for c in _cartesian.coordinates_array]
-BOTTOM_LAYER = [i for i, z in enumerate(_z) if z - min(_z) < 0.5]
-DISPLACED_ATOM = max(range(len(_z)), key=lambda i: _z[i])
+BOTTOM_LAYER = [i for i, z in enumerate(_z) if z - min(_z) < LAYER_TOLERANCE]
+TOP_ATOM = max(range(len(_z)), key=lambda i: _z[i])
 
-_coordinates = _cartesian.coordinates_array
-_coordinates[DISPLACED_ATOM][0] += 0.3
-_cartesian.set_coordinates(_coordinates)
-_cartesian.to_crystal()
-DISPLACED = _cartesian
+
+def _displaced(axis: int, amount: float) -> Material:
+    displaced = _cartesian.clone()
+    coordinates = displaced.coordinates_array
+    coordinates[TOP_ATOM][axis] += amount
+    displaced.set_coordinates(coordinates)
+    displaced.to_crystal()
+    return displaced
+
+
+Z_DISPLACED = _displaced(2, 0.3)  # out-of-plane: a real force for the along_z_only case
+XY_DISPLACED = _displaced(0, 0.3)  # in-plane: a real force to hold still or let drift back
 
 CALCULATOR = EMT()
 RELAX = {"fmax": 0.1, "max_steps": 50, "logfile": None}
 
 CASES = [
     # (material, fixed_atom_indices, along_z_only, xy_unchanged)
-    (MATERIAL, BOTTOM_LAYER, True, True),
-    (DISPLACED, BOTTOM_LAYER, False, False),  # in-plane force free to act: the atom drifts back
-    (DISPLACED, BOTTOM_LAYER, True, True),  # same force, held to z: the atom cannot drift
+    (Z_DISPLACED, BOTTOM_LAYER, True, True),
+    (XY_DISPLACED, BOTTOM_LAYER, False, False),  # in-plane force free to act: the atom drifts back
+    (XY_DISPLACED, BOTTOM_LAYER, True, True),  # same force, held to z: the atom cannot drift
 ]
 
 
