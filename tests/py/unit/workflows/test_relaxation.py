@@ -1,11 +1,10 @@
-# measured (pytest --durations=0): module 3.99s total, slowest case 0.04s
 import numpy as np
 import pytest
 from ase.calculators.emt import EMT
 from mat3ra.made.material import Material
 from mat3ra.made.tools.calculate import calculate_total_energy
 from mat3ra.made.tools.helpers import create_slab
-from mat3ra.notebooks_utils.relaxation import relax_material
+from mat3ra.notebooks_utils.workflows.relaxation import relax_material
 from mat3ra.standata.materials import Materials
 
 # A plain slab, not an interface: relax_material's contract is about constraints (fixed atoms,
@@ -61,6 +60,7 @@ def _cartesian_positions(material: Material) -> np.ndarray:
 
 
 @pytest.mark.parametrize("material, fixed_atom_indices, along_z_only, xy_unchanged", CASES)
+# measured (pytest --durations=0): module 4.34s total, slowest case 0.05s
 def test_relax_material(material, fixed_atom_indices, along_z_only, xy_unchanged):
     relaxed = relax_material(
         material, CALCULATOR, fixed_atom_indices=fixed_atom_indices, along_z_only=along_z_only, **RELAX
