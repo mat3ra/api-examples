@@ -2,7 +2,7 @@ import re
 from typing import Dict, List, Optional
 
 from mat3ra.wode import Workflow
-from mat3ra.wode.context.providers import PointsGridDataProvider
+from mat3ra.wode.context.providers import PlanewaveCutoffsContextProvider, PointsGridDataProvider
 
 FORTRAN_NUMBER_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[de][+-]?\d+)?$", re.IGNORECASE)
 
@@ -87,4 +87,18 @@ def apply_scf_kgrid(
         subworkflow.set_unit(unit)
         if first_only:
             break
+    return workflow
+
+
+def apply_planewave_cutoffs(workflow: Workflow, wavefunction, density, *, unit_name: str = "pw_relax") -> Workflow:
+    """Attaches an edited planewave cutoffs context to units named `unit_name`."""
+    context = PlanewaveCutoffsContextProvider(
+        wavefunction=wavefunction, density=density, isEdited=True
+    ).get_context_item_data()
+    for subworkflow in workflow.subworkflows:
+        if unit_name not in [unit.name for unit in subworkflow.units]:
+            continue
+        unit = subworkflow.get_unit_by_name(name=unit_name)
+        unit.add_context(context)
+        subworkflow.set_unit(unit)
     return workflow
