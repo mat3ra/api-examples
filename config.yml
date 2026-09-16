@@ -6,7 +6,10 @@
 # The default packages are installed for all the notebooks.
 default:
     packages_pyodide:
-      - mat3ra-notebooks-utils
+      # TEMPORARY (SOF-7975): branch-built wheel, because defect_formation_energy_charged.ipynb
+      # imports find_property_for_material, which no published release carries yet. Revert to
+      # `- mat3ra-notebooks-utils` once a release includes it.
+      - emfs:/drive/packages/mat3ra_notebooks_utils-2026.9.7.post1.dev7+g881e22dd-py3-none-any.whl
 notebooks:
   - name: made
     packages_pyodide:
