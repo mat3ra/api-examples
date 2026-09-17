@@ -230,29 +230,40 @@ def test_get_or_create_materials_set_requires_one_material():
 
 
 DEFECTIVE_HASH = "hash-defective"
+RELAXED_HASH = "hash-relaxed"
 DEFECTIVE_MATERIAL = SimpleNamespace(hash=DEFECTIVE_HASH)
 SAVED_DEFECTIVE: Dict[str, Any] = {"_id": "m-defective", "name": "B-vacancy h-BN", "hash": DEFECTIVE_HASH}
-RELAX_JOB: Dict[str, Any] = {"_id": "job-1", "name": "Fixed-cell Relaxation", "status": "finished"}
+FINISHED_JOB: Dict[str, Any] = {"_id": "job-1", "name": "Fixed-cell Relaxation", "status": "finished"}
 RELAXED_MATERIAL_DOC: Dict[str, Any] = {
     **Materials.get_by_name_first_match("Silicon"),
     "name": "B-vacancy h-BN relaxed",
+    "hash": RELAXED_HASH,
 }
-RELAX_WORKFLOW_NAME = "Fixed-cell Relaxation B-vacancy h-BN pbe-us"
+# Same hash as the input material: an SCF's own output, not a relaxation.
+SCF_MATERIAL_DOC: Dict[str, Any] = {
+    **Materials.get_by_name_first_match("Silicon"),
+    "name": "B-vacancy h-BN",
+    "hash": DEFECTIVE_HASH,
+}
 
 
 def test_find_relaxed_material_returns_final_structure_from_the_job():
     client = MagicMock()
     client.materials.list.return_value = [SAVED_DEFECTIVE]
-    client.jobs.list.return_value = [RELAX_JOB]
+    client.jobs.list.return_value = [FINISHED_JOB]
     client.properties.get_for_job.return_value = [{"materialId": "m-relaxed"}]
     client.materials.get.return_value = RELAXED_MATERIAL_DOC
 
-    relaxed = find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, RELAX_WORKFLOW_NAME)
+    relaxed = find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID)
 
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
     client.materials.list.assert_called_once_with({"hash": DEFECTIVE_HASH, "owner._id": OWNER_ID})
-    client.properties.get_for_job.assert_called_once_with(RELAX_JOB["_id"], "final_structure")
+    client.jobs.list.assert_called_once_with(
+        {"_material._id": SAVED_DEFECTIVE["_id"], "owner._id": OWNER_ID, "status": "finished"},
+        {"sort": {"updatedAt": -1}},
+    )
+    client.properties.get_for_job.assert_called_once_with(FINISHED_JOB["_id"], "final_structure")
     client.materials.get.assert_called_once_with("m-relaxed")
 
 
@@ -260,7 +271,7 @@ def test_find_relaxed_material_returns_none_when_material_is_not_on_the_platform
     client = MagicMock()
     client.materials.list.return_value = []
 
-    assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, RELAX_WORKFLOW_NAME) is None
+    assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID) is None
     client.jobs.list.assert_not_called()
 
 
@@ -269,15 +280,31 @@ def test_find_relaxed_material_returns_none_when_no_job_exists():
     client.materials.list.return_value = [SAVED_DEFECTIVE]
     client.jobs.list.return_value = []
 
-    assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, RELAX_WORKFLOW_NAME) is None
+    assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID) is None
     client.properties.get_for_job.assert_not_called()
 
 
 def test_find_relaxed_material_returns_none_when_job_has_no_final_structure():
     client = MagicMock()
     client.materials.list.return_value = [SAVED_DEFECTIVE]
-    client.jobs.list.return_value = [RELAX_JOB]
+    client.jobs.list.return_value = [FINISHED_JOB]
     client.properties.get_for_job.return_value = []
 
-    assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, RELAX_WORKFLOW_NAME) is None
+    assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID) is None
     client.materials.get.assert_not_called()
+
+
+def test_find_relaxed_material_skips_a_final_structure_with_the_same_hash():
+    scf_job: Dict[str, Any] = {"_id": "job-scf", "name": "Total Energy", "status": "finished"}
+    relax_job: Dict[str, Any] = {"_id": "job-relax", "name": "Fixed-cell Relaxation", "status": "finished"}
+    client = MagicMock()
+    client.materials.list.return_value = [SAVED_DEFECTIVE]
+    client.jobs.list.return_value = [scf_job, relax_job]
+    client.properties.get_for_job.side_effect = [[{"materialId": "m-scf"}], [{"materialId": "m-relaxed"}]]
+    client.materials.get.side_effect = [SCF_MATERIAL_DOC, RELAXED_MATERIAL_DOC]
+
+    relaxed = find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID)
+
+    assert relaxed is not None
+    assert relaxed.name == "B-vacancy h-BN relaxed"
+    assert client.properties.get_for_job.call_count == 2

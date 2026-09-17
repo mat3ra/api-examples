@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional
 from mat3ra.api_client import APIClient
 from mat3ra.made.material import Material
 
-from ..job.api import find_job_for_material
 from .analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
 
 ORDERED_ENTITY_SET_TYPE = "ordered"
@@ -33,32 +32,37 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
     return created
 
 
-def find_relaxed_material(api_client: APIClient, material, owner_id: str, workflow_name: str) -> Optional[Material]:
+def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Optional[Material]:
     """
-    Finds the relaxed structure a relaxation workflow already produced for this material, if the
-    platform holds both the material (by structural hash) and a finished job for it under that
-    exact workflow name. Read-only: never creates a job or writes to the platform.
+    Finds a relaxed version of this structure already on the platform: the material's finished
+    jobs, newest first, checked for one whose `final_structure` has a different hash from the
+    input -- an unchanged hash is an SCF's output, not a relaxation, and is skipped by content,
+    not by workflow name. Read-only: never creates a job or writes to the platform.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
         material: mat3ra-made Material object (must have a .hash property) to resolve on the platform.
         owner_id (str): Account ID under which to search.
-        workflow_name (str): Exact relaxation workflow name the job was created with.
 
     Returns:
-        Material, optional: The relaxed structure, or None if the material, its job, or the
-        job's `final_structure` property is missing.
+        Material, optional: The first differing-hash relaxed structure found, or None if the
+        material is not on the platform or none of its finished jobs produced one.
     """
     existing = api_client.materials.list({"hash": material.hash, "owner._id": owner_id})
     if not existing:
         return None
-    job = find_job_for_material(api_client, existing[0]["_id"], workflow_name, owner_id)
-    if job is None:
-        return None
-    properties = api_client.properties.get_for_job(job["_id"], "final_structure")
-    if not properties:
-        return None
-    return Material.create(api_client.materials.get(properties[-1]["materialId"]))
+    jobs = api_client.jobs.list(
+        {"_material._id": existing[0]["_id"], "owner._id": owner_id, "status": "finished"},
+        {"sort": {"updatedAt": -1}},
+    )
+    for job in jobs:
+        properties = api_client.properties.get_for_job(job["_id"], "final_structure")
+        if not properties:
+            continue
+        candidate = api_client.materials.get(properties[-1]["materialId"])
+        if candidate["hash"] != material.hash:
+            return Material.create(candidate)
+    return None
 
 
 def get_bulk_material(api_client: APIClient, slab_material: Material, owner_id: str) -> Material:
