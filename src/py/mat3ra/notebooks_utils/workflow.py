@@ -1,3 +1,4 @@
+import math
 import re
 from typing import Dict, List, Optional
 
@@ -60,6 +61,25 @@ def patch_workflow_qe_input(
                 template.set_content(content)
             subworkflow.set_unit(unit)
     return workflow
+
+
+def kgrid_from_density(material, density: float, periodic_dims=(0, 1, 2)) -> List[int]:
+    """
+    Returns a k-point grid sized to a reciprocal-space density, 1 on non-periodic dimensions.
+
+    Args:
+        material: Material the grid applies to; reciprocal vector norms come from its lattice.
+        density (float): Points per unit reciprocal length along each periodic dimension.
+        periodic_dims (tuple[int]): Lattice dimensions (0, 1, 2) that are periodic.
+
+    Returns:
+        list[int]: Grid dimensions, e.g. [4, 4, 1].
+    """
+    norms = material.lattice.reciprocal_vector_norms
+    grid = [1, 1, 1]
+    for dim in periodic_dims:
+        grid[dim] = max(1, math.ceil(density * 2 * math.pi * norms[dim]))
+    return grid
 
 
 def apply_scf_kgrid(
