@@ -65,7 +65,8 @@ def patch_workflow_qe_input(
 
 def kgrid_from_density(material, density: float, periodic_dims=(0, 1, 2)) -> List[int]:
     """
-    Returns a k-point grid sized as ceil(density * 2π * |b_i|) per periodic dimension, 1 elsewhere.
+    Returns a k-point grid sized to a reciprocal-space density (points per Å⁻¹) per periodic
+    dimension, 1 elsewhere.
 
     Args:
         material: Material the grid applies to; reciprocal vector norms come from its lattice.
