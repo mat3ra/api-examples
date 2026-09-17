@@ -1,9 +1,8 @@
-from types import SimpleNamespace
 from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
 import pytest
-from mat3ra.notebooks_utils.core.entity.job.api import create_job, get_or_create_job
+from mat3ra.notebooks_utils.core.entity.job.api import create_job, find_job_for_material
 
 OWNER_ID = "account-1"
 PROJECT_ID = "project-1"
@@ -32,13 +31,8 @@ MATERIALS_SET: Dict[str, Any] = {
     "isEntitySet": True,
 }
 CREATED_JOB: Dict[str, Any] = {"_id": "job-1", "name": JOB_PREFIX}
-CREATED_JOB_FULL: Dict[str, Any] = {"_id": "job-1", "name": JOB_PREFIX, "status": "pre-submission"}
 EXISTING_JOB: Dict[str, Any] = {"_id": "job-0", "name": "Fixed-cell Relaxation V_B pbe-us", "status": "finished"}
-
-RELAX_WORKFLOW = SimpleNamespace(
-    name="Fixed-cell Relaxation V_B pbe-us",
-    to_dict=lambda: {"name": "Fixed-cell Relaxation V_B pbe-us", "isMultiMaterial": False},
-)
+RELAX_WORKFLOW_NAME = "Fixed-cell Relaxation V_B pbe-us"
 
 
 @pytest.mark.parametrize(
@@ -82,59 +76,39 @@ def test_create_job_sets_materials_set_when_provided(workflow, materials_set, ex
 
 @pytest.mark.parametrize(
     "statuses",
-    [("finished",), ("submitted", "queued", "active", "finished")],
+    [("finished",), ("submitted", "queued", "active")],
 )
-def test_get_or_create_job_reuses_when_found(statuses):
+def test_find_job_for_material_returns_the_job_when_found(statuses):
     client = MagicMock()
     client.jobs.list.return_value = [EXISTING_JOB]
 
-    job = get_or_create_job(client, RELAX_WORKFLOW, MATERIALS, PROJECT_ID, OWNER_ID, statuses=statuses)
+    job = find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, statuses=statuses)
 
-    assert job["_id"] == EXISTING_JOB["_id"]
+    assert job == EXISTING_JOB
     client.jobs.list.assert_called_once_with(
         {
             "_material._id": MATERIAL_INITIAL["_id"],
             "owner._id": OWNER_ID,
-            "workflow.name": RELAX_WORKFLOW.name,
+            "workflow.name": RELAX_WORKFLOW_NAME,
             "status": {"$in": list(statuses)},
         },
         {"sort": {"updatedAt": -1}, "limit": 1},
     )
-    client.jobs.create.assert_not_called()
 
 
-def test_get_or_create_job_creates_when_not_found():
+def test_find_job_for_material_returns_none_when_not_found():
     client = MagicMock()
     client.jobs.list.return_value = []
-    client.jobs.create.return_value = CREATED_JOB
-    client.jobs.get.return_value = CREATED_JOB_FULL
 
-    job = get_or_create_job(client, RELAX_WORKFLOW, MATERIALS, PROJECT_ID, OWNER_ID, prefix=JOB_PREFIX)
+    job = find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID)
 
-    assert job == CREATED_JOB_FULL
-    client.jobs.get.assert_called_once_with(CREATED_JOB["_id"])
-    config = client.jobs.create.call_args.args[0]
-    assert config["workflow"]["name"] == RELAX_WORKFLOW.name
-    assert config["name"] == JOB_PREFIX
+    assert job is None
 
 
-def test_get_or_create_job_defaults_to_finished_only():
+def test_find_job_for_material_defaults_to_finished_only():
     client = MagicMock()
     client.jobs.list.return_value = []
-    client.jobs.create.return_value = CREATED_JOB
-    client.jobs.get.return_value = CREATED_JOB_FULL
 
-    get_or_create_job(client, RELAX_WORKFLOW, MATERIALS, PROJECT_ID, OWNER_ID)
+    find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID)
 
     assert client.jobs.list.call_args.args[0]["status"] == {"$in": ["finished"]}
-
-
-def test_get_or_create_job_defaults_prefix_to_workflow_name():
-    client = MagicMock()
-    client.jobs.list.return_value = []
-    client.jobs.create.return_value = CREATED_JOB
-    client.jobs.get.return_value = CREATED_JOB_FULL
-
-    get_or_create_job(client, RELAX_WORKFLOW, MATERIALS, PROJECT_ID, OWNER_ID)
-
-    assert client.jobs.create.call_args.args[0]["name"] == RELAX_WORKFLOW.name

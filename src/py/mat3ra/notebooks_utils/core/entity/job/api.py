@@ -2,7 +2,6 @@ import urllib.request
 from typing import Any, Dict, Iterable, List, Optional
 
 from mat3ra.api_client import APIClient, JobEndpoints
-from mat3ra.wode import Workflow
 
 MATERIALS_SET_ENTITY_CLASS = "Material"
 
@@ -117,56 +116,37 @@ def create_job(
     return api_client.jobs.create(config)
 
 
-def get_or_create_job(
+def find_job_for_material(
     api_client: APIClient,
-    workflow: Workflow,
-    materials: List[dict],
-    project_id: str,
+    material_id: str,
+    workflow_name: str,
     owner_id: str,
-    compute: Optional[dict] = None,
-    prefix: Optional[str] = None,
     statuses: Iterable[str] = ("finished",),
-) -> dict:
+) -> Optional[dict]:
     """
-    Returns an existing job for this material and workflow name if one with an allowed status
-    exists under the given owner, otherwise creates a new one.
+    Finds the most recently updated job for a material and exact workflow name, if one exists
+    with an allowed status. Read-only: never creates or submits a job.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
-        workflow (Workflow): mat3ra-wode Workflow object (must have a .name and a .to_dict()).
-        materials (list[dict]): Serialised material dicts; the first is the job's `_material`.
-        project_id (str): Project ID.
-        owner_id (str): Account ID under which to search and create.
-        compute (dict, optional): Compute configuration dict.
-        prefix (str, optional): Job name prefix for a newly created job; defaults to the
-            workflow's own name, which already carries the per-material label.
-        statuses (Iterable[str]): Job statuses that count as an existing job to reuse.
+        material_id (str): The job's `_material._id`.
+        workflow_name (str): Exact workflow name the job was created with.
+        owner_id (str): Account ID the job must belong to.
+        statuses (Iterable[str]): Job statuses that count as a match.
 
     Returns:
-        dict: The job dict (existing or newly created), always carrying `status`.
+        dict, optional: The most recently updated matching job, or None if none exists.
     """
-    query = {
-        "_material._id": materials[0]["_id"],
-        "owner._id": owner_id,
-        "workflow.name": workflow.name,
-        "status": {"$in": list(statuses)},
-    }
-    existing = api_client.jobs.list(query, {"sort": {"updatedAt": -1}, "limit": 1})
-    if existing:
-        print(f"♻️  Reusing already existing Job: {existing[0]['_id']} ({existing[0]['name']})")
-        return existing[0]
-    created = create_job(
-        api_client=api_client,
-        materials=materials,
-        workflow=workflow.to_dict(),
-        project_id=project_id,
-        owner_id=owner_id,
-        prefix=prefix or workflow.name,
-        compute=compute,
+    existing = api_client.jobs.list(
+        {
+            "_material._id": material_id,
+            "owner._id": owner_id,
+            "workflow.name": workflow_name,
+            "status": {"$in": list(statuses)},
+        },
+        {"sort": {"updatedAt": -1}, "limit": 1},
     )
-    job = api_client.jobs.get(created["_id"])
-    print(f"✅ Job created: {job['_id']} ({job['name']})")
-    return job
+    return existing[0] if existing else None
 
 
 def submit_jobs(endpoint: JobEndpoints, job_ids: List[str]) -> None:

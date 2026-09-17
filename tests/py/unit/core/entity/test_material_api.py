@@ -1,14 +1,17 @@
 import re
+from types import SimpleNamespace
 from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
 import pytest
 from mat3ra.notebooks_utils.core.entity.material.api import (
     find_material_set,
+    find_relaxed_material,
     get_or_create_materials_set,
     list_materials_by_set,
     list_materials_in_set,
 )
+from mat3ra.standata.materials import Materials
 
 OWNER_ID = "account-1"
 MATERIAL_SET_NAME = "H2+H"
@@ -224,3 +227,57 @@ def test_get_or_create_materials_set_requires_one_material():
             is_ordered=False,
         )
     client.materials.list.assert_not_called()
+
+
+DEFECTIVE_HASH = "hash-defective"
+DEFECTIVE_MATERIAL = SimpleNamespace(hash=DEFECTIVE_HASH)
+SAVED_DEFECTIVE: Dict[str, Any] = {"_id": "m-defective", "name": "B-vacancy h-BN", "hash": DEFECTIVE_HASH}
+RELAX_JOB: Dict[str, Any] = {"_id": "job-1", "name": "Fixed-cell Relaxation", "status": "finished"}
+RELAXED_MATERIAL_DOC: Dict[str, Any] = {
+    **Materials.get_by_name_first_match("Silicon"),
+    "name": "B-vacancy h-BN relaxed",
+}
+RELAX_WORKFLOW_NAME = "Fixed-cell Relaxation B-vacancy h-BN pbe-us"
+
+
+def test_find_relaxed_material_returns_final_structure_from_the_job():
+    client = MagicMock()
+    client.materials.list.return_value = [SAVED_DEFECTIVE]
+    client.jobs.list.return_value = [RELAX_JOB]
+    client.properties.get_for_job.return_value = [{"materialId": "m-relaxed"}]
+    client.materials.get.return_value = RELAXED_MATERIAL_DOC
+
+    relaxed = find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, RELAX_WORKFLOW_NAME)
+
+    assert relaxed is not None
+    assert relaxed.name == "B-vacancy h-BN relaxed"
+    client.materials.list.assert_called_once_with({"hash": DEFECTIVE_HASH, "owner._id": OWNER_ID})
+    client.properties.get_for_job.assert_called_once_with(RELAX_JOB["_id"], "final_structure")
+    client.materials.get.assert_called_once_with("m-relaxed")
+
+
+def test_find_relaxed_material_returns_none_when_material_is_not_on_the_platform():
+    client = MagicMock()
+    client.materials.list.return_value = []
+
+    assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, RELAX_WORKFLOW_NAME) is None
+    client.jobs.list.assert_not_called()
+
+
+def test_find_relaxed_material_returns_none_when_no_job_exists():
+    client = MagicMock()
+    client.materials.list.return_value = [SAVED_DEFECTIVE]
+    client.jobs.list.return_value = []
+
+    assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, RELAX_WORKFLOW_NAME) is None
+    client.properties.get_for_job.assert_not_called()
+
+
+def test_find_relaxed_material_returns_none_when_job_has_no_final_structure():
+    client = MagicMock()
+    client.materials.list.return_value = [SAVED_DEFECTIVE]
+    client.jobs.list.return_value = [RELAX_JOB]
+    client.properties.get_for_job.return_value = []
+
+    assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, RELAX_WORKFLOW_NAME) is None
+    client.materials.get.assert_not_called()

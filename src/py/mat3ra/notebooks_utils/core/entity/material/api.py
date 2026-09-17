@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 from mat3ra.api_client import APIClient
 from mat3ra.made.material import Material
 
+from ..job.api import find_job_for_material
 from .analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
 
 ORDERED_ENTITY_SET_TYPE = "ordered"
@@ -30,6 +31,34 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
     created = api_client.materials.create(material.to_dict(), owner_id=owner_id)
     print(f"✅ Material created: {created['_id']}")
     return created
+
+
+def find_relaxed_material(api_client: APIClient, material, owner_id: str, workflow_name: str) -> Optional[Material]:
+    """
+    Finds the relaxed structure a relaxation workflow already produced for this material, if the
+    platform holds both the material (by structural hash) and a finished job for it under that
+    exact workflow name. Read-only: never creates a job or writes to the platform.
+
+    Args:
+        api_client (APIClient): API client instance carrying the authorization context.
+        material: mat3ra-made Material object (must have a .hash property) to resolve on the platform.
+        owner_id (str): Account ID under which to search.
+        workflow_name (str): Exact relaxation workflow name the job was created with.
+
+    Returns:
+        Material, optional: The relaxed structure, or None if the material, its job, or the
+        job's `final_structure` property is missing.
+    """
+    existing = api_client.materials.list({"hash": material.hash, "owner._id": owner_id})
+    if not existing:
+        return None
+    job = find_job_for_material(api_client, existing[0]["_id"], workflow_name, owner_id)
+    if job is None:
+        return None
+    properties = api_client.properties.get_for_job(job["_id"], "final_structure")
+    if not properties:
+        return None
+    return Material.create(api_client.materials.get(properties[-1]["materialId"]))
 
 
 def get_bulk_material(api_client: APIClient, slab_material: Material, owner_id: str) -> Material:
