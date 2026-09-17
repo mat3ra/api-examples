@@ -32,7 +32,8 @@ MATERIALS_SET: Dict[str, Any] = {
     "isEntitySet": True,
 }
 CREATED_JOB: Dict[str, Any] = {"_id": "job-1", "name": JOB_PREFIX}
-EXISTING_JOB: Dict[str, Any] = {"_id": "job-0", "name": "Fixed-cell Relaxation V_B pbe-us"}
+CREATED_JOB_FULL: Dict[str, Any] = {"_id": "job-1", "name": JOB_PREFIX, "status": "pre-submission"}
+EXISTING_JOB: Dict[str, Any] = {"_id": "job-0", "name": "Fixed-cell Relaxation V_B pbe-us", "status": "finished"}
 
 RELAX_WORKFLOW = SimpleNamespace(
     name="Fixed-cell Relaxation V_B pbe-us",
@@ -106,10 +107,12 @@ def test_get_or_create_job_creates_when_not_found():
     client = MagicMock()
     client.jobs.list.return_value = []
     client.jobs.create.return_value = CREATED_JOB
+    client.jobs.get.return_value = CREATED_JOB_FULL
 
     job = get_or_create_job(client, RELAX_WORKFLOW, MATERIALS, PROJECT_ID, OWNER_ID, prefix=JOB_PREFIX)
 
-    assert job["_id"] == CREATED_JOB["_id"]
+    assert job == CREATED_JOB_FULL
+    client.jobs.get.assert_called_once_with(CREATED_JOB["_id"])
     config = client.jobs.create.call_args.args[0]
     assert config["workflow"]["name"] == RELAX_WORKFLOW.name
     assert config["name"] == JOB_PREFIX
@@ -119,7 +122,19 @@ def test_get_or_create_job_defaults_to_finished_only():
     client = MagicMock()
     client.jobs.list.return_value = []
     client.jobs.create.return_value = CREATED_JOB
+    client.jobs.get.return_value = CREATED_JOB_FULL
 
     get_or_create_job(client, RELAX_WORKFLOW, MATERIALS, PROJECT_ID, OWNER_ID)
 
     assert client.jobs.list.call_args.args[0]["status"] == {"$in": ["finished"]}
+
+
+def test_get_or_create_job_defaults_prefix_to_workflow_name():
+    client = MagicMock()
+    client.jobs.list.return_value = []
+    client.jobs.create.return_value = CREATED_JOB
+    client.jobs.get.return_value = CREATED_JOB_FULL
+
+    get_or_create_job(client, RELAX_WORKFLOW, MATERIALS, PROJECT_ID, OWNER_ID)
+
+    assert client.jobs.create.call_args.args[0]["name"] == RELAX_WORKFLOW.name

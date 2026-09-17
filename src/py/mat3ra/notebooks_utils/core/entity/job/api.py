@@ -1,7 +1,8 @@
 import urllib.request
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional
 
 from mat3ra.api_client import APIClient, JobEndpoints
+from mat3ra.wode import Workflow
 
 MATERIALS_SET_ENTITY_CLASS = "Material"
 
@@ -72,12 +73,12 @@ def create_job(
     workflow: dict,
     project_id: str,
     owner_id: str,
-    prefix: Optional[str] = None,
+    prefix: str,
     compute: Optional[dict] = None,
     materials_set: Optional[Dict[str, Any]] = None,
-) -> Union[dict, List[dict]]:
+) -> dict:
     """
-    Creates jobs using pre-serialised material and workflow dicts.
+    Creates a job using pre-serialised material and workflow dicts.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -85,13 +86,13 @@ def create_job(
         workflow (dict): Serialised workflow dict.
         project_id (str): Project ID.
         owner_id (str): Account ID.
-        prefix (str, optional): Job name prefix.
+        prefix (str): Job name prefix.
         compute (dict, optional): Compute configuration dict.
         materials_set (dict, optional): Ordered/unordered materials set document
             (same contract as the job designer `_materialsSet`).
 
     Returns:
-        dict | list[dict]: Created job(s).
+        dict: The created job.
     """
     workflow.pop("_id", None)
     is_multimaterial = workflow.get("isMultiMaterial", False)
@@ -118,13 +119,13 @@ def create_job(
 
 def get_or_create_job(
     api_client: APIClient,
-    workflow,
+    workflow: Workflow,
     materials: List[dict],
     project_id: str,
     owner_id: str,
     compute: Optional[dict] = None,
     prefix: Optional[str] = None,
-    statuses=("finished",),
+    statuses: Iterable[str] = ("finished",),
 ) -> dict:
     """
     Returns an existing job for this material and workflow name if one with an allowed status
@@ -132,16 +133,17 @@ def get_or_create_job(
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
-        workflow: mat3ra-wode Workflow object (must have a .name and a .to_dict()).
+        workflow (Workflow): mat3ra-wode Workflow object (must have a .name and a .to_dict()).
         materials (list[dict]): Serialised material dicts; the first is the job's `_material`.
         project_id (str): Project ID.
         owner_id (str): Account ID under which to search and create.
         compute (dict, optional): Compute configuration dict.
-        prefix (str, optional): Job name prefix for a newly created job.
-        statuses (tuple[str]): Job statuses that count as an existing job to reuse.
+        prefix (str, optional): Job name prefix for a newly created job; defaults to the
+            workflow's own name, which already carries the per-material label.
+        statuses (Iterable[str]): Job statuses that count as an existing job to reuse.
 
     Returns:
-        dict: The job dict (existing or newly created).
+        dict: The job dict (existing or newly created), always carrying `status`.
     """
     query = {
         "_material._id": materials[0]["_id"],
@@ -151,7 +153,7 @@ def get_or_create_job(
     }
     existing = api_client.jobs.list(query, {"sort": {"updatedAt": -1}, "limit": 1})
     if existing:
-        print(f"♻️  Reusing already existing Job: {existing[0]['_id']}")
+        print(f"♻️  Reusing already existing Job: {existing[0]['_id']} ({existing[0]['name']})")
         return existing[0]
     created = create_job(
         api_client=api_client,
@@ -159,12 +161,12 @@ def get_or_create_job(
         workflow=workflow.to_dict(),
         project_id=project_id,
         owner_id=owner_id,
-        prefix=prefix,
+        prefix=prefix or workflow.name,
         compute=compute,
     )
-    assert isinstance(created, dict)
-    print(f"✅ Job created: {created['_id']}")
-    return created
+    job = api_client.jobs.get(created["_id"])
+    print(f"✅ Job created: {job['_id']} ({job['name']})")
+    return job
 
 
 def submit_jobs(endpoint: JobEndpoints, job_ids: List[str]) -> None:
