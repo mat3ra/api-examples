@@ -260,8 +260,7 @@ def test_find_relaxed_material_returns_final_structure_from_the_job():
     assert relaxed.name == "B-vacancy h-BN relaxed"
     client.materials.list.assert_called_once_with({"hash": DEFECTIVE_HASH, "owner._id": OWNER_ID})
     client.jobs.list.assert_called_once_with(
-        {"_material._id": SAVED_DEFECTIVE["_id"], "owner._id": OWNER_ID, "status": "finished"},
-        {"sort": {"updatedAt": -1}},
+        {"_material._id": {"$in": [SAVED_DEFECTIVE["_id"]]}, "owner._id": OWNER_ID, "status": "finished"}
     )
     client.properties.get_for_job.assert_called_once_with(FINISHED_JOB["_id"], "final_structure")
     client.materials.get.assert_called_once_with("m-relaxed")
@@ -270,9 +269,10 @@ def test_find_relaxed_material_returns_final_structure_from_the_job():
 def test_find_relaxed_material_returns_none_when_material_is_not_on_the_platform():
     client = MagicMock()
     client.materials.list.return_value = []
+    client.jobs.list.return_value = []
 
     assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID) is None
-    client.jobs.list.assert_not_called()
+    client.properties.get_for_job.assert_not_called()
 
 
 def test_find_relaxed_material_returns_none_when_no_job_exists():
@@ -295,12 +295,10 @@ def test_find_relaxed_material_returns_none_when_job_has_no_final_structure():
 
 
 def test_find_relaxed_material_checks_every_same_hash_material():
-    # A job's own input material carries the hash too, but has no jobs of its own -- the first
-    # match with no jobs must not short-circuit the search.
-    jobless_defective: Dict[str, Any] = {"_id": "m-jobless", "name": "final_structure of job X", "hash": DEFECTIVE_HASH}
+    other_material: Dict[str, Any] = {"_id": "m-other", "name": "B-vacancy h-BN", "hash": DEFECTIVE_HASH}
     client = MagicMock()
-    client.materials.list.return_value = [jobless_defective, SAVED_DEFECTIVE]
-    client.jobs.list.side_effect = [[], [FINISHED_JOB]]
+    client.materials.list.return_value = [other_material, SAVED_DEFECTIVE]
+    client.jobs.list.return_value = [FINISHED_JOB]
     client.properties.get_for_job.return_value = [{"materialId": "m-relaxed"}]
     client.materials.get.return_value = RELAXED_MATERIAL_DOC
 
@@ -308,9 +306,9 @@ def test_find_relaxed_material_checks_every_same_hash_material():
 
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
-    assert client.jobs.list.call_count == 2
-    assert client.jobs.list.call_args_list[0].args[0]["_material._id"] == jobless_defective["_id"]
-    assert client.jobs.list.call_args_list[1].args[0]["_material._id"] == SAVED_DEFECTIVE["_id"]
+    client.jobs.list.assert_called_once_with(
+        {"_material._id": {"$in": ["m-other", "m-defective"]}, "owner._id": OWNER_ID, "status": "finished"}
+    )
 
 
 def test_find_relaxed_material_skips_a_final_structure_with_the_same_hash():

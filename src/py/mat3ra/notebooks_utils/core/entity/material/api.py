@@ -34,34 +34,26 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
 
 def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Optional[Material]:
     """
-    Finds a relaxed version of this structure already on the platform. Several account-owned
-    materials can carry the same structural hash, and the ones minted as a job's own input carry
-    no jobs of their own, so every match is checked: each material's finished jobs, newest first,
-    for one whose `final_structure` has a different hash from the input -- an unchanged hash is an
-    SCF's output, not a relaxation, and is skipped by content, not by workflow name. Read-only:
-    never creates a job or writes to the platform.
+    Finds a relaxed version of a material: the final structure of a finished job on a material
+    with the same structural hash, where the geometry has changed.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
-        material: mat3ra-made Material object (must have a .hash property) to resolve on the platform.
+        material: mat3ra-made Material object (must have a .hash property).
         owner_id (str): Account ID under which to search.
 
     Returns:
-        Material, optional: The first differing-hash relaxed structure found, or None if no
-        matching material's finished jobs produced one.
+        Material, optional: The relaxed structure, or None if none exists.
     """
-    for candidate in api_client.materials.list({"hash": material.hash, "owner._id": owner_id}):
-        jobs = api_client.jobs.list(
-            {"_material._id": candidate["_id"], "owner._id": owner_id, "status": "finished"},
-            {"sort": {"updatedAt": -1}},
-        )
-        for job in jobs:
-            properties = api_client.properties.get_for_job(job["_id"], "final_structure")
-            if not properties:
-                continue
-            relaxed = api_client.materials.get(properties[-1]["materialId"])
-            if relaxed["hash"] != material.hash:
-                return Material.create(relaxed)
+    ids = [m["_id"] for m in api_client.materials.list({"hash": material.hash, "owner._id": owner_id})]
+    query = {"_material._id": {"$in": ids}, "owner._id": owner_id, "status": "finished"}
+    for job in api_client.jobs.list(query):
+        properties = api_client.properties.get_for_job(job["_id"], "final_structure")
+        if not properties:
+            continue
+        relaxed = api_client.materials.get(properties[0]["materialId"])
+        if relaxed["hash"] != material.hash:
+            return Material.create(relaxed)
     return None
 
 

@@ -92,7 +92,7 @@ def test_find_job_for_material_returns_the_job_when_found(statuses):
             "workflow.name": RELAX_WORKFLOW_NAME,
             "status": {"$in": list(statuses)},
         },
-        {"sort": {"updatedAt": -1}, "limit": 1},
+        {"limit": 1},
     )
 
 

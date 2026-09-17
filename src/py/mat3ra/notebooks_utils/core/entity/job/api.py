@@ -124,8 +124,7 @@ def find_job_for_material(
     statuses: Iterable[str] = ("finished",),
 ) -> Optional[dict]:
     """
-    Finds the most recently updated job for a material and exact workflow name, if one exists
-    with an allowed status. Read-only: never creates or submits a job.
+    Finds a job for a material and workflow name under the given owner, filtered by status.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -135,7 +134,7 @@ def find_job_for_material(
         statuses (Iterable[str]): Job statuses that count as a match.
 
     Returns:
-        dict, optional: The most recently updated matching job, or None if none exists.
+        dict, optional: The matching job, or None if none exists.
     """
     existing = api_client.jobs.list(
         {
@@ -144,7 +143,7 @@ def find_job_for_material(
             "workflow.name": workflow_name,
             "status": {"$in": list(statuses)},
         },
-        {"sort": {"updatedAt": -1}, "limit": 1},
+        {"limit": 1},
     )
     return existing[0] if existing else None
 
