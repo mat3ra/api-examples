@@ -294,6 +294,25 @@ def test_find_relaxed_material_returns_none_when_job_has_no_final_structure():
     client.materials.get.assert_not_called()
 
 
+def test_find_relaxed_material_checks_every_same_hash_material():
+    # A job's own input material carries the hash too, but has no jobs of its own -- the first
+    # match with no jobs must not short-circuit the search.
+    jobless_defective: Dict[str, Any] = {"_id": "m-jobless", "name": "final_structure of job X", "hash": DEFECTIVE_HASH}
+    client = MagicMock()
+    client.materials.list.return_value = [jobless_defective, SAVED_DEFECTIVE]
+    client.jobs.list.side_effect = [[], [FINISHED_JOB]]
+    client.properties.get_for_job.return_value = [{"materialId": "m-relaxed"}]
+    client.materials.get.return_value = RELAXED_MATERIAL_DOC
+
+    relaxed = find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID)
+
+    assert relaxed is not None
+    assert relaxed.name == "B-vacancy h-BN relaxed"
+    assert client.jobs.list.call_count == 2
+    assert client.jobs.list.call_args_list[0].args[0]["_material._id"] == jobless_defective["_id"]
+    assert client.jobs.list.call_args_list[1].args[0]["_material._id"] == SAVED_DEFECTIVE["_id"]
+
+
 def test_find_relaxed_material_skips_a_final_structure_with_the_same_hash():
     scf_job: Dict[str, Any] = {"_id": "job-scf", "name": "Total Energy", "status": "finished"}
     relax_job: Dict[str, Any] = {"_id": "job-relax", "name": "Fixed-cell Relaxation", "status": "finished"}
