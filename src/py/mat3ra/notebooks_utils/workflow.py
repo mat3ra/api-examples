@@ -65,11 +65,11 @@ def patch_workflow_qe_input(
 
 def kgrid_from_density(material, density: float, periodic_dims=(0, 1, 2)) -> List[int]:
     """
-    Returns a k-point grid sized to a reciprocal-space density, 1 on non-periodic dimensions.
+    Returns a k-point grid sized as ceil(density * 2π * |b_i|) per periodic dimension, 1 elsewhere.
 
     Args:
         material: Material the grid applies to; reciprocal vector norms come from its lattice.
-        density (float): Points per unit reciprocal length along each periodic dimension.
+        density (float): Points per Å⁻¹ of reciprocal length (GPAW's k-point density convention).
         periodic_dims (tuple[int]): Lattice dimensions (0, 1, 2) that are periodic.
 
     Returns:

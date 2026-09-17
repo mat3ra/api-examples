@@ -3,7 +3,6 @@ import json
 import os
 from typing import Any, List, Optional
 
-from mat3ra.api_client import APIClient
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build_components import MaterialWithBuildMetadata
 from mat3ra.utils.array import convert_to_array_if_not
@@ -159,28 +158,3 @@ def load_material_from_folder(folder_path: str, name: str, verbose: bool = True)
 
     log(f"No material containing '{name}' found in '{folder_path}'.", SeverityLevelEnum.WARNING, force_verbose=verbose)
     return None
-
-
-def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) -> Material:
-    """
-    Loads a material by exact name from a folder, falling back to the owner's platform collection.
-
-    Args:
-        api_client (APIClient): API client instance carrying the authorization context.
-        folder (str): Folder to look in first, if it exists.
-        name (str): Exact material name to match.
-        owner_id (str): Account ID to search if the folder has no exact match.
-
-    Returns:
-        Material: The matching material.
-
-    Raises:
-        ValueError: If no exact match exists in the folder or the account.
-    """
-    loaded = load_material_from_folder(folder, name, verbose=False) if os.path.isdir(folder) else None
-    if loaded is not None and loaded.name == name:
-        return loaded
-    matches = api_client.materials.list({"name": name, "owner._id": owner_id}, {"limit": 1})
-    if not matches:
-        raise ValueError(f"No material named '{name}' in '{folder}' or in the account")
-    return Material.create(matches[0])

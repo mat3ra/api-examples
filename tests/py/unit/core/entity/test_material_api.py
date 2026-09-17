@@ -1,3 +1,4 @@
+import json
 import re
 from types import SimpleNamespace
 from typing import Any, Dict, List
@@ -10,6 +11,7 @@ from mat3ra.notebooks_utils.core.entity.material.api import (
     get_or_create_materials_set,
     list_materials_by_set,
     list_materials_in_set,
+    load_material,
 )
 from mat3ra.standata.materials import Materials
 
@@ -272,7 +274,7 @@ def test_find_relaxed_material_returns_none_when_material_is_not_on_the_platform
     client.jobs.list.return_value = []
 
     assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID) is None
-    client.properties.get_for_job.assert_not_called()
+    assert client.jobs.list.call_args.args[0]["_material._id"] == {"$in": []}
 
 
 def test_find_relaxed_material_returns_none_when_no_job_exists():
@@ -325,3 +327,47 @@ def test_find_relaxed_material_skips_a_final_structure_with_the_same_hash():
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
     assert client.properties.get_for_job.call_count == 2
+
+
+SILICON_NAMED = {**Materials.get_by_name_first_match("Silicon"), "name": "Silicon"}
+
+
+def test_load_material_finds_an_exact_match_in_the_folder(tmp_path):
+    (tmp_path / "silicon.json").write_text(json.dumps(SILICON_NAMED))
+    client = MagicMock()
+
+    material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
+
+    assert material.name == "Silicon"
+    client.materials.list.assert_not_called()
+
+
+def test_load_material_falls_back_to_the_account(tmp_path):
+    (tmp_path / "silicon.json").write_text(json.dumps(Materials.get_by_name_first_match("Silicon")))
+    client = MagicMock()
+    client.materials.list.return_value = [SILICON_NAMED]
+
+    material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
+
+    assert material.name == "Silicon"
+    client.materials.list.assert_called_once_with({"name": "Silicon", "owner._id": OWNER_ID}, {"limit": 1})
+
+
+def test_load_material_raises_when_neither_has_it(tmp_path):
+    client = MagicMock()
+    client.materials.list.return_value = []
+
+    with pytest.raises(ValueError, match="Germanium"):
+        load_material(client, str(tmp_path), "Germanium", OWNER_ID)
+
+
+def test_load_material_falls_through_a_folder_near_miss(tmp_path):
+    (tmp_path / "silicon.json").write_text(json.dumps(SILICON_NAMED))
+    (tmp_path / "silicon relaxed.json").write_text(json.dumps({**SILICON_NAMED, "name": "Silicon relaxed"}))
+    client = MagicMock()
+    client.materials.list.return_value = [SILICON_NAMED]
+
+    material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
+
+    assert material.name == "Silicon"
+    client.materials.list.assert_called_once_with({"name": "Silicon", "owner._id": OWNER_ID}, {"limit": 1})

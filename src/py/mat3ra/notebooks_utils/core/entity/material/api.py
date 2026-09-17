@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Any, Dict, List, Optional
 
@@ -5,6 +6,7 @@ from mat3ra.api_client import APIClient
 from mat3ra.made.material import Material
 
 from .analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
+from .io import load_material_from_folder
 
 ORDERED_ENTITY_SET_TYPE = "ordered"
 UNORDERED_ENTITY_SET_TYPE = "unordered"
@@ -30,6 +32,32 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
     created = api_client.materials.create(material.to_dict(), owner_id=owner_id)
     print(f"✅ Material created: {created['_id']}")
     return created
+
+
+def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) -> Material:
+    """
+    Loads a material by exact name from a folder (substring-matched, accepted only on an exact
+    name) or the owner's platform collection.
+
+    Args:
+        api_client (APIClient): API client instance carrying the authorization context.
+        folder (str): Folder to look in first, if it exists.
+        name (str): Exact material name to match.
+        owner_id (str): Account ID to search if the folder has no exact match.
+
+    Returns:
+        Material: The matching material.
+
+    Raises:
+        ValueError: If no exact match exists in the folder or the account.
+    """
+    loaded = load_material_from_folder(folder, name, verbose=False) if os.path.isdir(folder) else None
+    if loaded is not None and loaded.name == name:
+        return loaded
+    matches = api_client.materials.list({"name": name, "owner._id": owner_id}, {"limit": 1})
+    if not matches:
+        raise ValueError(f"No material named '{name}' in '{folder}' or in the account")
+    return Material.create(matches[0])
 
 
 def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Optional[Material]:
