@@ -89,7 +89,7 @@ def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Opt
         properties = api_client.properties.get_for_job(job["_id"], "final_structure")
         if not properties:
             continue
-        relaxed = api_client.materials.get(properties[0]["materialId"])
+        relaxed = api_client.materials.get(properties[-1]["materialId"])
         if relaxed["hash"] != material.hash:
             return Material.create(relaxed)
     return None
