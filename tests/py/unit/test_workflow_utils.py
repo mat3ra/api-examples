@@ -1,6 +1,11 @@
 import pytest
 from mat3ra.made.material import Material
-from mat3ra.notebooks_utils.workflow import apply_planewave_cutoffs, apply_scf_kgrid, patch_workflow_qe_input
+from mat3ra.notebooks_utils.workflow import (
+    apply_planewave_cutoffs,
+    apply_scf_kgrid,
+    kgrid_from_density,
+    patch_workflow_qe_input,
+)
 from mat3ra.standata.workflows import WorkflowStandata
 from mat3ra.wode.workflows import Workflow
 
@@ -88,6 +93,39 @@ def test_apply_scf_kgrid_updates_pw_scf_context():
     # KPPRA is per reciprocal atom, and the ratios come from the lattice -- both via `material`.
     assert kgrid_item["data"]["gridMetricValue"] == 4 * 4 * 1 * 2
     assert kgrid_item["data"]["reciprocalVectorRatios"] == [1.0, 1.0, 0.5]
+
+
+def _lattice_material(a, b, c):
+    return Material.create(
+        {
+            "name": "test",
+            "lattice": {
+                "a": a,
+                "b": b,
+                "c": c,
+                "alpha": 90,
+                "beta": 90,
+                "gamma": 90,
+                "type": "ORC",
+                "units": {"length": "angstrom", "angle": "degree"},
+            },
+            "basis": {
+                "elements": [{"id": 0, "value": "Si"}],
+                "coordinates": [{"id": 0, "value": [0, 0, 0]}],
+                "units": "crystal",
+            },
+        }
+    )
+
+
+def test_kgrid_from_density_monolayer():
+    material = _lattice_material(a=15.05, b=8.69, c=20.0)
+    assert kgrid_from_density(material, 6, periodic_dims=(0, 1)) == [3, 5, 1]
+
+
+def test_kgrid_from_density_cubic():
+    material = _lattice_material(a=5.0, b=5.0, c=5.0)
+    assert kgrid_from_density(material, 6) == [8, 8, 8]
 
 
 @pytest.mark.parametrize("wavefunction,density", [(40, 200), (60, 480)])
