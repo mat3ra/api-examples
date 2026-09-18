@@ -1,6 +1,11 @@
 import pytest
 from mat3ra.made.material import Material
-from mat3ra.notebooks_utils.workflow import apply_scf_kgrid, kgrid_from_density, patch_workflow_qe_input
+from mat3ra.notebooks_utils.workflow import (
+    apply_planewave_cutoffs,
+    apply_scf_kgrid,
+    kgrid_from_density,
+    patch_workflow_qe_input,
+)
 from mat3ra.standata.workflows import WorkflowStandata
 from mat3ra.wode.workflows import Workflow
 
@@ -121,3 +126,13 @@ def test_kgrid_from_density_monolayer():
 def test_kgrid_from_density_cubic():
     material = _lattice_material(a=5.0, b=5.0, c=5.0)
     assert kgrid_from_density(material, 6) == [8, 8, 8]
+
+
+@pytest.mark.parametrize("wavefunction,density", [(40, 200), (60, 480)])
+def test_apply_planewave_cutoffs_updates_pw_relax_context(wavefunction, density):
+    workflow = _relax_workflow()
+    apply_planewave_cutoffs(workflow, wavefunction, density, unit_name="pw_relax")
+    unit = workflow.subworkflows[0].get_unit_by_name(name="pw_relax")
+    cutoffs_item = next(item for item in unit.context if item.get("name") == "cutoffs")
+    assert cutoffs_item["data"]["wavefunction"] == float(wavefunction)
+    assert cutoffs_item["data"]["density"] == float(density)

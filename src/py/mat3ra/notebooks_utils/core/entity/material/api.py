@@ -4,7 +4,9 @@ from typing import Any, Dict, List, Optional
 
 from mat3ra.api_client import APIClient
 from mat3ra.made.material import Material
+from mat3ra.prode import PropertyName
 
+from ..property.api import get_properties_for_job
 from .analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
 from .io import load_material_from_folder
 
@@ -58,6 +60,14 @@ def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) 
     if not matches:
         raise ValueError(f"No material named '{name}' in '{folder}' or in the account")
     return Material.create(matches[0])
+
+
+def get_final_structure_for_job(api_client: APIClient, job_id: str) -> Material:
+    """Fetch the relaxed structure a job reported as its `final_structure` property."""
+    properties = get_properties_for_job(api_client, job_id, PropertyName.non_scalar.final_structure.value)
+    if not properties:
+        raise RuntimeError(f"Job {job_id} reported no 'final_structure'")
+    return Material.create(api_client.materials.get(properties[-1]["materialId"]))
 
 
 def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Optional[Material]:

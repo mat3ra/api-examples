@@ -8,6 +8,7 @@ import pytest
 from mat3ra.notebooks_utils.core.entity.material.api import (
     find_material_set,
     find_relaxed_material,
+    get_final_structure_for_job,
     get_or_create_materials_set,
     list_materials_by_set,
     list_materials_in_set,
@@ -371,3 +372,28 @@ def test_load_material_falls_through_a_folder_near_miss(tmp_path):
 
     assert material.name == "Silicon"
     client.materials.list.assert_called_once_with({"name": "Silicon", "owner._id": OWNER_ID}, {"limit": 1})
+
+
+JOB_ID = "job-1"
+FINAL_STRUCTURE_MATERIAL_ID = "m-final-structure"
+
+
+@pytest.mark.parametrize(
+    ("properties", "error"),
+    [
+        ([{"materialId": FINAL_STRUCTURE_MATERIAL_ID}], None),
+        ([], "reported no 'final_structure'"),
+    ],
+)
+def test_get_final_structure_for_job(properties, error):
+    client = MagicMock()
+    client.properties.get_for_job.return_value = properties
+    client.materials.get.return_value = Materials.get_by_name_first_match("Silicon")
+    if error:
+        with pytest.raises(RuntimeError, match=error):
+            get_final_structure_for_job(client, JOB_ID)
+        return
+    material = get_final_structure_for_job(client, JOB_ID)
+    assert material.basis.elements.values == ["Si", "Si"]
+    client.properties.get_for_job.assert_called_once_with(JOB_ID, "final_structure")
+    client.materials.get.assert_called_once_with(FINAL_STRUCTURE_MATERIAL_ID)
