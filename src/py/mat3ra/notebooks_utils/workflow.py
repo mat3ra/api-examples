@@ -63,7 +63,7 @@ def patch_workflow_qe_input(
     return workflow
 
 
-def kgrid_from_density(material, density: float, periodic_dims=(0, 1, 2)) -> List[int]:
+def kgrid_from_density(material, density: float, periodic_dims: tuple = (0, 1, 2)) -> List[int]:
     """
     Returns a k-point grid sized to a reciprocal-space density (points per Å⁻¹) per periodic
     dimension, 1 elsewhere.

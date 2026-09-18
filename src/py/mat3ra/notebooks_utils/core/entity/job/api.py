@@ -1,5 +1,5 @@
 import urllib.request
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 from mat3ra.api_client import APIClient, JobEndpoints
 
@@ -75,9 +75,9 @@ def create_job(
     prefix: str,
     compute: Optional[dict] = None,
     materials_set: Optional[Dict[str, Any]] = None,
-) -> dict:
+) -> Union[dict, List[dict]]:
     """
-    Creates a job using pre-serialised material and workflow dicts.
+    Creates jobs using pre-serialised material and workflow dicts.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -91,7 +91,7 @@ def create_job(
             (same contract as the job designer `_materialsSet`).
 
     Returns:
-        dict: The created job.
+        dict | list[dict]: Created job(s).
     """
     workflow.pop("_id", None)
     is_multimaterial = workflow.get("isMultiMaterial", False)

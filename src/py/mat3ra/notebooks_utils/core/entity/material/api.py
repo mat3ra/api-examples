@@ -86,7 +86,7 @@ def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Opt
     ids = [m["_id"] for m in api_client.materials.list({"hash": material.hash, "owner._id": owner_id})]
     query = {"_material._id": {"$in": ids}, "owner._id": owner_id, "status": "finished"}
     for job in api_client.jobs.list(query):
-        properties = api_client.properties.get_for_job(job["_id"], "final_structure")
+        properties = api_client.properties.get_for_job(job["_id"], PropertyName.non_scalar.final_structure.value)
         if not properties:
             continue
         relaxed = api_client.materials.get(properties[-1]["materialId"])

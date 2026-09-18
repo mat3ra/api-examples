@@ -269,6 +269,25 @@ def test_find_relaxed_material_returns_final_structure_from_the_job():
     client.materials.get.assert_called_once_with("m-relaxed")
 
 
+def test_find_relaxed_material_uses_the_last_final_structure_entry():
+    # A relaxation job's final_structure property can carry more than one entry: the initial
+    # structure (same hash as the input) first, the relaxed one last -- PLAN #27.
+    client = MagicMock()
+    client.materials.list.return_value = [SAVED_DEFECTIVE]
+    client.jobs.list.return_value = [FINISHED_JOB]
+    client.properties.get_for_job.return_value = [{"materialId": "m-initial"}, {"materialId": "m-relaxed"}]
+    client.materials.get.side_effect = lambda material_id: {
+        "m-initial": SCF_MATERIAL_DOC,
+        "m-relaxed": RELAXED_MATERIAL_DOC,
+    }[material_id]
+
+    relaxed = find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID)
+
+    assert relaxed is not None
+    assert relaxed.name == "B-vacancy h-BN relaxed"
+    client.materials.get.assert_called_once_with("m-relaxed")
+
+
 def test_find_relaxed_material_returns_none_when_material_is_not_on_the_platform():
     client = MagicMock()
     client.materials.list.return_value = []
