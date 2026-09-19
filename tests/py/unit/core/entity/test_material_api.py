@@ -382,7 +382,6 @@ def test_load_material_raises_when_neither_has_it(tmp_path):
 
 
 def test_load_material_falls_through_a_folder_near_miss(tmp_path):
-    (tmp_path / "silicon.json").write_text(json.dumps(SILICON_NAMED))
     (tmp_path / "silicon relaxed.json").write_text(json.dumps({**SILICON_NAMED, "name": "Silicon relaxed"}))
     client = MagicMock()
     client.materials.list.return_value = [SILICON_NAMED]
