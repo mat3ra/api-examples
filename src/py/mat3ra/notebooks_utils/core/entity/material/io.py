@@ -122,35 +122,52 @@ def load_materials_from_folder(folder_path: Optional[str] = None, verbose: bool 
     return materials
 
 
+def _get_name_match_rank(requested_name: str, material_name: str, filename_without_extension: str) -> Optional[int]:
+    """
+    Rank how well one folder entry matches a requested name: lower is better, None is no match.
+
+    An exact match wins over a substring match, and a case-sensitive match over a case-insensitive
+    one. Among exact matches the material name wins; among substring matches the filename wins.
+    """
+    requested_name_lower = requested_name.lower()
+    ranked_candidates = [
+        material_name == requested_name,
+        filename_without_extension == requested_name,
+        material_name.lower() == requested_name_lower,
+        filename_without_extension.lower() == requested_name_lower,
+        requested_name_lower in filename_without_extension.lower(),
+        requested_name_lower in material_name.lower(),
+    ]
+    return next((rank for rank, matches in enumerate(ranked_candidates) if matches), None)
+
+
 def load_material_from_folder(folder_path: str, name: str, verbose: bool = True) -> Optional[Any]:
     """
-    Load a single material from the specified folder by matching a substring of the name or filename.
+    Load a single material from the specified folder by matching the name or filename.
 
     Args:
         folder_path (str): The path to the folder containing material files.
-        name (str): The substring to match against material names or filenames (case-insensitive).
+        name (str): The name to match against material names or filenames. An exact match is
+                    preferred; otherwise a case-insensitive substring match is accepted.
         verbose (bool): Whether to log verbose messages.
 
     Returns:
-        Optional[Material]: The first Material object that matches, or None if not found.
+        Optional[Material]: The best matching Material object, or None if not found.
     """
-    name_lower = name.lower()
+    best_rank = None
     resulting_material = None
 
     for filename in sorted(os.listdir(folder_path)):
-        if filename.endswith(".json") and name_lower in os.path.splitext(filename)[0].lower():
-            with open(os.path.join(folder_path, filename), "r") as file:
-                data = json.load(file)
-            if MaterialWithBuildMetadata.is_valid(data):
-                resulting_material = MaterialWithBuildMetadata.create(data)
-                break
-
-    if not resulting_material:
-        materials = load_materials_from_folder(folder_path, verbose=verbose)
-        for material in materials:
-            if name_lower in material.name.lower():
-                resulting_material = material
-                break
+        if not filename.endswith(".json"):
+            continue
+        with open(os.path.join(folder_path, filename), "r") as file:
+            data = json.load(file)
+        if not MaterialWithBuildMetadata.is_valid(data):
+            continue
+        material = MaterialWithBuildMetadata.create(data)
+        rank = _get_name_match_rank(name, material.name, os.path.splitext(filename)[0])
+        if rank is not None and (best_rank is None or rank < best_rank):
+            best_rank, resulting_material = rank, material
 
     if resulting_material:
         log(f"Found: '{resulting_material.name}'", SeverityLevelEnum.INFO, force_verbose=verbose)
