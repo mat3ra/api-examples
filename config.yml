@@ -51,7 +51,9 @@ notebooks:
       - emfs:/drive/packages/watchdog-2.3.1-py3-none-any.whl
   - name: specific_examples
     packages_pyodide:
-      - mat3ra-standata
+      # TEMPORARY: Mg3N2 (mp-1559) is not in a released mat3ra-standata. Built from
+      # https://github.com/mat3ra/standata/pull/160 -- restore `mat3ra-standata` once it is released.
+      - emfs:/drive/packages/mat3ra_standata-2026.9.11.post3.dev1+g12200846-py3-none-any.whl
 #      - mat3ra-notebooks-utils[utils_standata]
   - name: analyze_convex_hull
     packages_pyodide:
@@ -77,7 +79,7 @@ notebooks:
       - jinja2
       - emfs:/drive/packages/pydantic_core-2.18.2-py3-none-any.whl
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
-      - mat3ra-standata
+      - emfs:/drive/packages/mat3ra_standata-2026.9.11.post3.dev1+g12200846-py3-none-any.whl
       - mat3ra-ide
       - mat3ra-api-client
       - requests
