@@ -18,3 +18,15 @@ def test_data_file_beside_a_material_is_skipped(tmp_path):
 
 def test_lookup_by_name_works_alongside_a_data_file(tmp_path):
     assert load_material_from_folder(_uploads_folder(tmp_path), "Silicon", verbose=False) is not None
+
+
+def _prefixed_names_folder(tmp_path):
+    silicon = Materials.get_by_name_first_match("Silicon")
+    for name in ("Silicon", "Silicon with a vacancy"):
+        (tmp_path / f"{name}.json").write_text(json.dumps({**silicon, "name": name}))
+    return str(tmp_path)
+
+
+def test_exact_name_wins_over_a_longer_name_containing_it(tmp_path):
+    material = load_material_from_folder(_prefixed_names_folder(tmp_path), "Silicon", verbose=False)
+    assert material.name == "Silicon"
