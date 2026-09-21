@@ -271,9 +271,10 @@ def parse(run_dir, limit_records=None, deposition=None, instrument="asylum-afm")
     records = all_records[:limit_records] if limit_records else all_records
     wid = wafer_id(recipe)
     run_name = session.get("name") or run_dir.name
-    # the specimen's physical ID is the case-sticker text; it is how NLR's and UTK's data find the same set
-    sample_set = {"name": wid, "entitySetType": "ordered",
-                  "metadata": {"label": wid, "recipe": recipe["name"], "context": recipe.get("context", "")}}
+    reg = registration(recipe)
+    sample_set = {"name": run_name, "entitySetType": "ordered", "wafer": {"physicalId": wid},
+                  "origin": {"coordinates": [recipe["sites"][0]["x_stage_m"], recipe["sites"][0]["y_stage_m"]], "units": "m"},
+                  "metadata": {"recipe": recipe["name"], "context": recipe.get("context", ""), "registration": reg}}
     # NLR's HTEM deposition record(s) for this wafer, verbatim — the specimen's synthesis data. UTK drops the file into
     # the run folder as deposition*.json; --deposition overrides that.
     deposition_files = [Path(deposition)] if deposition else sorted(run_dir.glob("deposition*.json"))
@@ -304,7 +305,6 @@ def parse(run_dir, limit_records=None, deposition=None, instrument="asylum-afm")
     for label, const in per_sample.items():
         if label in samples:
             samples[label]["metadata"] = const
-    reg = registration(recipe)
     workflow = build_workflow(recipe, list(samples))
     unit_id = workflow["subworkflows"][0]["units"][0]["flowchartId"]
     measurement_set = {"name": run_name, "entitySetType": "ordered",
@@ -315,10 +315,8 @@ def parse(run_dir, limit_records=None, deposition=None, instrument="asylum-afm")
     started = session.get("started_ts")
     setup_block = {"name": instrument,
                         "session": {k: v for k, v in {"name": session.get("name"),
-                                                      "started": datetime.fromtimestamp(started, timezone.utc).isoformat().replace("+00:00", "Z") if started else None,
-                                                      "directory": session.get("instrument_directory")}.items() if v},
-                        **({"settings": common["instrument_params"]} if common.get("instrument_params") else {}),
-                        "registration": reg}
+                                                      "started": datetime.fromtimestamp(started, timezone.utc).isoformat().replace("+00:00", "Z") if started else None}.items() if v},
+                        **({"settings": common["instrument_params"]} if common.get("instrument_params") else {})}
     by_sample, slim_by_sample = {}, {}
     for r, slim in zip(records, slim_records):
         lab = r["labels"]["site_label"]
@@ -329,7 +327,8 @@ def parse(run_dir, limit_records=None, deposition=None, instrument="asylum-afm")
         recs = by_sample.get(label, [])
         measurements[label] = {"name": f"{run_name} {label}", "_sample": None, "workflow": workflow,
                                "setup": setup_block, "status": "finished",
-                               "metadata": {"run_dir": session.get("run_dir", str(run_dir)), "recordsCount": len(recs)}}
+                               "metadata": {"run_dir": session.get("run_dir", str(run_dir)), "recordsCount": len(recs),
+                                            "registration": reg, "instrumentDirectory": session.get("instrument_directory")}}
         slim_by_label = slim_by_sample.get(label, [])
         measurements[label]["_records"] = slim_by_label  # not sent; upload() decides files vs metadata
         files[label] = sample_files(label, recs, run_dir, slim_by_sample.get(label, []))
@@ -441,46 +440,25 @@ def ensure_set(endpoint, doc, owner_id):
     return (found[0], False) if found else (endpoint.create_set(dict(doc, owner={"_id": owner_id})), True)
 
 
-def find_set_by_label(endpoint, label, owner_id):
-    """The specimen is found by its physical ID (metadata.label); older sets by name."""
-    found = find(endpoint, {"isEntitySet": True, "metadata.label": label}, owner_id, 5) or \
-            find(endpoint, {"isEntitySet": True, "name": label}, owner_id, 5)
-    return found[0] if found else None
-
-
 def upload(client, parsed, command="both", files="records"):
-    """Two separate imports joined by the Sample Set's physical label:
+    """Two imports onto the run's own Sample Set — one placement of the wafer on one instrument:
     `synthesis`   — NLR's record(s) + the photograph onto the set (created if missing; no samples, no measurements);
-    `measurement` — UTK's run: the set (created bare if NLR has not arrived), its samples, the measurement set tied to
-                    it, one measurement per sample, files, properties;
+    `measurement` — UTK's run: the set, its samples, the measurement set tied to it, one measurement per sample, files, properties;
     `both`        — synthesis if the folder has a deposition record, then measurement.
-    Idempotent: sets by label, members by name/label; files re-put; properties posted only when missing."""
+    Idempotent: sets by run name, members by name/label; files re-put; properties posted only when missing."""
     wafer_label, run_name = parsed["wafer"], parsed["run"]
     owner = {"_id": client.my_account.id}
     has_deposition = "deposition" in parsed["sample_set"]["metadata"]
-    sample_set = find_set_by_label(client.samples, wafer_label, owner["_id"])
-    created_set = False
-    if sample_set is None:
-        doc = dict(parsed["sample_set"], owner=owner)
-        if command == "measurement":  # UTK arrived first: a bare set, the synthesis record comes later
-            doc["metadata"] = {k: v for k, v in doc["metadata"].items() if k != "deposition"}
-        sample_set = client.samples.create_set(doc)
-        created_set = True
+    sample_set, created_set = ensure_set(client.samples, parsed["sample_set"], owner["_id"])
     set_id = sample_set["_id"]
-    if command in ("synthesis", "both") and has_deposition and not created_set:
-        # the set was here first (UTK arrived before NLR): attach the record now
-        patch = {k: v for k, v in parsed["sample_set"]["metadata"].items() if k in ("label", "deposition")}
-        client.samples.update_set(set_id, {"metadata": patch})
     if command in ("synthesis", "both") and has_deposition:
-        print(f"sample set {set_id} ({wafer_label}{', created' if created_set else ', updated'}): synthesis record attached")
+        print(f"sample set {set_id} ({wafer_label}{', created' if created_set else ''}): synthesis record attached")
     if command in ("synthesis", "both") and files != "none":
         for image in parsed["images"]:
             put_file(client, f"sets/{set_id}/{image.name}", image, owner["_id"])
             print(f"  image {image.name} -> sets/{set_id}/")
     if command == "synthesis":
         return
-    if not created_set and not (sample_set.get("metadata") or {}).get("label"):
-        client.samples.update_set(set_id, {"metadata": {"label": wafer_label}})
     in_set = {s.get("label"): s for s in find(client.samples, {"inSet._id": set_id, "isEntitySet": {"$ne": True}}, owner["_id"], 500)}
     sample_ids, created = {}, 0
     for label, sample_doc in parsed["samples"].items():
