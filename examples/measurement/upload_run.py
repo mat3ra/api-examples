@@ -13,9 +13,9 @@ Requires Python 3.9+ and `pip install mat3ra-api-client`, which talks to the pla
 ACCOUNT_ID + AUTH_TOKEN (an API token from Preferences), from the environment; MAT3RA_HOST picks the host. Optional:
 `pip install mat3ra-esse` (tested with 2026.8.27-0) turns on schema validation before anything is uploaded.
 
-Canonical copy: mat3ra/web-app `src/application/public/upload_run.py` (served by the web app at /upload_run.py, so the
-instructions in the app always match). The planning repo keeps a working copy and the tests; scripts/publish.sh
-copies web-app → plan by default and plan → web-app with --push.
+Canonical copy: mat3ra/api-examples `examples/measurement/upload_run.py`, beside the notebook that imports it. The
+planning repo keeps a working copy and the tests; scripts/publish.sh copies api-examples → plan by default and
+plan → api-examples with --push.
 """
 import argparse, ast, concurrent.futures, json, math, os, re, statistics, struct, sys, threading, time, urllib.parse, uuid
 from datetime import datetime, timezone
@@ -84,7 +84,7 @@ def load_run(run_dir):
 
 
 def wafer_id(recipe):
-    """The specimen's physical ID as written on its case, taken from the recipe name (e.g. PDAC_COM5_01448)."""
+    """The wafer's physical ID as written on its case, taken from the recipe name (e.g. PDAC_COM5_01448)."""
     m = WAFER_ID.search(recipe.get("context", ""))
     return m.group(1) if m else recipe["name"]
 
@@ -239,12 +239,17 @@ def factor_records(records):
     slim = [_unflatten({k: v for k, v in row.items() if k not in common_keys and k not in sample_keys}) for row in flat]
     return common, per_sample, slim
 
+def starting_site(recipe):
+    """The site the run started from: r0c00 when the recipe has it, else the first one listed."""
+    return next((s for s in recipe["sites"] if s["label"] == "r0c00"), recipe["sites"][0])
+
+
 def registration(recipe):
-    """The instrument's frame as UTK stated it: one anchor in words (from recipe.context) and where r0c00 sits on the stage.
-    Recorded, not interpreted — a second anchor is needed for a rigid map (PROPOSAL §3.5)."""
+    """The instrument's frame as UTK stated it: one anchor in words (from recipe.context) and where the run started
+    on the stage. Recorded, not interpreted."""
     ctx = recipe.get("context", "")
     m = re.search(r"starting point is (.+?)(?:\.|$)", ctx)
-    r0 = next((s for s in recipe["sites"] if s["label"] == "r0c00"), recipe["sites"][0])
+    r0 = starting_site(recipe)
     return {"frame": "asylum-spm stage", "units": "m", "anchor": m.group(1).strip() if m else ctx,
             f"{r0['label']}_stage_m": [r0["x_stage_m"], r0["y_stage_m"]]}
 
@@ -271,11 +276,11 @@ def parse(run_dir, limit_records=None, deposition=None, instrument="asylum-afm")
     records = all_records[:limit_records] if limit_records else all_records
     wid = wafer_id(recipe)
     run_name = session.get("name") or run_dir.name
-    reg = registration(recipe)
+    reg, start = registration(recipe), starting_site(recipe)
     sample_set = {"name": run_name, "entitySetType": "ordered", "wafer": {"physicalId": wid},
-                  "origin": {"coordinates": [recipe["sites"][0]["x_stage_m"], recipe["sites"][0]["y_stage_m"]], "units": "m"},
+                  "origin": {"coordinates": [start["x_stage_m"], start["y_stage_m"]], "units": "m"},
                   "metadata": {"recipe": recipe["name"], "context": recipe.get("context", ""), "registration": reg}}
-    # NLR's HTEM deposition record(s) for this wafer, verbatim — the specimen's synthesis data. UTK drops the file into
+    # NLR's HTEM deposition record(s) for this wafer, verbatim. UTK drops the file into
     # the run folder as deposition*.json; --deposition overrides that.
     deposition_files = [Path(deposition)] if deposition else sorted(run_dir.glob("deposition*.json"))
     if deposition_files:
@@ -284,7 +289,7 @@ def parse(run_dir, limit_records=None, deposition=None, instrument="asylum-afm")
             d = json.loads(f.read_text())
             deposition_records.extend(d if isinstance(d, list) else [d])
         sample_set["metadata"]["deposition"] = deposition_records
-    # the specimen photograph: any image at the run-folder root
+    # the wafer photograph: any image at the run-folder root
     images = [f for f in sorted(run_dir.iterdir()) if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
     # samples in recipe order (the set is ordered; the server assigns inSet.index as they are moved in)
     samples = {s["label"]: {"name": f"{wid} {s['label']}", "label": s["label"],
@@ -327,8 +332,7 @@ def parse(run_dir, limit_records=None, deposition=None, instrument="asylum-afm")
         recs = by_sample.get(label, [])
         measurements[label] = {"name": f"{run_name} {label}", "_sample": None, "workflow": workflow,
                                "setup": setup_block, "status": "finished",
-                               "metadata": {"run_dir": session.get("run_dir", str(run_dir)), "recordsCount": len(recs),
-                                            "registration": reg, "instrumentDirectory": session.get("instrument_directory")}}
+                               "metadata": {"run_dir": session.get("run_dir", str(run_dir)), "recordsCount": len(recs)}}
         slim_by_label = slim_by_sample.get(label, [])
         measurements[label]["_records"] = slim_by_label  # not sent; upload() decides files vs metadata
         files[label] = sample_files(label, recs, run_dir, slim_by_sample.get(label, []))
@@ -470,7 +474,6 @@ def upload(client, parsed, command="both", files="records"):
         sample_ids[label] = doc["_id"]
         created += 1
     print(f"sample set {set_id} ({wafer_label}, ordered{', created' if created_set else ''}): {len(sample_ids)} samples, {created} created")
-    # the run's specimen is not stored on the set: each measurement names its sample, and the sample names the set
     measurement_set, created_measurement_set = ensure_set(client.measurements, parsed["measurement_set"], owner["_id"])
     existing = {m["name"]: m for m in find(client.measurements, {"inSet._id": measurement_set["_id"], "isEntitySet": {"$ne": True}}, owner["_id"], 500)}
     measurement_ids, measurements_created = {}, 0
@@ -529,7 +532,7 @@ def main():
     a = ap.parse_args()
     p = parse(a.run_dir, a.limit_records, a.deposition, a.instrument)
     nfiles = sum(len(v) for v in p["files"].values())
-    print(f"specimen {p['wafer']}: {len(p['samples'])} samples (ordered set) · run {p['run']}: {len(p['measurements'])} measurements "
+    print(f"wafer {p['wafer']}: {len(p['samples'])} samples (ordered set) · run {p['run']}: {len(p['measurements'])} measurements "
           f"(ordered set, one per sample) · {len(p['records'])} records -> {nfiles} files · {len(p['images'])} image(s) · "
           f"{len(p['properties'])} samples with a combined loop" + (f" · no curves: {len(p['skipped'])} samples" if p["skipped"] else ""))
     for label, _, prop, _rep in p["properties"]:
