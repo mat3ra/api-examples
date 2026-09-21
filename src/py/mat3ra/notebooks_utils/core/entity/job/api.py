@@ -35,7 +35,11 @@ def get_jobs_statuses_by_ids(endpoint: JobEndpoints, job_ids: List[str]) -> List
     Returns:
         list: list of job statuses
     """
-    jobs = endpoint.list({"_id": {"$in": job_ids}}, {"fields": {"status": 1}})
+    # .list()'s query=<json blob> is silently dropped by the migrated JobsList use case, which
+    # only accepts flat, declared keys - unfiltered, it returns every job in the account, so the
+    # wait loop above never sees the tracked jobs reach a terminal status. `id` is such a flat key
+    # (accepts a single id or an array), so use .request() directly with it instead.
+    jobs = endpoint.request("GET", endpoint.name, params={"id": job_ids}, headers=endpoint.headers)
     return [job["status"] for job in jobs]
 
 

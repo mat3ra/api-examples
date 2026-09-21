@@ -11,19 +11,42 @@ FERMI_ENERGY_PROPERTIES = {
 }
 
 
+def _get_properties_for_job(
+    client: APIClient, job_id: str, property_name: Optional[str] = None, unit_id: Optional[str] = None
+) -> List[dict]:
+    """
+    Replacement for the broken `client.properties.get_for_job()`: that method builds its filter
+    as `{"source.info.jobId": ..., "data.name": ...}` via `.list()`, which wraps it as a
+    query=<json> blob - the properties list endpoint (migrated to a validated use case) silently
+    drops it, since it only accepts flat, declared keys. "jobId"/"slug" are the flat equivalents
+    of "source.info.jobId"/"data.name"; there's no flat equivalent for "source.info.unitId", so
+    that part (rare - only used for disambiguating fermiEnergy by flowchart unit) is filtered in
+    Python. Returns each match's "data" sub-dict, matching get_for_job()'s own return shape.
+    """
+    params = {"jobId": job_id}
+    if property_name:
+        params["slug"] = property_name
+    holders = client.properties.request(
+        "GET", client.properties.name, params=params, headers=client.properties.headers
+    )
+    if unit_id:
+        holders = [h for h in holders if h.get("source", {}).get("info", {}).get("unitId") == unit_id]
+    return [holder["data"] for holder in holders]
+
+
 def get_properties_for_job(client: APIClient, job_id: str, property_name: Optional[str] = None) -> List[dict]:
     """
     Fetch properties for a job, automatically enriching band_structure/DOS results with fermiEnergy.
     Use instead of client.properties.get_for_job when passing results to visualize_properties.
     """
     job = client.jobs.get(job_id)
-    properties = client.properties.get_for_job(job_id, property_name)
+    properties = _get_properties_for_job(client, job_id, property_name)
     if property_name not in FERMI_ENERGY_PROPERTIES:
         return properties
     flowchart_id = get_fermi_energy_flowchart_id(job)
     fermi_energy = None
     if flowchart_id:
-        fe_props = client.properties.get_for_job(job_id, PropertyName.scalar.fermi_energy.value, flowchart_id)
+        fe_props = _get_properties_for_job(client, job_id, PropertyName.scalar.fermi_energy.value, flowchart_id)
         if fe_props:
             fermi_energy = fe_props[0].get("value")
     return [{**prop, "fermiEnergy": fermi_energy} for prop in properties]
@@ -44,13 +67,15 @@ def get_property_holder_for_job(
     Returns:
         dict: Full property holder document.
     """
-    query = {
-        "source.info.jobId": job_id,
-        "data.name": property_name,
-    }
+    # Using .request() with flat params instead of .list(): see _get_properties_for_job above for
+    # why, and note this function (unlike get_properties_for_job) needs the full property holder,
+    # not just its "data" sub-dict.
+    params = {"jobId": job_id, "slug": property_name}
+    holders = client.properties.request(
+        "GET", client.properties.name, params=params, headers=client.properties.headers
+    )
     if unit_id:
-        query["source.info.unitId"] = unit_id
-    holders = client.properties.list(query=query)
+        holders = [h for h in holders if h.get("source", {}).get("info", {}).get("unitId") == unit_id]
     if not holders:
         raise ValueError(f"Property '{property_name}' not found for job '{job_id}'")
     return holders[0]
@@ -94,18 +119,24 @@ def find_total_energy_for_material(client: APIClient, material_id: str, source: 
     exabyte_id = material.get("exabyteId")
     if not exabyte_id:
         return None
-    query = {"exabyteId": exabyte_id, "slug": "total_energy"}
+    # Using .request() with flat params instead of .list(): see _get_properties_for_job above for
+    # why. "owner.slug"/"owner._id" map onto the flat "ownerSlug"/"ownerId" keys; sorting/limiting
+    # by best precision has no flat equivalent (the endpoint's "sort" param expects a nested
+    # object, which a simple flat query param can't carry), so that's done in Python instead -
+    # there are only ever a few differently-precise total_energy properties per material.
+    params = {"exabyteId": exabyte_id, "slug": "total_energy"}
     if source == "curators":
-        query["owner.slug"] = "curators"
+        params["ownerSlug"] = "curators"
     elif source == "my_account":
-        query["owner._id"] = client.my_account.id
+        params["ownerId"] = client.my_account.id
     elif source != "public":
         raise ValueError(f"Invalid source: {source!r}. Expected 'public', 'curators', or 'my_account'.")
-    properties = client.properties.list(
-        query=query,
-        projection={"sort": {"precision.value": -1}, "limit": 1},
+    properties = client.properties.request(
+        "GET", client.properties.name, params=params, headers=client.properties.headers
     )
-    return properties[0] if properties else None
+    if not properties:
+        return None
+    return max(properties, key=lambda prop: prop.get("precision", {}).get("value", 0))
 
 
 def get_property_by_subworkflow_and_unit_indicies(

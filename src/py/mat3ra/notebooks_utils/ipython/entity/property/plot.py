@@ -23,7 +23,6 @@ FONT_SIZE_TITLE = 22
 FONT_SIZE_LABEL_STABLE = 16
 FONT_SIZE_LABEL_UNSTABLE = 14
 FONT_SIZE_LEGEND = 14
-TEXT_SHADOW = "2px 2px 4px rgba(0,0,0,0.8), " "-2px -2px 4px rgba(0,0,0,0.8), " "0px 0px 8px rgba(0,0,0,0.9)"
 
 # Markers
 MARKER_SIZE = 20
@@ -60,14 +59,10 @@ def plot_convex_hull(phase_diagram: PhaseDiagram, show_unstable: float = 0.2) ->
         trace.marker.size = MARKER_SIZE
         if trace.name == "Stable":
             trace.textposition = "top center"
-            trace.textfont = dict(
-                size=FONT_SIZE_LABEL_STABLE, color=TEXT_COLOR_PRIMARY, family=FONT_FAMILY, shadow=TEXT_SHADOW
-            )
+            trace.textfont = dict(size=FONT_SIZE_LABEL_STABLE, color=TEXT_COLOR_PRIMARY, family=FONT_FAMILY)
         else:
             trace.textposition = "bottom center"
-            trace.textfont = dict(
-                size=FONT_SIZE_LABEL_UNSTABLE, color=TEXT_COLOR_UNSTABLE, family=FONT_FAMILY, shadow=TEXT_SHADOW
-            )
+            trace.textfont = dict(size=FONT_SIZE_LABEL_UNSTABLE, color=TEXT_COLOR_UNSTABLE, family=FONT_FAMILY)
 
     axis_style = dict(
         title=dict(font=dict(size=FONT_SIZE_TITLE, color=TEXT_COLOR_PRIMARY)),
