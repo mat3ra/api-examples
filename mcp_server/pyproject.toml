@@ -1,0 +1,32 @@
+[project]
+name = "mat3ra-mcp-server"
+version = "0.1.0"
+description = "Proof-of-concept MCP server for the Mat3ra API"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0",
+    "mat3ra-api-client",
+]
+
+[project.optional-dependencies]
+openai  = ["openai>=1.0"]
+claude  = ["anthropic>=0.25"]
+gemini  = ["google-genai>=1.0"]
+# hf backend: transformers runtime needs these; ollama runtime uses only stdlib urllib
+hf      = ["transformers>=4.40", "accelerate>=0.27"]
+# torch must be installed separately (platform-specific wheel)
+# Mac/CPU:   pip install torch
+# CUDA:      pip install torch --index-url https://download.pytorch.org/whl/cu121
+all-llm = [
+    "mat3ra-mcp-server[openai]",
+    "mat3ra-mcp-server[claude]",
+    "mat3ra-mcp-server[gemini]",
+    "mat3ra-mcp-server[hf]",
+]
+
+[project.scripts]
+mat3ra-mcp = "mcp_server.server:main"
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
