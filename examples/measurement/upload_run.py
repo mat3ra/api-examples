@@ -10,9 +10,8 @@ It knows nothing about any instrument. Reading a lab's delivery into a run docum
 `parse_utk.py` for a UTK SS-PFM run, `parse_nlr.py` for NLR's delivery — and `run_document.py` states the
 shape they agree on. A new lab is a new parser; nothing here changes.
 
-Requires Python 3.9+ and `pip install mat3ra-api-client`, which talks to the platform and takes OIDC_ACCESS_TOKEN,
-or ACCOUNT_ID + AUTH_TOKEN (an API token from Preferences), from the environment; MAT3RA_HOST picks the host.
-Optional: `pip install mat3ra-esse` turns on schema validation before anything is uploaded.
+Requires Python 3.9+ and `pip install -r requirements.txt`. Credentials come from the environment:
+OIDC_ACCESS_TOKEN, or ACCOUNT_ID + AUTH_TOKEN (an API token from Preferences); MAT3RA_HOST picks the host.
 """
 import argparse, concurrent.futures, os, sys, threading, time, urllib.parse
 from pathlib import Path
@@ -22,11 +21,8 @@ from mat3ra.api_client import APIClient
 
 from run_document import load
 
-try:  # optional: schema validation before anything is sent
-    from mat3ra.esse import ESSE
-    from mat3ra.esse.models.sample import SampleSchema
-except ImportError:
-    ESSE = SampleSchema = None
+from mat3ra.esse import ESSE
+from mat3ra.esse.models.sample import SampleSchema
 
 def holder(prop, measurement_id, sample_id, unit_id, repetition):
     """The property holder the platform stores: the data, where it came from (measurement, sample, workflow unit) and a
@@ -40,10 +36,7 @@ def holder(prop, measurement_id, sample_id, unit_id, repetition):
 
 
 def validate(parsed):
-    """Validate every document against the ESSE schemas; returns the number of invalid ones. Skipped (returns 0) when the
-    optional mat3ra-esse package is not installed."""
-    if ESSE is None:
-        return None  # not installed: the caller says so rather than reporting a pass
+    """Validate every document against the ESSE schemas; returns the number of invalid ones."""
     esse = ESSE()
     schemas = {x["$id"]: x for x in esse.schemas}
     errors = 0
@@ -263,13 +256,8 @@ def main():
     a = ap.parse_args()
 
     runs = [load(path) for path in a.documents]
-    counts = [validate(run) for run in runs]
-    if any(count is None for count in counts):
-        print("validation: SKIPPED — mat3ra-esse is not installed (see requirements.txt); nothing was checked")
-        errors = 0
-    else:
-        errors = sum(counts)
-        print("validation:", "OK" if errors == 0 else f"{errors} invalid documents")
+    errors = sum(validate(run) for run in runs)
+    print("validation:", "OK" if errors == 0 else f"{errors} invalid documents")
     if errors or a.dry_run:
         sys.exit(1 if errors else 0)
 

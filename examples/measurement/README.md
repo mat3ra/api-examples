@@ -16,17 +16,8 @@ python -m venv venv && . venv/bin/activate      # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-That file names every package and the exact source of each. Three of them are pinned to a branch: the PyPI
-releases do not yet have the REST endpoints, the instrument registry entries, or the Sample and Measurement
-schemas this example uses. The pins become ordinary version numbers when those branches release.
-
-Check it worked — this must print three workflow names, not `None`:
-
-```bash
-python -c "from mat3ra.standata.workflows import WorkflowStandata as W; print([
-    W.find_by_application_and_name(a, n)['name'] for a, n in
-    (('asylum-spm','SS-PFM Hysteresis Loop'),('xrf-mapper','XRF Grid Map'),('probe-station','DC I-V Sweep'))])"
-```
+api-client, standata and esse are pinned to the branch carrying the REST endpoints, the instrument registry
+entries and the Sample and Measurement schemas. They become version pins when it releases.
 
 ## Credentials
 

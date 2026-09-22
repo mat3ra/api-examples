@@ -2,41 +2,19 @@
 technique over those same pads — the XRF map, then the DC I-V sweep.
 
 Ad hoc parser for SOF-8050: it reads the tab-separated files NLR ships and nothing else.
-
-Requires `pip install "git+https://github.com/mat3ra/standata.git@feature/SOF-8051"` until that branch is released:
-the instruments' registry entries are on it, and the PyPI release predates them.
 """
 import argparse
 from pathlib import Path
+
+from mat3ra.standata.workflows import WorkflowStandata
 
 from run_document import serialize
 
 
 def standata_workflow(application_name, workflow_name):
-    """The procedure the instrument runs, from the standata registry — the same entry the platform resolves a
-    job's workflow through. Building one here would be a second source of truth for something that already
-    has one; a new instrument is a new registry entry, not code."""
-    from mat3ra.standata.workflows import WorkflowStandata
-    workflow = WorkflowStandata.find_by_application_and_name(application_name, workflow_name)
-    if workflow is None:
-        raise SystemExit(f"standata has no '{workflow_name}' workflow for {application_name}.\n{standata_origin()}\n"
-                         'Install the branch it is registered on and RESTART THE KERNEL (a %pip install does not\n'
-                         'replace a module this session already imported):\n'
-                         '    pip install --force-reinstall --no-deps "git+https://github.com/mat3ra/standata.git@feature/SOF-8051"')
-    return workflow
-
-
-def standata_origin():
-    """Which mat3ra-standata is in this interpreter — the answer to 'but it is installed'."""
-    import importlib.metadata as metadata
-    try:
-        distribution = metadata.distribution("mat3ra-standata")
-    except metadata.PackageNotFoundError:
-        return "mat3ra-standata is not installed."
-    direct_url = distribution.read_text("direct_url.json")
-    source = "the feature branch" if direct_url and "feature/SOF-8051" in direct_url else \
-             "another branch" if direct_url else "PyPI, which predates these entries"
-    return f"You have mat3ra-standata {distribution.version} from {source}."
+    """The procedure the instrument runs, from the standata registry — the entry the platform resolves
+    a job's workflow through."""
+    return WorkflowStandata.find_by_application_and_name(application_name, workflow_name)
 
 
 def unit_id(workflow):
