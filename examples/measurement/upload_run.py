@@ -295,7 +295,7 @@ def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument=
             deposition_records.extend(d if isinstance(d, list) else [d])
         sample_set["metadata"]["deposition"] = deposition_records
     # the photograph of the piece: any image at the run-folder root
-    images = [f for f in sorted(run_dir.iterdir()) if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
+    images = [(f.name, f) for f in sorted(run_dir.iterdir()) if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
     # samples in recipe order (the set is ordered; the server assigns inSet.index as they are moved in)
     samples = {s["label"]: {"name": f"{physical_id} {s['label']}", "label": s["label"], "physicalId": physical_id,
                             "position": {"coordinates": [s["x_stage_m"], s["y_stage_m"]], "units": "m"},
@@ -394,7 +394,9 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument):
     grid_file = sorted(folder.rglob("*xrf_grid.txt"))[0]
     volts_file, amps_file = sorted(folder.rglob("IV_Volts.txt"))[0], sorted(folder.rglob("IV_Amps.txt"))[0]
     run_name = grid_file.stem
-    images = [f for f in sorted(folder.rglob("*")) if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
+    # searched recursively, so the name keeps the subdirectory: two photographs may share a basename
+    images = [(f.relative_to(folder).as_posix(), f) for f in sorted(folder.rglob("*"))
+              if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
     sample_set = {"name": run_name, "entitySetType": "ordered", "metadata": {}}
     xrf_run_name = f"{run_name} XRF"
     xrf_workflow = build_nlr_workflow(XRF_APPLICATION, "map", "xrf_grid", "XRF Grid Map",
@@ -603,7 +605,7 @@ def run_files(parsed, groups=("records",)):
     if unknown:
         raise SystemExit(f"unknown file group(s): {', '.join(sorted(unknown))}; choose from {', '.join(FILE_GROUPS)}")
     files = [(f"set/{name}", payload) for name, payload in parsed["set_files"]]
-    files += [(f"set/{image.name}", image) for image in parsed["images"]]
+    files += [(f"set/{name}", path) for name, path in parsed["images"]]
     for label, file_list in parsed["files"].items():
         files += [(f"{label}/{name}", payload) for name, payload in file_list
                   if ("loops" if name.startswith("loops/") else "records") in groups]
