@@ -404,6 +404,10 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument):
     samples, xrf_measurements, xrf_properties = {}, {}, []
     for row, column, x_mm, y_mm, thickness_um, aluminium_at_pct, scandium_at_pct in grid:
         label = f"r{int(row)}c{int(column)}"
+        # two rows for one pad would overwrite each other here and leave the row counts below
+        # agreeing against a dictionary that has already lost an entry
+        if label in samples:
+            raise SystemExit(f"{grid_file.name}: pad {label} appears twice")
         samples[label] = {"name": f"{physical_id} {label}", "label": label, "physicalId": physical_id,
                           "position": {"coordinates": [float(x_mm), float(y_mm)], "units": "mm"},
                           "metadata": {"frame": NLR_FRAME, "row": int(row), "column": int(column)}}
@@ -420,9 +424,9 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument):
     volts = [[float(v) for v in cells] for cells in read_columns(volts_file)]
     amps = [[float(a) for a in cells] for cells in read_columns(amps_file)]
     # zip would silently drop pads, so the shapes are checked before any document is built
-    if not (len(samples) == len(volts) == len(amps)):
+    if not (len(grid) == len(volts) == len(amps)):
         raise SystemExit(f"{volts_file.name}/{amps_file.name}: {len(volts)}/{len(amps)} rows for "
-                         f"{len(samples)} pads — every pad needs one row in each file")
+                         f"{len(grid)} pads in {grid_file.name} — every pad needs one row in each file")
     for row, (bias_row, current_row) in enumerate(zip(volts, amps)):
         if len(bias_row) != len(current_row):
             raise SystemExit(f"row {row}: {len(bias_row)} bias points but {len(current_row)} current points")
@@ -555,6 +559,22 @@ def put_file(client, name, payload, owner_id):
             time.sleep(2 * (attempt + 1))
 
 
+def merge_metadata(existing, incoming):
+    """`incoming` on top of `existing`, keeping what neither replaces. A list grows by the entries it
+    does not already hold - a second synthesis run brings deposition records the set has never seen,
+    and taking only absent keys would drop them because `deposition` is already there."""
+    merged = dict(existing)
+    for key, value in incoming.items():
+        held = merged.get(key)
+        if isinstance(held, list) and isinstance(value, list):
+            merged[key] = held + [v for v in value if v not in held]
+        elif isinstance(held, dict) and isinstance(value, dict):
+            merged[key] = merge_metadata(held, value)
+        else:
+            merged[key] = value
+    return merged
+
+
 def ensure_set(endpoint, doc, owner_id):
     """The set with this name in the account, created when missing; returns (set, created).
     An existing set takes any metadata it does not have yet - a synthesis run after a measurement
@@ -564,11 +584,10 @@ def ensure_set(endpoint, doc, owner_id):
         return endpoint.create_set(dict(doc, owner={"_id": owner_id})), True
 
     existing = found[0]
-    incoming = doc.get("metadata") or {}
-    missing = {k: v for k, v in incoming.items() if k not in (existing.get("metadata") or {})}
-    if missing:
-        endpoint.update_set(existing["_id"], {"metadata": missing})
-        existing = dict(existing, metadata={**(existing.get("metadata") or {}), **missing})
+    merged = merge_metadata(existing.get("metadata") or {}, doc.get("metadata") or {})
+    if merged != (existing.get("metadata") or {}):
+        endpoint.update_set(existing["_id"], {"metadata": merged})
+        existing = dict(existing, metadata=merged)
     return existing, False
 
 
