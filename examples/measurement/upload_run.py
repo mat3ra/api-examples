@@ -6,8 +6,8 @@ Ad hoc parser for SOF-8050. Field kinds follow ONTOLOGY.md. The property model f
 the property is the pad's hysteresis loop — the eight loops combined — with the loop parameters (mean, population
 standard deviation, count over the loops) inside it. Individual loops stay in the measurement's metadata.
 
-    upload_run.py <run_dir> --account <slug>                      # upload everything
-    upload_run.py <run_dir> --dry-run [--emit-example out.json]   # parse + validate only; write one property as the ESSE example
+    upload_run.py <run_dir> --physical-id <id> --account <slug>                      # upload everything
+    upload_run.py <run_dir> --physical-id <id> --dry-run [--emit-example out.json]   # parse + validate only; write one property as the ESSE example
 
 Requires Python 3.9+ and `pip install mat3ra-api-client`, which talks to the platform and takes OIDC_ACCESS_TOKEN, or
 ACCOUNT_ID + AUTH_TOKEN (an API token from Preferences), from the environment; MAT3RA_HOST picks the host. Optional:
@@ -279,17 +279,15 @@ def sample_files(label, records, run_dir, slim_by_index):
     return out
 
 
-def parse(run_dir, limit_records=None, deposition=None, instrument="asylum-afm"):
+def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument="asylum-afm"):
     """The whole run folder as platform documents: sample set, samples, measurement set, one measurement per sample, files, one loop property per fully measured sample."""
     run_dir = Path(run_dir)
     recipe, session, all_records = load_run(run_dir)
     records = all_records[:limit_records] if limit_records else all_records
     wid = wafer_id(recipe)
     run_name = session.get("name") or run_dir.name
-    reg, start = registration(recipe), starting_site(recipe)
-    sample_set = {"name": run_name, "entitySetType": "ordered", "wafer": {"physicalId": wid},
-                  "origin": {"coordinates": [start["x_stage_m"], start["y_stage_m"]], "units": "m"},
-                  "metadata": {"recipe": recipe["name"], "context": recipe.get("context", ""), "registration": reg}}
+    reg = registration(recipe)
+    sample_set = {"name": run_name, "entitySetType": "ordered", "metadata": {}}
     # NLR's HTEM deposition record(s) for this wafer, verbatim. UTK drops the file into
     # the run folder as deposition*.json; --deposition overrides that.
     deposition_files = [Path(deposition)] if deposition else sorted(run_dir.glob("deposition*.json"))
@@ -302,8 +300,9 @@ def parse(run_dir, limit_records=None, deposition=None, instrument="asylum-afm")
     # the wafer photograph: any image at the run-folder root
     images = [f for f in sorted(run_dir.iterdir()) if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
     # samples in recipe order (the set is ordered; the server assigns inSet.index as they are moved in)
-    samples = {s["label"]: {"name": f"{wid} {s['label']}", "label": s["label"],
-                            "position": {"coordinates": [s["x_stage_m"], s["y_stage_m"]], "units": "m"}, "metadata": {}}
+    samples = {s["label"]: {"name": f"{wid} {s['label']}", "label": s["label"], "physicalId": physical_id,
+                            "position": {"coordinates": [s["x_stage_m"], s["y_stage_m"]], "units": "m"},
+                            "metadata": {"registration": reg}}
                for s in recipe["sites"]}
     if limit_records:
         # a trial run must be a prefix of a full one: only samples whose records ALL made the cut, so no sample is
@@ -319,7 +318,7 @@ def parse(run_dir, limit_records=None, deposition=None, instrument="asylum-afm")
     common, per_sample, slim_records = factor_records(records)
     for label, const in per_sample.items():
         if label in samples:
-            samples[label]["metadata"] = const
+            samples[label]["metadata"].update(const)
     workflow = build_workflow(recipe, list(samples))
     unit_id = workflow["subworkflows"][0]["units"][0]["flowchartId"]
     measurement_set = {"name": run_name, "entitySetType": "ordered",
@@ -527,6 +526,7 @@ def main():
     """Command line: parse, validate, upload."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("run_dir")
+    ap.add_argument("--physical-id", required=True, help="the identifier written on the physical piece the samples are part of, e.g. PDAC_COM5_01448")
     ap.add_argument("command", nargs="?", choices=["synthesis", "measurement", "both"], default="both",
                     help="synthesis: NLR record + photo onto the set · measurement: UTK run onto the set · both (default)")
     ap.add_argument("--dry-run", action="store_true")
@@ -540,7 +540,7 @@ def main():
     ap.add_argument("--deposition", help="NLR HTEM record (json) attached to the wafer set's metadata")
     ap.add_argument("--instrument", default="asylum-afm", help="identity of the machine the run was measured on (the run folder does not record it)")
     a = ap.parse_args()
-    p = parse(a.run_dir, a.limit_records, a.deposition, a.instrument)
+    p = parse(a.run_dir, a.physical_id, a.limit_records, a.deposition, a.instrument)
     nfiles = sum(len(v) for v in p["files"].values())
     print(f"wafer {p['wafer']}: {len(p['samples'])} samples (ordered set) · run {p['run']}: {len(p['measurements'])} measurements "
           f"(ordered set, one per sample) · {len(p['records'])} records -> {nfiles} files · {len(p['images'])} image(s) · "
