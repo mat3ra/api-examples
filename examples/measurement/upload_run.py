@@ -30,7 +30,6 @@ try:  # optional: schema validation before anything is sent
 except ImportError:
     ESSE = SampleSchema = None
 
-WAFER_ID = re.compile(r"(PDAC_COM\d+_\d+)")
 FIELD = {"off_field": "off", "on_field": "on"}
 # loop_params key -> parameters path (units: voltages in xAxis.units, responses in yAxis.units)
 PARAMETERS = {
@@ -81,12 +80,6 @@ def load_run(run_dir):
     session = json.loads((run_dir / "session.json").read_text()) if (run_dir / "session.json").exists() else {}
     records = [json.loads(p.read_text()) for p in sorted((run_dir / "records").glob("*.json"))]
     return recipe, session, records
-
-
-def wafer_id(recipe):
-    """The wafer's physical ID as written on its case, taken from the recipe name (e.g. PDAC_COM5_01448)."""
-    m = WAFER_ID.search(recipe.get("context", ""))
-    return m.group(1) if m else recipe["name"]
 
 
 def response_curve(loops_dir, field, phase_offset_deg, bias):
@@ -284,7 +277,7 @@ def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument=
     run_dir = Path(run_dir)
     recipe, session, all_records = load_run(run_dir)
     records = all_records[:limit_records] if limit_records else all_records
-    wid = wafer_id(recipe)
+    wid = physical_id
     run_name = session.get("name") or run_dir.name
     reg = registration(recipe)
     sample_set = {"name": run_name, "entitySetType": "ordered", "metadata": {}}
