@@ -277,11 +277,12 @@ def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument=
     run_dir = Path(run_dir)
     recipe, session, all_records = load_run(run_dir)
     records = all_records[:limit_records] if limit_records else all_records
-    wid = physical_id
+    if not physical_id:
+        raise ValueError("--physical-id: the identifier written on the physical piece is required")
     run_name = session.get("name") or run_dir.name
     reg = registration(recipe)
     sample_set = {"name": run_name, "entitySetType": "ordered", "metadata": {}}
-    # NLR's HTEM deposition record(s) for this wafer, verbatim. UTK drops the file into
+    # NLR's HTEM deposition record(s) for the piece, verbatim. UTK drops the file into
     # the run folder as deposition*.json; --deposition overrides that.
     deposition_files = [Path(deposition)] if deposition else sorted(run_dir.glob("deposition*.json"))
     if deposition_files:
@@ -290,10 +291,10 @@ def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument=
             d = json.loads(f.read_text())
             deposition_records.extend(d if isinstance(d, list) else [d])
         sample_set["metadata"]["deposition"] = deposition_records
-    # the wafer photograph: any image at the run-folder root
+    # the photograph of the piece: any image at the run-folder root
     images = [f for f in sorted(run_dir.iterdir()) if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
     # samples in recipe order (the set is ordered; the server assigns inSet.index as they are moved in)
-    samples = {s["label"]: {"name": f"{wid} {s['label']}", "label": s["label"], "physicalId": physical_id,
+    samples = {s["label"]: {"name": f"{physical_id} {s['label']}", "label": s["label"], "physicalId": physical_id,
                             "position": {"coordinates": [s["x_stage_m"], s["y_stage_m"]], "units": "m"},
                             "metadata": {"registration": reg}}
                for s in recipe["sites"]}
@@ -340,7 +341,7 @@ def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument=
         files[label] = sample_files(label, recs, run_dir, slim_by_sample.get(label, []))
         prop = combine_pad(label, recs, run_dir) if recs else None
         (properties.append((label, unit_id, prop, 0)) if prop else skipped.append(label))
-    return {"wafer": wid, "run": run_name, "sample_set": sample_set, "images": images, "samples": samples,
+    return {"physicalId": physical_id, "run": run_name, "sample_set": sample_set, "images": images, "samples": samples,
             "measurement_set": measurement_set, "measurements": measurements, "files": files,
             "records": records, "properties": properties, "skipped": skipped}
 
@@ -447,18 +448,18 @@ def ensure_set(endpoint, doc, owner_id):
 
 
 def upload(client, parsed, command="both", files="records"):
-    """Two imports onto the run's own Sample Set — one placement of the wafer on one instrument:
+    """Two imports onto the run's own Sample Set:
     `synthesis`   — NLR's record(s) + the photograph onto the set (created if missing; no samples, no measurements);
     `measurement` — UTK's run: the set, its samples, the measurement set tied to it, one measurement per sample, files, properties;
     `both`        — synthesis if the folder has a deposition record, then measurement.
     Idempotent: sets by run name, members by name/label; files re-put; properties posted only when missing."""
-    wafer_label, run_name = parsed["wafer"], parsed["run"]
+    physical_id, run_name = parsed["physicalId"], parsed["run"]
     owner = {"_id": client.my_account.id}
     has_deposition = "deposition" in parsed["sample_set"]["metadata"]
     sample_set, created_set = ensure_set(client.samples, parsed["sample_set"], owner["_id"])
     set_id = sample_set["_id"]
     if command in ("synthesis", "both") and has_deposition:
-        print(f"sample set {set_id} ({wafer_label}{', created' if created_set else ''}): synthesis record attached")
+        print(f"sample set {set_id} ({run_name}{', created' if created_set else ''}): synthesis record attached")
     if command in ("synthesis", "both") and files != "none":
         for image in parsed["images"]:
             put_file(client, f"sets/{set_id}/{image.name}", image, owner["_id"])
@@ -475,7 +476,7 @@ def upload(client, parsed, command="both", files="records"):
         client.samples.move_to_set(doc["_id"], None, set_id)
         sample_ids[label] = doc["_id"]
         created += 1
-    print(f"sample set {set_id} ({wafer_label}, ordered{', created' if created_set else ''}): {len(sample_ids)} samples, {created} created")
+    print(f"sample set {set_id} ({run_name}, ordered{', created' if created_set else ''}): {len(sample_ids)} samples, {created} created")
     measurement_set, created_measurement_set = ensure_set(client.measurements, parsed["measurement_set"], owner["_id"])
     existing = {m["name"]: m for m in find(client.measurements, {"inSet._id": measurement_set["_id"], "isEntitySet": {"$ne": True}}, owner["_id"], 500)}
     measurement_ids, measurements_created = {}, 0
@@ -530,12 +531,12 @@ def main():
     ap.add_argument("--files", choices=["records", "all", "none"], default="records",
                     help="which files to upload per measurement: the record JSONs (default), also the loop arrays and plots (all), or none")
     ap.add_argument("--limit-records", type=int, help="trial: only the first N records and the samples they belong to")
-    ap.add_argument("--deposition", help="NLR HTEM record (json) attached to the wafer set's metadata")
+    ap.add_argument("--deposition", help="NLR HTEM record (json) kept in the run's sample set metadata")
     ap.add_argument("--instrument", default="asylum-afm", help="identity of the machine the run was measured on (the run folder does not record it)")
-    a = ap.parse_args()
+    a = ap.parse_intermixed_args()
     p = parse(a.run_dir, a.physical_id, a.limit_records, a.deposition, a.instrument)
     nfiles = sum(len(v) for v in p["files"].values())
-    print(f"wafer {p['wafer']}: {len(p['samples'])} samples (ordered set) · run {p['run']}: {len(p['measurements'])} measurements "
+    print(f"{p['physicalId']}: {len(p['samples'])} samples (ordered set) · run {p['run']}: {len(p['measurements'])} measurements "
           f"(ordered set, one per sample) · {len(p['records'])} records -> {nfiles} files · {len(p['images'])} image(s) · "
           f"{len(p['properties'])} samples with a combined loop" + (f" · no curves: {len(p['skipped'])} samples" if p["skipped"] else ""))
     for label, _, prop, _rep in p["properties"]:
