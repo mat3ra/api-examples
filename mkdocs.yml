@@ -59,6 +59,7 @@ nav:
   - Run Simulations and Extract Properties:                 examples/job/run-simulations-and-extract-properties.ipynb
   - ML - Train Model Predict Properties:                    examples/job/ml-train-model-predict-properties.ipynb
   - Upload an SPM Run:                                      examples/measurement/upload_spm_run.ipynb
+  - Upload NLR Data:                                        examples/measurement/upload_nlr_data.ipynb
 
 plugins:
   - same-dir
@@ -86,5 +87,6 @@ plugins:
         - examples/system/get_authentication_params.ipynb
         - examples/job/run-simulations-and-extract-properties.ipynb
         - examples/measurement/upload_spm_run.ipynb
+        - examples/measurement/upload_nlr_data.ipynb
       ignore:
         - "other/**/*.ipynb"

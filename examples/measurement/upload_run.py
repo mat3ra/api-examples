@@ -8,6 +8,7 @@ standard deviation, count over the loops) inside it. Individual loops stay in th
 
     upload_run.py <run_dir> --physical-id <id> --account <slug>                      # upload everything
     upload_run.py <run_dir> --physical-id <id> --dry-run [--emit-example out.json]   # parse + validate only; write one property as the ESSE example
+    upload_run.py <folder> --physical-id <id> --nlr <xrf instrument> <iv instrument>  # NLR's XRF grid and DC I-V sweep instead of a UTK run
 
 Requires Python 3.9+ and `pip install mat3ra-api-client`, which talks to the platform and takes OIDC_ACCESS_TOKEN, or
 ACCOUNT_ID + AUTH_TOKEN (an API token from Preferences), from the environment; MAT3RA_HOST picks the host. Optional:
@@ -342,8 +343,97 @@ def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument=
         prop = combine_pad(label, recs, run_dir) if recs else None
         (properties.append((label, unit_id, prop, 0)) if prop else skipped.append(label))
     return {"physicalId": physical_id, "run": run_name, "sample_set": sample_set, "images": images, "samples": samples,
-            "measurement_set": measurement_set, "measurements": measurements, "files": files,
+            "measurement_set": measurement_set, "measurements": measurements, "files": files, "set_files": [],
             "records": records, "properties": properties, "skipped": skipped}
+
+
+NLR_FRAME = {"frame": "wafer", "units": "mm", "note": "x_mm, y_mm as delivered by NLR; corner and axes to be confirmed"}
+XRF_APPLICATION = {"name": "xrf-mapper", "shortName": "xrf", "summary": "X-ray fluorescence mapper (film thickness and composition over a grid of positions)",
+                   "version": "1.0", "build": "Default", "isUsingMaterial": False, "hasAdvancedComputeOptions": False}
+IV_APPLICATION = {"name": "probe-station", "shortName": "iv", "summary": "DC probe station (current through a pad over a bias sweep)",
+                  "version": "1.0", "build": "Default", "isUsingMaterial": False, "hasAdvancedComputeOptions": False}
+
+
+def read_columns(path):
+    """Every line of a tab-separated file after its header, split into its cells."""
+    return [line.split("\t") for line in Path(path).read_text().splitlines()[1:] if line.strip()]
+
+
+def build_nlr_workflow(application, executable_name, flavor_name, name, properties):
+    """The procedure one of NLR's instruments runs, in the shape build_workflow gives UTK's: ONE workflow, one
+    subworkflow, one execution unit declaring what it produces, ids stable across uploads (uuid5 of the names).
+    Application, executable and flavor name the standata registry entries these two instruments still need."""
+    results = [{"name": property_name} for property_name in properties]
+    monitors = [{"name": "standard_output"}]
+    executable = {"name": executable_name, "applicationName": application["name"], "applicationVersion": "*", "isDefault": True,
+                  "monitors": monitors, "results": results, "preProcessors": [], "postProcessors": []}
+    flavor = {"name": flavor_name, "executableName": executable_name, "applicationName": application["name"], "applicationVersion": "*",
+              "isDefault": True, "input": [], "monitors": monitors, "results": results, "preProcessors": [], "postProcessors": []}
+    unit = {"type": "execution", "name": executable_name, "head": True, "status": "finished",
+            "flowchartId": uuid.uuid5(WORKFLOW_NAMESPACE, f"{application['name']}/{executable_name}").hex[:24],
+            "application": application, "executable": executable, "flavor": flavor, "input": [], "context": [],
+            "monitors": monitors, "results": results, "preProcessors": [], "postProcessors": []}
+    model = {"type": "unknown", "subtype": "unknown", "method": {"type": "unknown", "subtype": "unknown"}}
+    subworkflow_id = uuid.uuid5(WORKFLOW_NAMESPACE, f"{application['name']}/{flavor_name}").hex[:17]
+    subworkflow = {"_id": subworkflow_id, "name": flavor_name, "application": application, "model": model,
+                   "properties": properties, "units": [unit]}
+    subworkflow_unit = {"_id": subworkflow_id, "type": "subworkflow", "name": flavor_name, "head": True, "status": "finished",
+                        "flowchartId": uuid.uuid5(WORKFLOW_NAMESPACE, f"{application['name']}/{flavor_name}/unit").hex[:24],
+                        "preProcessors": [], "postProcessors": [], "monitors": [], "results": []}
+    return {"name": name, "isDefault": False, "tags": ["experimental"], "properties": properties, "application": application,
+            "subworkflows": [subworkflow], "units": [subworkflow_unit], "workflows": []}
+
+
+def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument):
+    """NLR's delivery for one piece as platform documents: one Sample Set of the pads they measured, and one run per
+    technique over those same pads — the XRF map, then the DC I-V sweep. Two runs, each in the shape parse() returns,
+    so upload() takes them one after the other: the first creates the Sample Set, the second finds it by name."""
+    folder = Path(folder)
+    grid_file = sorted(folder.rglob("*xrf_grid.txt"))[0]
+    volts_file, amps_file = sorted(folder.rglob("IV_Volts.txt"))[0], sorted(folder.rglob("IV_Amps.txt"))[0]
+    run_name = grid_file.stem
+    images = [f for f in sorted(folder.rglob("*")) if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
+    sample_set = {"name": run_name, "entitySetType": "ordered", "metadata": {}}
+    xrf_run_name = f"{run_name} XRF"
+    xrf_workflow = build_nlr_workflow(XRF_APPLICATION, "map", "xrf_grid", "XRF Grid Map",
+                                      ["thickness", "al_atomic_fraction", "sc_atomic_fraction"])
+    xrf_unit_id = xrf_workflow["subworkflows"][0]["units"][0]["flowchartId"]
+    grid = read_columns(grid_file)
+    samples, xrf_measurements, xrf_properties = {}, {}, []
+    for row, column, x_mm, y_mm, thickness_um, aluminium_at_pct, scandium_at_pct in grid:
+        label = f"r{int(row)}c{int(column)}"
+        samples[label] = {"name": f"{physical_id} {label}", "label": label, "physicalId": physical_id,
+                          "position": {"coordinates": [float(x_mm), float(y_mm)], "units": "mm"},
+                          "metadata": {"frame": NLR_FRAME, "row": int(row), "column": int(column)}}
+        xrf_measurements[label] = {"name": f"{xrf_run_name} {label}", "_sample": None, "workflow": xrf_workflow,
+                                   "setup": {"name": xrf_instrument}, "status": "finished", "_records": [],
+                                   "metadata": {"row": int(row), "column": int(column), "thickness_um": float(thickness_um),
+                                                "al_at_pct": float(aluminium_at_pct), "sc_at_pct": float(scandium_at_pct)}}
+        xrf_properties += [(label, xrf_unit_id, {"name": "thickness", "value": float(thickness_um), "units": "um"}, 0),
+                           (label, xrf_unit_id, {"name": "al_atomic_fraction", "value": float(aluminium_at_pct), "units": "at%"}, 0),
+                           (label, xrf_unit_id, {"name": "sc_atomic_fraction", "value": float(scandium_at_pct), "units": "at%"}, 0)]
+    iv_run_name = f"{run_name} DC IV"
+    iv_workflow = build_nlr_workflow(IV_APPLICATION, "sweep", "dc_iv", "DC I-V Sweep", ["iv_curve"])
+    iv_unit_id = iv_workflow["subworkflows"][0]["units"][0]["flowchartId"]
+    volts = [[float(v) for v in cells] for cells in read_columns(volts_file)]
+    amps = [[float(a) for a in cells] for cells in read_columns(amps_file)]
+    # the sweep NLR ran, read off the voltages themselves; every row of the file holds the same one
+    iv_setup = {"name": iv_instrument, "settings": {"v_min": min(volts[0]), "v_max": max(volts[0]), "points": len(volts[0])}}
+    iv_measurements, iv_properties = {}, []
+    for index, (label, bias, current) in enumerate(zip(samples, volts, amps)):
+        iv_measurements[label] = {"name": f"{iv_run_name} {label}", "_sample": None, "workflow": iv_workflow,
+                                  "setup": iv_setup, "status": "finished", "_records": [], "metadata": {"row_index": index}}
+        iv_properties.append((label, iv_unit_id, {"name": "iv_curve", "xAxis": {"label": "bias", "units": "V"},
+                                                  "yAxis": {"label": "current", "units": "A"},
+                                                  "xDataArray": bias, "yDataSeries": [current]}, 0))
+    return [{"physicalId": physical_id, "run": xrf_run_name, "sample_set": sample_set, "images": images, "samples": samples,
+             "measurement_set": {"name": xrf_run_name, "entitySetType": "ordered", "metadata": {}},
+             "measurements": xrf_measurements, "files": {}, "set_files": [(grid_file.name, grid_file)],
+             "records": grid, "properties": xrf_properties},
+            {"physicalId": physical_id, "run": iv_run_name, "sample_set": sample_set, "images": images, "samples": samples,
+             "measurement_set": {"name": iv_run_name, "entitySetType": "ordered", "metadata": {}},
+             "measurements": iv_measurements, "files": {}, "set_files": [(volts_file.name, volts_file), (amps_file.name, amps_file)],
+             "records": volts, "properties": iv_properties}]
 
 
 def holder(prop, measurement_id, sample_id, unit_id, repetition):
@@ -476,7 +566,7 @@ def upload(client, parsed, command="both", files="records"):
         client.samples.move_to_set(doc["_id"], None, set_id)
         sample_ids[label] = doc["_id"]
         created += 1
-    print(f"sample set {set_id} ({run_name}, ordered{', created' if created_set else ''}): {len(sample_ids)} samples, {created} created")
+    print(f"sample set {set_id} ({sample_set['name']}, ordered{', created' if created_set else ''}): {len(sample_ids)} samples, {created} created")
     measurement_set, created_measurement_set = ensure_set(client.measurements, parsed["measurement_set"], owner["_id"])
     existing = {m["name"]: m for m in find(client.measurements, {"inSet._id": measurement_set["_id"], "isEntitySet": {"$ne": True}}, owner["_id"], 500)}
     measurement_ids, measurements_created = {}, 0
@@ -497,9 +587,10 @@ def upload(client, parsed, command="both", files="records"):
     if files != "none":
         # One request per file (~1-2 s each), so: the record JSONs by default, the loop arrays and plots only with
         # --files all, and eight uploads in flight at a time.
-        jobs = [(f"measurements/{measurement_ids[label]}/{name}", payload)
-                for label, file_list in parsed["files"].items() for name, payload in file_list
-                if files == "all" or not name.startswith("loops/")]
+        jobs = [(f"measurements/{measurement_set['_id']}/{name}", payload) for name, payload in parsed["set_files"]]
+        jobs += [(f"measurements/{measurement_ids[label]}/{name}", payload)
+                 for label, file_list in parsed["files"].items() for name, payload in file_list
+                 if files == "all" or not name.startswith("loops/")]
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
             for done, _ in enumerate(pool.map(lambda job: put_file(thread_client(client), *job, owner["_id"]), jobs), 1):
                 if done % 200 == 0:
@@ -513,7 +604,7 @@ def upload(client, parsed, command="both", files="records"):
             continue
         client.properties.create(dict(holder(prop, measurement_ids[label], sample_ids[label], unit_id, repetition), owner=owner))
         posted += 1
-    print(f"properties: {posted} hysteresis loops posted, {len(parsed['properties']) - posted} already present (one per measured sample)")
+    print(f"properties: {posted} posted, {len(parsed['properties']) - posted} already present")
 
 
 def main():
@@ -533,20 +624,30 @@ def main():
     ap.add_argument("--limit-records", type=int, help="trial: only the first N records and the samples they belong to")
     ap.add_argument("--deposition", help="NLR HTEM record (json) kept in the run's sample set metadata")
     ap.add_argument("--instrument", default="asylum-afm", help="identity of the machine the run was measured on (the run folder does not record it)")
+    ap.add_argument("--nlr", nargs=2, metavar=("XRF_INSTRUMENT", "IV_INSTRUMENT"),
+                    help="the folder holds NLR's delivery — an XRF grid and a DC I-V sweep over the same pads, measured on these two machines — not a UTK run")
     a = ap.parse_intermixed_args()
-    p = parse(a.run_dir, a.physical_id, a.limit_records, a.deposition, a.instrument)
-    nfiles = sum(len(v) for v in p["files"].values())
-    print(f"{p['physicalId']}: {len(p['samples'])} samples (ordered set) · run {p['run']}: {len(p['measurements'])} measurements "
-          f"(ordered set, one per sample) · {len(p['records'])} records -> {nfiles} files · {len(p['images'])} image(s) · "
-          f"{len(p['properties'])} samples with a combined loop" + (f" · no curves: {len(p['skipped'])} samples" if p["skipped"] else ""))
-    for label, _, prop, _rep in p["properties"]:
-        n = prop["parameters"]["off"].get("imprint", {}).get("count")
-        print(f"  {label}: {n} loops combined, imprint off = {prop['parameters']['off'].get('imprint', {}).get('value')} V")
-    if a.emit_example and p["properties"]:
-        label, _, prop, _rep = max(p["properties"], key=lambda t: t[2]["parameters"]["off"].get("imprint", {}).get("count", 0))
-        prop = dict(prop, **thinned_curves(prop))
-        Path(a.emit_example).write_text(json.dumps(prop, indent=4) + "\n"); print(f"example written from sample {label} -> {a.emit_example}")
-    errors = validate(p)
+    if a.nlr:
+        runs = parse_nlr(a.run_dir, a.physical_id, *a.nlr)
+        for p in runs:
+            print(f"{p['physicalId']}: {len(p['samples'])} samples (ordered set) · run {p['run']}: {len(p['measurements'])} "
+                  f"measurements (ordered set, one per sample) · {len(p['records'])} rows -> {len(p['set_files'])} files · "
+                  f"{len(p['images'])} image(s) · {len(p['properties'])} properties")
+    else:
+        runs = [parse(a.run_dir, a.physical_id, a.limit_records, a.deposition, a.instrument)]
+        p = runs[0]
+        nfiles = sum(len(v) for v in p["files"].values())
+        print(f"{p['physicalId']}: {len(p['samples'])} samples (ordered set) · run {p['run']}: {len(p['measurements'])} measurements "
+              f"(ordered set, one per sample) · {len(p['records'])} records -> {nfiles} files · {len(p['images'])} image(s) · "
+              f"{len(p['properties'])} samples with a combined loop" + (f" · no curves: {len(p['skipped'])} samples" if p["skipped"] else ""))
+        for label, _, prop, _rep in p["properties"]:
+            n = prop["parameters"]["off"].get("imprint", {}).get("count")
+            print(f"  {label}: {n} loops combined, imprint off = {prop['parameters']['off'].get('imprint', {}).get('value')} V")
+        if a.emit_example and p["properties"]:
+            label, _, prop, _rep = max(p["properties"], key=lambda t: t[2]["parameters"]["off"].get("imprint", {}).get("count", 0))
+            prop = dict(prop, **thinned_curves(prop))
+            Path(a.emit_example).write_text(json.dumps(prop, indent=4) + "\n"); print(f"example written from sample {label} -> {a.emit_example}")
+    errors = sum(validate(p) for p in runs)
     print("validation:", "OK" if errors == 0 else f"{errors} invalid documents")
     if errors or a.dry_run:
         sys.exit(1 if errors else 0)
@@ -555,7 +656,8 @@ def main():
     client = APIClient.authenticate(**address)
     if a.account:
         client = APIClient.authenticate(account_id=account_id(client, a.account), **address)
-    upload(client, p, command=a.command, files=a.files)
+    for p in runs:
+        upload(client, p, command=a.command, files=a.files)
 
 
 if __name__ == "__main__":
