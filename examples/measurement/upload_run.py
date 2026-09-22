@@ -126,7 +126,9 @@ def combine_pad(label, records, run_dir):
             b = load_npy(bias_p)
             bias = bias or b
             curve = response_curve(loops_dir, field, lp["phase_offset_deg"], b)
-            if curve is not None and len(curve) == len(bias):
+            # averaged point by point, so a loop measured on a different bias axis is dropped rather
+            # than folded in: same length is not the same voltages
+            if curve is not None and same_axis(b, bias):
                 series[field].append(curve)
     if bias is None or not series["on"] or not series["off"]:
         return None
@@ -417,6 +419,13 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument):
     iv_unit_id = iv_workflow["subworkflows"][0]["units"][0]["flowchartId"]
     volts = [[float(v) for v in cells] for cells in read_columns(volts_file)]
     amps = [[float(a) for a in cells] for cells in read_columns(amps_file)]
+    # zip would silently drop pads, so the shapes are checked before any document is built
+    if not (len(samples) == len(volts) == len(amps)):
+        raise SystemExit(f"{volts_file.name}/{amps_file.name}: {len(volts)}/{len(amps)} rows for "
+                         f"{len(samples)} pads — every pad needs one row in each file")
+    for row, (bias_row, current_row) in enumerate(zip(volts, amps)):
+        if len(bias_row) != len(current_row):
+            raise SystemExit(f"row {row}: {len(bias_row)} bias points but {len(current_row)} current points")
     # the sweep NLR ran, read off the voltages themselves; every row of the file holds the same one
     iv_setup = {"name": iv_instrument, "settings": {"v_min": min(volts[0]), "v_max": max(volts[0]), "points": len(volts[0])}}
     iv_measurements, iv_properties = {}, []
@@ -467,13 +476,28 @@ def validate(parsed):
             esse.validate(m, schemas["measurement"])
         except Exception as e:
             errors += 1; print("MEASUREMENT INVALID", label, str(e)[:300]); break
+    unvalidated = set()
     for label, uid, prop, rep in parsed["properties"]:
+        # by the property's own name: NLR's thickness, atomic fractions and I-V curve are not the
+        # hysteresis loop, and ESSE has no schema for them yet, so they are reported, not failed
+        schema_id = f"properties-directory/non-scalar/{prop['name'].replace('_', '-')}"
+        schema = schemas.get(schema_id) or schemas.get(schema_id.replace("non-scalar", "scalar"))
+        if schema is None:
+            unvalidated.add(prop["name"]); continue
         try:
-            esse.validate(prop, schemas["properties-directory/non-scalar/hysteresis-loop"])
+            esse.validate(prop, schema)
             esse.validate(holder(prop, "dryrun", "dryrun", uid, rep), schemas["property/holder"])
         except Exception as e:
             errors += 1; print("PROPERTY INVALID", label, str(e)[:300])
+    if unvalidated:
+        print("no ESSE schema yet, not validated:", ", ".join(sorted(unvalidated)))
     return errors
+
+
+def same_axis(candidate, reference, tolerance=1e-9):
+    """Whether two bias axes are the same sweep: equal length and equal voltages within tolerance."""
+    return len(candidate) == len(reference) and all(
+        abs(a - b) <= tolerance + 1e-6 * abs(b) for a, b in zip(candidate, reference))
 
 
 def base_url(host):
