@@ -6,7 +6,7 @@ Ad hoc parser for SOF-8050. Field kinds follow ONTOLOGY.md. The property model f
 the property is the pad's hysteresis loop — the eight loops combined — with the loop parameters (mean, population
 standard deviation, count over the loops) inside it. Individual loops stay in the measurement's metadata.
 
-    upload_run.py <run_dir> --physical-id <id> --account <slug>                      # upload everything
+    upload_run.py <run_dir> --physical-id <id> --account <slug>                      # upload the run
     upload_run.py <run_dir> --physical-id <id> --dry-run [--emit-example out.json]   # parse + validate only; write one property as the ESSE example
     upload_run.py <folder> --physical-id <id> --nlr <xrf instrument> <iv instrument>  # NLR's XRF grid and DC I-V sweep instead of a UTK run
 
@@ -561,7 +561,7 @@ def put_file(client, name, payload, owner_id):
 
 def merge_metadata(existing, incoming):
     """`incoming` on top of `existing`, keeping what neither replaces. A list grows by the entries it
-    does not already hold - a second synthesis run brings deposition records the set has never seen,
+    does not already hold - a re-upload brings deposition records the set has never seen,
     and taking only absent keys would drop them because `deposition` is already there."""
     merged = dict(existing)
     for key, value in incoming.items():
@@ -577,8 +577,8 @@ def merge_metadata(existing, incoming):
 
 def ensure_set(endpoint, doc, owner_id):
     """The set with this name in the account, created when missing; returns (set, created).
-    An existing set takes any metadata it does not have yet - a synthesis run after a measurement
-    run has the deposition record to add, and the set was created without it."""
+    An existing set takes any metadata it does not have yet - a later upload may carry a
+    deposition record the set was created without."""
     found = find(endpoint, {"isEntitySet": True, "name": doc["name"]}, owner_id, 5)
     if not found:
         return endpoint.create_set(dict(doc, owner={"_id": owner_id})), True
@@ -591,25 +591,44 @@ def ensure_set(endpoint, doc, owner_id):
     return existing, False
 
 
-def upload(client, parsed, command="both", files="records"):
-    """Two imports onto the run's own Sample Set:
-    `synthesis`   — NLR's record(s) + the photograph onto the set (created if missing; no samples, no measurements);
-    `measurement` — UTK's run: the set, its samples, the measurement set tied to it, one measurement per sample, files, properties;
-    `both`        — synthesis if the folder has a deposition record, then measurement.
-    Idempotent: sets by run name, members by name/label; files re-put; properties posted only when missing."""
-    physical_id, run_name = parsed["physicalId"], parsed["run"]
+FILE_GROUPS = ("records", "loops")
+
+
+def run_files(parsed, groups=("records",)):
+    """Every file this run puts, as (name, payload) pairs. `groups` names what to include per
+    measurement: "records" for the record JSONs, "loops" for the loop arrays and plots, which are
+    large. The set's own files - NLR's grid, the photographs of the piece - are few and always go.
+    `name` carries the label it belongs to so `destination` can address it."""
+    unknown = set(groups) - set(FILE_GROUPS)
+    if unknown:
+        raise SystemExit(f"unknown file group(s): {', '.join(sorted(unknown))}; choose from {', '.join(FILE_GROUPS)}")
+    files = [(f"set/{name}", payload) for name, payload in parsed["set_files"]]
+    files += [(f"set/{image.name}", image) for image in parsed["images"]]
+    for label, file_list in parsed["files"].items():
+        files += [(f"{label}/{name}", payload) for name, payload in file_list
+                  if ("loops" if name.startswith("loops/") else "records") in groups]
+    return files
+
+
+def destination(name, set_id, measurement_ids):
+    """Where one of `run_files`' entries is put: the set's own, or the measurement it belongs to."""
+    label, _, rest = name.partition("/")
+    if label == "set":
+        return f"sets/{set_id}/{rest}"
+    return f"measurements/{measurement_ids[label]}/{rest}"
+
+
+def upload(client, parsed, files=("records",)):
+    """The run onto its Sample Set: the set, its samples, the measurement set, one measurement per
+    sample, the files and the properties. `files` names which groups to upload - see FILE_GROUPS;
+    an empty list uploads none and keeps the raw records in each measurement's metadata instead.
+    Idempotent: sets by run name, members by name/label; files re-put; properties posted only when
+    missing."""
+    uploads = run_files(parsed, files) if files else []
+    run_name = parsed["run"]
     owner = {"_id": client.my_account.id}
-    has_deposition = "deposition" in parsed["sample_set"]["metadata"]
     sample_set, created_set = ensure_set(client.samples, parsed["sample_set"], owner["_id"])
     set_id = sample_set["_id"]
-    if command in ("synthesis", "both") and has_deposition:
-        print(f"sample set {set_id} ({run_name}{', created' if created_set else ''}): synthesis record attached")
-    if command in ("synthesis", "both") and files != "none":
-        for image in parsed["images"]:
-            put_file(client, f"sets/{set_id}/{image.name}", image, owner["_id"])
-            print(f"  image {image.name} -> sets/{set_id}/")
-    if command == "synthesis":
-        return
     in_set = {s.get("label"): s for s in find(client.samples, {"inSet._id": set_id, "isEntitySet": {"$ne": True}}, owner["_id"], 500)}
     sample_ids, created = {}, 0
     for label, sample_doc in parsed["samples"].items():
@@ -630,7 +649,7 @@ def upload(client, parsed, command="both", files="records"):
             continue
         body = {k: v for k, v in measurement_doc.items() if k != "_records"}
         body["_sample"] = {"_id": sample_ids[label], "cls": "Sample"}
-        if files == "none":  # no file store: keep the raw records in the measurement's metadata
+        if not uploads:  # no file store: keep the raw records in the measurement's metadata
             body["metadata"] = dict(body["metadata"], records=measurement_doc["_records"])
         doc = client.measurements.create(dict(body, owner=owner))
         client.measurements.move_to_set(doc["_id"], None, measurement_set["_id"])
@@ -638,18 +657,14 @@ def upload(client, parsed, command="both", files="records"):
         measurements_created += 1
     print(f"measurement set {measurement_set['_id']} ({run_name}, ordered{', created' if created_measurement_set else ''}): "
           f"{len(measurement_ids)} measurements, {measurements_created} created")
-    if files != "none":
-        # One request per file (~1-2 s each), so: the record JSONs by default, the loop arrays and plots only with
-        # --files all, and eight uploads in flight at a time.
-        jobs = [(f"measurements/{measurement_set['_id']}/{name}", payload) for name, payload in parsed["set_files"]]
-        jobs += [(f"measurements/{measurement_ids[label]}/{name}", payload)
-                 for label, file_list in parsed["files"].items() for name, payload in file_list
-                 if files == "all" or not name.startswith("loops/")]
+    if uploads:
+        # one request per file (~1-2 s each), eight in flight
+        jobs = [(destination(name, set_id, measurement_ids), payload) for name, payload in uploads]
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
             for done, _ in enumerate(pool.map(lambda job: put_file(thread_client(client), *job, owner["_id"]), jobs), 1):
                 if done % 200 == 0:
                     print(f"  files: {done}/{len(jobs)}", flush=True)
-        print(f"files: {len(jobs)} put under measurements/<id>/ ({'records/*.json, loops/*' if files == 'all' else 'records/*.json; --files all adds loops/*'})")
+        print(f"files: {len(jobs)} put")
     posted = 0
     for label, unit_id, prop, repetition in parsed["properties"]:  # properties/create is not idempotent: skip what is there
         present = find(client.properties, {"source.info.origin._id": measurement_ids[label], "data.name": prop["name"],
@@ -666,15 +681,14 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("run_dir")
     ap.add_argument("--physical-id", required=True, help="the identifier written on the physical piece the samples are part of, e.g. PDAC_COM5_01448")
-    ap.add_argument("command", nargs="?", choices=["synthesis", "measurement", "both"], default="both",
-                    help="synthesis: NLR record + photo onto the set · measurement: UTK run onto the set · both (default)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--emit-example", help="write the first combined loop property (most loops) to this path — the ESSE example")
     ap.add_argument("--host", default=os.environ.get("MAT3RA_HOST", "localhost:3000"),
                     help="web app host or URL (or MAT3RA_HOST); https unless localhost, e.g. dev.mat3ra.com")
     ap.add_argument("--account", help="slug of the account the data belongs to (reads scoped to it, writes owned by it)")
-    ap.add_argument("--files", choices=["records", "all", "none"], default="records",
-                    help="which files to upload per measurement: the record JSONs (default), also the loop arrays and plots (all), or none")
+    ap.add_argument("--files", nargs="*", default=["records"], metavar="GROUP",
+                    help=f"which file groups to upload ({', '.join(FILE_GROUPS)}); pass --files with no value "
+                         "to upload none and keep the raw records in each measurement's metadata")
     ap.add_argument("--limit-records", type=int, help="trial: only the first N records and the samples they belong to")
     ap.add_argument("--deposition", help="NLR HTEM record (json) kept in the run's sample set metadata")
     ap.add_argument("--instrument", default="asylum-afm", help="identity of the machine the run was measured on (the run folder does not record it)")
@@ -711,7 +725,7 @@ def main():
     if a.account:
         client = APIClient.authenticate(account_id=account_id(client, a.account), **address)
     for p in runs:
-        upload(client, p, command=a.command, files=a.files)
+        upload(client, p, files=a.files)
 
 
 if __name__ == "__main__":
