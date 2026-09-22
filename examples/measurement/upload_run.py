@@ -22,7 +22,6 @@ from mat3ra.api_client import APIClient
 from run_document import load
 
 from mat3ra.esse import ESSE
-from mat3ra.esse.models.sample import SampleSchema
 
 def holder(prop, measurement_id, sample_id, unit_id, repetition):
     """The property holder the platform stores: the data, where it came from (measurement, sample, workflow unit) and a
@@ -42,7 +41,7 @@ def validate(parsed):
     errors = 0
     for smp in parsed["samples"].values():
         try:
-            SampleSchema(**smp); esse.validate(smp, schemas["sample"])
+            esse.validate(smp, schemas["sample"])
         except Exception as e:
             errors += 1; print("SAMPLE INVALID", smp["label"], str(e)[:200])
     for label, m in parsed["measurements"].items():

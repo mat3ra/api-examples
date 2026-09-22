@@ -14,7 +14,10 @@ from run_document import serialize
 def standata_workflow(application_name, workflow_name):
     """The procedure the instrument runs, from the standata registry — the entry the platform resolves
     a job's workflow through."""
-    return WorkflowStandata.find_by_application_and_name(application_name, workflow_name)
+    workflow = WorkflowStandata.find_by_application_and_name(application_name, workflow_name)
+    if workflow is None:
+        raise LookupError(f"standata has no '{workflow_name}' workflow for {application_name}")
+    return workflow
 
 
 def unit_id(workflow):
