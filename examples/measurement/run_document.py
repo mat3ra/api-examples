@@ -20,7 +20,7 @@ and neither knows anything about the other.
 Paths are relative to the document, so a run folder moves as a whole. A parser that derives a file (a record
 JSON it cut from a larger one) writes it here too — `serialize` takes text in place of a path and stores it.
 """
-import json, os
+import json
 from pathlib import Path
 
 
@@ -59,7 +59,7 @@ def relative(path, out_dir):
     try:
         return path.relative_to(out_dir).as_posix()
     except ValueError:
-        return os.path.relpath(path, out_dir)
+        return path.as_posix()
 
 
 def load(path):
