@@ -244,6 +244,16 @@ def starting_site(recipe):
     return next((s for s in recipe["sites"] if s["label"] == "r0c00"), recipe["sites"][0])
 
 
+def thinned_curves(prop, points=12):
+    """The curves at `points` evenly spaced samples: an ESSE example shows the shape, not the data."""
+    x = prop["xDataArray"]
+    if len(x) <= points:
+        return {}
+    keep = [round(i * (len(x) - 1) / (points - 1)) for i in range(points)]
+    return {"xDataArray": [x[i] for i in keep],
+            "yDataSeries": [[s[i] for i in keep] for s in prop["yDataSeries"]]}
+
+
 def registration(recipe):
     """The instrument's frame as UTK stated it: one anchor in words (from recipe.context) and where the run started
     on the stage. Recorded, not interpreted."""
@@ -540,6 +550,7 @@ def main():
         print(f"  {label}: {n} loops combined, imprint off = {prop['parameters']['off'].get('imprint', {}).get('value')} V")
     if a.emit_example and p["properties"]:
         label, _, prop, _rep = max(p["properties"], key=lambda t: t[2]["parameters"]["off"].get("imprint", {}).get("count", 0))
+        prop = dict(prop, **thinned_curves(prop))
         Path(a.emit_example).write_text(json.dumps(prop, indent=4) + "\n"); print(f"example written from sample {label} -> {a.emit_example}")
     errors = validate(p)
     print("validation:", "OK" if errors == 0 else f"{errors} invalid documents")
