@@ -1,0 +1,20 @@
+# Everything the measurement upload needs, exactly. Install it and the example runs:
+#
+#     python -m venv venv && . venv/bin/activate
+#     pip install -r requirements.txt
+#
+# api-client and standata are named by branch because the PyPI releases predate what this
+# example uses — api-client the samples/measurements/files endpoints, standata the three
+# instrument registry entries. A direct reference like this one wins over any PyPI version,
+# so it holds even though PyPI's standata carries a higher version number than the branch.
+# Both lines become ordinary version pins once those branches merge and release.
+
+mat3ra-api-client @ git+https://github.com/mat3ra/api-client.git@feature/SOF-8051
+mat3ra-standata @ git+https://github.com/mat3ra/standata.git@feature/SOF-8051
+
+# schema validation before anything is uploaded — by branch for the same reason: PyPI's esse
+# has no Sample or Measurement schema yet, and without them validation silently does nothing
+mat3ra-esse @ git+https://github.com/mat3ra/esse.git@feature/SOF-8051
+
+# the file uploads retry a refused connection
+requests

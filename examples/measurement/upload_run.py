@@ -43,8 +43,7 @@ def validate(parsed):
     """Validate every document against the ESSE schemas; returns the number of invalid ones. Skipped (returns 0) when the
     optional mat3ra-esse package is not installed."""
     if ESSE is None:
-        print("schema validation skipped: `pip install mat3ra-esse` to enable it", flush=True)
-        return 0
+        return None  # not installed: the caller says so rather than reporting a pass
     esse = ESSE()
     schemas = {x["$id"]: x for x in esse.schemas}
     errors = 0
@@ -264,8 +263,13 @@ def main():
     a = ap.parse_args()
 
     runs = [load(path) for path in a.documents]
-    errors = sum(validate(run) for run in runs)
-    print("validation:", "OK" if errors == 0 else f"{errors} invalid documents")
+    counts = [validate(run) for run in runs]
+    if any(count is None for count in counts):
+        print("validation: SKIPPED — mat3ra-esse is not installed (see requirements.txt); nothing was checked")
+        errors = 0
+    else:
+        errors = sum(counts)
+        print("validation:", "OK" if errors == 0 else f"{errors} invalid documents")
     if errors or a.dry_run:
         sys.exit(1 if errors else 0)
 

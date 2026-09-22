@@ -21,9 +21,24 @@ def standata_workflow(application_name, workflow_name):
     from mat3ra.standata.workflows import WorkflowStandata
     workflow = WorkflowStandata.find_by_application_and_name(application_name, workflow_name)
     if workflow is None:
-        raise SystemExit(f"standata has no '{workflow_name}' workflow for {application_name}: "
-                         "add it to mat3ra/standata, or pin a release that has it")
+        raise SystemExit(f"standata has no '{workflow_name}' workflow for {application_name}.\n{standata_origin()}\n"
+                         'Install the branch it is registered on and RESTART THE KERNEL (a %pip install does not\n'
+                         'replace a module this session already imported):\n'
+                         '    pip install --force-reinstall --no-deps "git+https://github.com/mat3ra/standata.git@feature/SOF-8051"')
     return workflow
+
+
+def standata_origin():
+    """Which mat3ra-standata is in this interpreter — the answer to 'but it is installed'."""
+    import importlib.metadata as metadata
+    try:
+        distribution = metadata.distribution("mat3ra-standata")
+    except metadata.PackageNotFoundError:
+        return "mat3ra-standata is not installed."
+    direct_url = distribution.read_text("direct_url.json")
+    source = "the feature branch" if direct_url and "feature/SOF-8051" in direct_url else \
+             "another branch" if direct_url else "PyPI, which predates these entries"
+    return f"You have mat3ra-standata {distribution.version} from {source}."
 
 
 def unit_id(workflow):
