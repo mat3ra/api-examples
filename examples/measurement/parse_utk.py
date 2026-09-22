@@ -3,6 +3,9 @@ hysteresis-loop property per pad — the eight loops combined, with the loop par
 deviation, count) inside it. Individual loops stay in the measurement's files.
 
 Ad hoc parser for SOF-8050: it reads the shape UTK's afm-lib writes and nothing else.
+
+Requires `pip install "git+https://github.com/mat3ra/standata.git@feature/SOF-8051"` until that branch is released:
+the instruments' registry entries are on it, and the PyPI release predates them.
 """
 import argparse, ast, json, math, re, statistics, struct
 from datetime import datetime, timezone

@@ -2,6 +2,9 @@
 technique over those same pads — the XRF map, then the DC I-V sweep.
 
 Ad hoc parser for SOF-8050: it reads the tab-separated files NLR ships and nothing else.
+
+Requires `pip install "git+https://github.com/mat3ra/standata.git@feature/SOF-8051"` until that branch is released:
+the instruments' registry entries are on it, and the PyPI release predates them.
 """
 import argparse
 from pathlib import Path
