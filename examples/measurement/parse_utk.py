@@ -4,11 +4,29 @@ deviation, count) inside it. Individual loops stay in the measurement's files.
 
 Ad hoc parser for SOF-8050: it reads the shape UTK's afm-lib writes and nothing else.
 """
-import ast, json, math, re, statistics, struct
+import argparse, ast, json, math, re, statistics, struct
 from datetime import datetime, timezone
 from pathlib import Path
 
-from workflow import build_workflow, unit_id
+from run_document import serialize
+
+
+def standata_workflow(application_name, workflow_name):
+    """The procedure the instrument runs, from the standata registry — the same entry the platform resolves a
+    job's workflow through. Building one here would be a second source of truth for something that already
+    has one; a new instrument is a new registry entry, not code."""
+    from mat3ra.standata.workflows import WorkflowStandata
+    workflow = WorkflowStandata.find_by_application_and_name(application_name, workflow_name)
+    if workflow is None:
+        raise SystemExit(f"standata has no '{workflow_name}' workflow for {application_name}: "
+                         "add it to mat3ra/standata, or pin a release that has it")
+    return workflow
+
+
+def unit_id(workflow):
+    """The execution unit a property of this workflow comes from."""
+    return workflow["subworkflows"][0]["units"][0]["flowchartId"]
+
 
 
 FIELD = {"off_field": "off", "on_field": "on"}
@@ -22,8 +40,7 @@ PARAMETERS = {
     "remnant_rising_m": ("remanentResponse", "rising"),
     "remnant_falling_m": ("remanentResponse", "falling"),
 }
-INSTRUMENT = {"name": "asylum-spm", "shortName": "spm", "summary": "Asylum Research SPM driven by afm-lib (switching-spectroscopy PFM)",
-              "version": "1.0", "build": "afm-lib", "isUsingMaterial": False, "hasAdvancedComputeOptions": False}
+INSTRUMENT_NAME = "asylum-spm"  # the standata application whose workflow this run records
 g = lambda v: float(f"{v:.6g}")
 
 
@@ -262,14 +279,12 @@ def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument=
     for label, const in per_sample.items():
         if label in samples:
             samples[label]["metadata"].update(const)
-    workflow = build_workflow(INSTRUMENT, "loop", "ss_pfm", "SS-PFM Hysteresis Loop", ["hysteresis_loop"],
-                              unit_name="run_loop", tags=["experimental", "afm"],
-                              metadata={"recipe": recipe, "loop_settings": recipe["per_site"][0]["loop_settings"],
-                                        "sites": list(samples)})
+    workflow = standata_workflow(INSTRUMENT_NAME, "SS-PFM Hysteresis Loop")
     unit = unit_id(workflow)
     measurement_set = {"name": run_name, "entitySetType": "ordered",
-                       "metadata": {"session": session, "recipe": recipe["name"], "context": recipe.get("context", ""),
-                                    "common": common, "registration": reg}}
+                       "metadata": {"session": session, "recipe": recipe, "context": recipe.get("context", ""),
+                                    "loop_settings": recipe["per_site"][0]["loop_settings"],
+                                    "sites": list(samples), "common": common, "registration": reg}}
     # the setup block, Measurement : setup :: Job : compute — the machine and the sitting; the technique
     # (asylum-spm, SS-PFM) is the workflow's application. The run folder does not name the machine: --instrument does.
     started = session.get("started_ts")
@@ -303,3 +318,32 @@ def same_axis(candidate, reference, tolerance=1e-9):
     """Whether two bias axes are the same sweep: equal length and equal voltages within tolerance."""
     return len(candidate) == len(reference) and all(
         abs(a - b) <= tolerance + 1e-6 * abs(b) for a, b in zip(candidate, reference))
+
+
+def main():
+    """Read a UTK run folder and write its run document."""
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("run_dir")
+    ap.add_argument("--physical-id", required=True, help="the identifier written on the physical piece, e.g. PDAC_COM5_01448")
+    ap.add_argument("--out", default="parsed", help="directory for the run document and the records cut from the run (default: parsed/)")
+    ap.add_argument("--limit-records", type=int, help="trial: only the first N records and the samples they belong to")
+    ap.add_argument("--deposition", help="NLR HTEM record (json) kept in the run's sample set metadata")
+    ap.add_argument("--instrument", default="asylum-afm", help="identity of the machine the run was measured on (the run folder does not record it)")
+    ap.add_argument("--emit-example", help="write the property with the most loops to this path — the ESSE example")
+    a = ap.parse_args()
+
+    parsed = parse(a.run_dir, a.physical_id, a.limit_records, a.deposition, a.instrument)
+    files = sum(len(v) for v in parsed["files"].values())
+    print(f"{parsed['physicalId']}: {len(parsed['samples'])} samples · run {parsed['run']}: "
+          f"{len(parsed['measurements'])} measurements · {len(parsed['records'])} records -> {files} files · "
+          f"{len(parsed['properties'])} samples with a combined loop"
+          + (f" · no curves: {len(parsed['skipped'])} samples" if parsed["skipped"] else ""))
+    if a.emit_example and parsed["properties"]:
+        label, _, prop, _rep = max(parsed["properties"], key=lambda t: t[2]["parameters"]["off"].get("imprint", {}).get("count", 0))
+        Path(a.emit_example).write_text(json.dumps(dict(prop, **thinned_curves(prop)), indent=4) + "\n")
+        print(f"example written from sample {label} -> {a.emit_example}")
+    print("run document:", serialize(parsed, a.out))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
-"""Parsed runs -> platform documents, validated against the ESSE schemas, then uploaded through the REST API.
+"""Run documents -> the platform: the sample set, its samples, the measurement set, one measurement per sample,
+the files and the properties, validated against the ESSE schemas before anything is sent.
 
-    upload_run.py <run_dir> --physical-id <id> --account <slug>                      # upload the run
-    upload_run.py <run_dir> --physical-id <id> --dry-run [--emit-example out.json]   # parse + validate only; write one property as the ESSE example
-    upload_run.py <folder> --physical-id <id> --nlr <xrf instrument> <iv instrument>  # NLR's XRF grid and DC I-V sweep instead of a UTK run
+    upload_run.py parsed/run.json --account <slug>                 # upload it
+    upload_run.py parsed/*.json --account <slug> --files records loops
+    upload_run.py parsed/run.json --dry-run                        # validate only
 
-The instrument-specific reading lives beside this file — `parse_utk.py` for a UTK SS-PFM run, `parse_nlr.py` for
-NLR's delivery — and each returns the same dict, so everything below is the same for both. A third instrument is
-a third parser, not a change here.
+It knows nothing about any instrument. Reading a lab's delivery into a run document is a parser's job —
+`parse_utk.py` for a UTK SS-PFM run, `parse_nlr.py` for NLR's delivery — and `run_document.py` states the
+shape they agree on. A new lab is a new parser; nothing here changes.
 
-Requires Python 3.9+ and `pip install mat3ra-api-client`, which talks to the platform and takes OIDC_ACCESS_TOKEN, or
-ACCOUNT_ID + AUTH_TOKEN (an API token from Preferences), from the environment; MAT3RA_HOST picks the host. Optional:
-`pip install mat3ra-esse` (tested with 2026.8.27-0) turns on schema validation before anything is uploaded.
+Requires Python 3.9+ and `pip install mat3ra-api-client`, which talks to the platform and takes OIDC_ACCESS_TOKEN,
+or ACCOUNT_ID + AUTH_TOKEN (an API token from Preferences), from the environment; MAT3RA_HOST picks the host.
+Optional: `pip install mat3ra-esse` turns on schema validation before anything is uploaded.
 """
-import argparse, concurrent.futures, json, os, sys, threading, time, urllib.parse
+import argparse, concurrent.futures, os, sys, threading, time, urllib.parse
 from pathlib import Path
 
 import requests
 from mat3ra.api_client import APIClient
 
-from parse_nlr import parse_nlr
-from parse_utk import parse, thinned_curves
+from run_document import load
 
 try:  # optional: schema validation before anything is sent
     from mat3ra.esse import ESSE
@@ -177,7 +177,6 @@ def run_files(parsed, groups=("records",)):
     if unknown:
         raise SystemExit(f"unknown file group(s): {', '.join(sorted(unknown))}; choose from {', '.join(FILE_GROUPS)}")
     files = [(f"set/{name}", payload) for name, payload in parsed["set_files"]]
-    files += [(f"set/{name}", path) for name, path in parsed["images"]]
     for label, file_list in parsed["files"].items():
         files += [(f"{label}/{name}", payload) for name, payload in file_list
                   if ("loops" if name.startswith("loops/") else "records") in groups]
@@ -221,10 +220,11 @@ def upload(client, parsed, files=("records",)):
         if measurement_doc["name"] in existing:
             measurement_ids[label] = existing[measurement_doc["name"]]["_id"]
             continue
-        body = {k: v for k, v in measurement_doc.items() if k != "_records"}
+        body = dict(measurement_doc)
         body["_sample"] = {"_id": sample_ids[label], "cls": "Sample"}
-        if not uploads:  # no file store: keep the raw records in the measurement's metadata
-            body["metadata"] = dict(body["metadata"], records=measurement_doc["_records"])
+        records = parsed.get("records_by_sample", {}).get(label)
+        if not uploads and records:  # no file store: keep the raw records in the measurement's metadata
+            body["metadata"] = dict(body["metadata"], records=records)
         doc = client.measurements.create(dict(body, owner=owner))
         client.measurements.move_to_set(doc["_id"], None, measurement_set["_id"])
         measurement_ids[label] = doc["_id"]
@@ -251,55 +251,31 @@ def upload(client, parsed, files=("records",)):
 
 
 def main():
-    """Command line: parse, validate, upload."""
+    """Command line: validate the run documents, then upload them."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("run_dir")
-    ap.add_argument("--physical-id", required=True, help="the identifier written on the physical piece the samples are part of, e.g. PDAC_COM5_01448")
-    ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--emit-example", help="write the first combined loop property (most loops) to this path — the ESSE example")
+    ap.add_argument("documents", nargs="+", metavar="RUN.JSON", help="run documents, as a parser writes them")
     ap.add_argument("--host", default=os.environ.get("MAT3RA_HOST", "localhost:3000"),
                     help="web app host or URL (or MAT3RA_HOST); https unless localhost, e.g. dev.mat3ra.com")
     ap.add_argument("--account", help="slug of the account the data belongs to (reads scoped to it, writes owned by it)")
     ap.add_argument("--files", nargs="*", default=["records"], metavar="GROUP",
                     help=f"which file groups to upload ({', '.join(FILE_GROUPS)}); pass --files with no value "
                          "to upload none and keep the raw records in each measurement's metadata")
-    ap.add_argument("--limit-records", type=int, help="trial: only the first N records and the samples they belong to")
-    ap.add_argument("--deposition", help="NLR HTEM record (json) kept in the run's sample set metadata")
-    ap.add_argument("--instrument", default="asylum-afm", help="identity of the machine the run was measured on (the run folder does not record it)")
-    ap.add_argument("--nlr", nargs=2, metavar=("XRF_INSTRUMENT", "IV_INSTRUMENT"),
-                    help="the folder holds NLR's delivery — an XRF grid and a DC I-V sweep over the same pads, measured on these two machines — not a UTK run")
-    a = ap.parse_intermixed_args()
-    if a.nlr:
-        runs = parse_nlr(a.run_dir, a.physical_id, *a.nlr)
-        for p in runs:
-            print(f"{p['physicalId']}: {len(p['samples'])} samples (ordered set) · run {p['run']}: {len(p['measurements'])} "
-                  f"measurements (ordered set, one per sample) · {len(p['records'])} rows -> {len(p['set_files'])} files · "
-                  f"{len(p['images'])} image(s) · {len(p['properties'])} properties")
-    else:
-        runs = [parse(a.run_dir, a.physical_id, a.limit_records, a.deposition, a.instrument)]
-        p = runs[0]
-        nfiles = sum(len(v) for v in p["files"].values())
-        print(f"{p['physicalId']}: {len(p['samples'])} samples (ordered set) · run {p['run']}: {len(p['measurements'])} measurements "
-              f"(ordered set, one per sample) · {len(p['records'])} records -> {nfiles} files · {len(p['images'])} image(s) · "
-              f"{len(p['properties'])} samples with a combined loop" + (f" · no curves: {len(p['skipped'])} samples" if p["skipped"] else ""))
-        for label, _, prop, _rep in p["properties"]:
-            n = prop["parameters"]["off"].get("imprint", {}).get("count")
-            print(f"  {label}: {n} loops combined, imprint off = {prop['parameters']['off'].get('imprint', {}).get('value')} V")
-        if a.emit_example and p["properties"]:
-            label, _, prop, _rep = max(p["properties"], key=lambda t: t[2]["parameters"]["off"].get("imprint", {}).get("count", 0))
-            prop = dict(prop, **thinned_curves(prop))
-            Path(a.emit_example).write_text(json.dumps(prop, indent=4) + "\n"); print(f"example written from sample {label} -> {a.emit_example}")
-    errors = sum(validate(p) for p in runs)
+    ap.add_argument("--dry-run", action="store_true", help="validate the documents and stop")
+    a = ap.parse_args()
+
+    runs = [load(path) for path in a.documents]
+    errors = sum(validate(run) for run in runs)
     print("validation:", "OK" if errors == 0 else f"{errors} invalid documents")
     if errors or a.dry_run:
         sys.exit(1 if errors else 0)
+
     url = urllib.parse.urlsplit(base_url(a.host))
     address = {"host": url.hostname, "port": url.port or (443 if url.scheme == "https" else 80), "secure": url.scheme == "https"}
     client = APIClient.authenticate(**address)
     if a.account:
         client = APIClient.authenticate(account_id=account_id(client, a.account), **address)
-    for p in runs:
-        upload(client, p, files=a.files)
+    for run in runs:
+        upload(client, run, files=a.files)
 
 
 if __name__ == "__main__":

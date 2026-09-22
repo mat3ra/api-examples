@@ -3,26 +3,36 @@ technique over those same pads — the XRF map, then the DC I-V sweep.
 
 Ad hoc parser for SOF-8050: it reads the tab-separated files NLR ships and nothing else.
 """
+import argparse
 from pathlib import Path
 
-from workflow import build_workflow, unit_id
+from run_document import serialize
+
+
+def standata_workflow(application_name, workflow_name):
+    """The procedure the instrument runs, from the standata registry — the same entry the platform resolves a
+    job's workflow through. Building one here would be a second source of truth for something that already
+    has one; a new instrument is a new registry entry, not code."""
+    from mat3ra.standata.workflows import WorkflowStandata
+    workflow = WorkflowStandata.find_by_application_and_name(application_name, workflow_name)
+    if workflow is None:
+        raise SystemExit(f"standata has no '{workflow_name}' workflow for {application_name}: "
+                         "add it to mat3ra/standata, or pin a release that has it")
+    return workflow
+
+
+def unit_id(workflow):
+    """The execution unit a property of this workflow comes from."""
+    return workflow["subworkflows"][0]["units"][0]["flowchartId"]
 
 NLR_FRAME = {"frame": "wafer", "units": "mm", "note": "x_mm, y_mm as delivered by NLR; corner and axes to be confirmed"}
-XRF_APPLICATION = {"name": "xrf-mapper", "shortName": "xrf", "summary": "X-ray fluorescence mapper (film thickness and composition over a grid of positions)",
-                   "version": "1.0", "build": "Default", "isUsingMaterial": False, "hasAdvancedComputeOptions": False}
-IV_APPLICATION = {"name": "probe-station", "shortName": "iv", "summary": "DC probe station (current through a pad over a bias sweep)",
-                  "version": "1.0", "build": "Default", "isUsingMaterial": False, "hasAdvancedComputeOptions": False}
+XRF_APPLICATION = "xrf-mapper"      # the standata applications whose workflows these two runs record
+IV_APPLICATION = "probe-station"
 
 
 def read_columns(path):
     """Every line of a tab-separated file after its header, split into its cells."""
     return [line.split("\t") for line in Path(path).read_text().splitlines()[1:] if line.strip()]
-
-
-def nlr_workflow(application, executable_name, flavor_name, name, properties):
-    """NLR's two instruments are not in the standata registry yet, so their ids are scoped by application name."""
-    return build_workflow(application, executable_name, flavor_name, name, properties,
-                          id_prefix=f"{application['name']}/")
 
 
 def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument):
@@ -38,8 +48,7 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument):
               if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
     sample_set = {"name": run_name, "entitySetType": "ordered", "metadata": {}}
     xrf_run_name = f"{run_name} XRF"
-    xrf_workflow = nlr_workflow(XRF_APPLICATION, "map", "xrf_grid", "XRF Grid Map",
-                                ["thickness", "al_atomic_fraction", "sc_atomic_fraction"])
+    xrf_workflow = standata_workflow(XRF_APPLICATION, "XRF Grid Map")
     xrf_unit_id = unit_id(xrf_workflow)
     grid = read_columns(grid_file)
     samples, xrf_measurements, xrf_properties = {}, {}, []
@@ -60,7 +69,7 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument):
                            (label, xrf_unit_id, {"name": "al_atomic_fraction", "value": float(aluminium_at_pct), "units": "at%"}, 0),
                            (label, xrf_unit_id, {"name": "sc_atomic_fraction", "value": float(scandium_at_pct), "units": "at%"}, 0)]
     iv_run_name = f"{run_name} DC IV"
-    iv_workflow = nlr_workflow(IV_APPLICATION, "sweep", "dc_iv", "DC I-V Sweep", ["iv_curve"])
+    iv_workflow = standata_workflow(IV_APPLICATION, "DC I-V Sweep")
     iv_unit_id = unit_id(iv_workflow)
     volts = [[float(v) for v in cells] for cells in read_columns(volts_file)]
     amps = [[float(a) for a in cells] for cells in read_columns(amps_file)]
@@ -89,3 +98,24 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument):
              "measurements": iv_measurements, "files": {}, "set_files": [(volts_file.name, volts_file), (amps_file.name, amps_file)],
              "records": volts, "properties": iv_properties}]
 
+
+
+def main():
+    """Read NLR's delivery and write a run document per technique."""
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("folder")
+    ap.add_argument("--physical-id", required=True, help="the identifier written on the physical piece, e.g. PDAC_COM5_01448")
+    ap.add_argument("--xrf-instrument", required=True, help="identity of the machine the grid was mapped on")
+    ap.add_argument("--iv-instrument", required=True, help="identity of the machine the sweep was measured on")
+    ap.add_argument("--out", default="parsed", help="directory for the run documents (default: parsed/)")
+    a = ap.parse_args()
+
+    for parsed in parse_nlr(a.folder, a.physical_id, a.xrf_instrument, a.iv_instrument):
+        print(f"{parsed['physicalId']}: {len(parsed['samples'])} samples · run {parsed['run']}: "
+              f"{len(parsed['measurements'])} measurements · {len(parsed['records'])} rows -> "
+              f"{len(parsed['set_files'])} files · {len(parsed['images'])} image(s) · {len(parsed['properties'])} properties")
+        print("run document:", serialize(parsed, a.out, name=parsed["run"].replace(" ", "_") + ".json"))
+
+
+if __name__ == "__main__":
+    main()
