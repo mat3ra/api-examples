@@ -556,9 +556,20 @@ def put_file(client, name, payload, owner_id):
 
 
 def ensure_set(endpoint, doc, owner_id):
-    """The set with this name in the account, created when missing; returns (set, created)."""
+    """The set with this name in the account, created when missing; returns (set, created).
+    An existing set takes any metadata it does not have yet - a synthesis run after a measurement
+    run has the deposition record to add, and the set was created without it."""
     found = find(endpoint, {"isEntitySet": True, "name": doc["name"]}, owner_id, 5)
-    return (found[0], False) if found else (endpoint.create_set(dict(doc, owner={"_id": owner_id})), True)
+    if not found:
+        return endpoint.create_set(dict(doc, owner={"_id": owner_id})), True
+
+    existing = found[0]
+    incoming = doc.get("metadata") or {}
+    missing = {k: v for k, v in incoming.items() if k not in (existing.get("metadata") or {})}
+    if missing:
+        endpoint.update_set(existing["_id"], {"metadata": missing})
+        existing = dict(existing, metadata={**(existing.get("metadata") or {}), **missing})
+    return existing, False
 
 
 def upload(client, parsed, command="both", files="records"):
