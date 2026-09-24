@@ -33,6 +33,7 @@ MATERIALS_SET: Dict[str, Any] = {
 CREATED_JOB: Dict[str, Any] = {"_id": "job-1", "name": JOB_PREFIX}
 EXISTING_JOB: Dict[str, Any] = {"_id": "job-0", "name": "Fixed-cell Relaxation V_B pbe-us", "status": "finished"}
 RELAX_WORKFLOW_NAME = "Fixed-cell Relaxation V_B pbe-us"
+CHARGE_TAGS = ["charge:-1"]
 
 
 @pytest.mark.parametrize(
@@ -72,6 +73,40 @@ def test_create_job_sets_materials_set_when_provided(workflow, materials_set, ex
         assert config["_materials"] == [{"_id": "m-initial"}, {"_id": "m-final"}]
     else:
         assert "_materials" not in config
+
+
+@pytest.mark.parametrize(
+    ("tags", "expected_tags"),
+    [(None, None), (CHARGE_TAGS, CHARGE_TAGS)],
+)
+def test_create_job_sets_tags_when_provided(tags, expected_tags):
+    client = MagicMock()
+    client.jobs.create.return_value = CREATED_JOB
+
+    create_job(
+        api_client=client,
+        materials=MATERIALS,
+        workflow=dict(SINGLE_MATERIAL_WORKFLOW),
+        project_id=PROJECT_ID,
+        owner_id=OWNER_ID,
+        prefix=JOB_PREFIX,
+        tags=tags,
+    )
+
+    assert client.jobs.create.call_args.args[0].get("tags") == expected_tags
+
+
+@pytest.mark.parametrize(
+    ("tags", "expected_tags_filter"),
+    [((), None), (CHARGE_TAGS, {"$all": CHARGE_TAGS})],
+)
+def test_find_job_for_material_filters_by_tags_when_provided(tags, expected_tags_filter):
+    client = MagicMock()
+    client.jobs.list.return_value = []
+
+    find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, tags=tags)
+
+    assert client.jobs.list.call_args.args[0].get("tags") == expected_tags_filter
 
 
 @pytest.mark.parametrize(
