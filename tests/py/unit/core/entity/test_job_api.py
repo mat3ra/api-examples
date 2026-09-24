@@ -97,19 +97,6 @@ def test_create_job_sets_tags_when_provided(tags, expected_tags):
 
 
 @pytest.mark.parametrize(
-    ("tags", "expected_tags_filter"),
-    [((), None), (CHARGE_TAGS, {"$all": CHARGE_TAGS})],
-)
-def test_find_job_for_material_filters_by_tags_when_provided(tags, expected_tags_filter):
-    client = MagicMock()
-    client.jobs.list.return_value = []
-
-    find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, tags=tags)
-
-    assert client.jobs.list.call_args.args[0].get("tags") == expected_tags_filter
-
-
-@pytest.mark.parametrize(
     "statuses",
     [("finished",), ("submitted", "queued", "active")],
 )

@@ -127,7 +127,6 @@ def find_job_for_material(
     workflow_name: str,
     owner_id: str,
     statuses: Iterable[str] = ("finished",),
-    tags: Iterable[str] = (),
 ) -> Optional[dict]:
     """
     Finds a job for a material and workflow name under the given owner, filtered by status.
@@ -138,20 +137,19 @@ def find_job_for_material(
         workflow_name (str): Exact workflow name the job was created with.
         owner_id (str): Account ID the job must belong to.
         statuses (Iterable[str]): Job statuses that count as a match.
-        tags (Iterable[str]): Tags the job must carry, all of them.
 
     Returns:
         dict, optional: The matching job, or None if none exists.
     """
-    query = {
-        "_material._id": material_id,
-        "owner._id": owner_id,
-        "workflow.name": workflow_name,
-        "status": {"$in": list(statuses)},
-    }
-    if tags:
-        query["tags"] = {"$all": list(tags)}
-    existing = api_client.jobs.list(query, {"limit": 1})
+    existing = api_client.jobs.list(
+        {
+            "_material._id": material_id,
+            "owner._id": owner_id,
+            "workflow.name": workflow_name,
+            "status": {"$in": list(statuses)},
+        },
+        {"limit": 1},
+    )
     return existing[0] if existing else None
 
 
