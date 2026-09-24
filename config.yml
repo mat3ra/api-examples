@@ -67,6 +67,7 @@ notebooks:
       - tabulate==0.9.0
       - mat3ra-utils
       - mat3ra-api-client
+      - emfs:/drive/packages/mat3ra_api_client-2026.4.14.post1.dev1+g0398a21-py3-none-any.whl
   - name: dataframe
     packages_pyodide:
       - jinja2
@@ -80,6 +81,7 @@ notebooks:
       - mat3ra-standata
       - mat3ra-ide
       - mat3ra-api-client
+      - emfs:/drive/packages/mat3ra_api_client-2026.4.14.post1.dev1+g0398a21-py3-none-any.whl
       - requests
       - mat3ra-ade
       - mat3ra-mode
