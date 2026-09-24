@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Any, Dict, List, Optional
 
@@ -7,6 +8,7 @@ from mat3ra.prode import PropertyName
 
 from ..property.api import get_properties_for_job
 from .analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
+from .io import load_material_from_folder
 
 ORDERED_ENTITY_SET_TYPE = "ordered"
 UNORDERED_ENTITY_SET_TYPE = "unordered"
@@ -34,12 +36,63 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
     return created
 
 
+def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) -> Material:
+    """
+    Loads a material by exact name from a folder (substring-matched, accepted only on an exact
+    name) or the owner's platform collection.
+
+    Args:
+        api_client (APIClient): API client instance carrying the authorization context.
+        folder (str): Folder to look in first, if it exists.
+        name (str): Exact material name to match.
+        owner_id (str): Account ID to search if the folder has no exact match.
+
+    Returns:
+        Material: The matching material.
+
+    Raises:
+        ValueError: If no exact match exists in the folder or the account.
+    """
+    loaded = load_material_from_folder(folder, name, verbose=False) if os.path.isdir(folder) else None
+    if loaded is not None and loaded.name == name:
+        return loaded
+    matches = api_client.materials.list({"name": name, "owner._id": owner_id}, {"limit": 1})
+    if not matches:
+        raise ValueError(f"No material named '{name}' in '{folder}' or in the account")
+    return Material.create(matches[0])
+
+
 def get_final_structure_for_job(api_client: APIClient, job_id: str) -> Material:
     """Fetch the relaxed structure a job reported as its `final_structure` property."""
     properties = get_properties_for_job(api_client, job_id, PropertyName.non_scalar.final_structure.value)
     if not properties:
         raise RuntimeError(f"Job {job_id} reported no 'final_structure'")
     return Material.create(api_client.materials.get(properties[-1]["materialId"]))
+
+
+def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Optional[Material]:
+    """
+    Finds a relaxed version of a material: the final structure of a finished job on a material
+    with the same structural hash, where the geometry has changed.
+
+    Args:
+        api_client (APIClient): API client instance carrying the authorization context.
+        material: mat3ra-made Material object (must have a .hash property).
+        owner_id (str): Account ID under which to search.
+
+    Returns:
+        Material, optional: The relaxed structure, or None if none exists.
+    """
+    ids = [m["_id"] for m in api_client.materials.list({"hash": material.hash, "owner._id": owner_id})]
+    query = {"_material._id": {"$in": ids}, "owner._id": owner_id, "status": "finished"}
+    for job in api_client.jobs.list(query):
+        properties = api_client.properties.get_for_job(job["_id"], PropertyName.non_scalar.final_structure.value)
+        if not properties:
+            continue
+        relaxed = api_client.materials.get(properties[-1]["materialId"])
+        if relaxed["hash"] != material.hash:
+            return Material.create(relaxed)
+    return None
 
 
 def get_bulk_material(api_client: APIClient, slab_material: Material, owner_id: str) -> Material:

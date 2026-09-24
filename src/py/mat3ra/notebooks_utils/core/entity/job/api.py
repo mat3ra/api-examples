@@ -1,5 +1,5 @@
 import urllib.request
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 from mat3ra.api_client import APIClient, JobEndpoints
 
@@ -114,6 +114,38 @@ def create_job(
         config["compute"] = compute
 
     return api_client.jobs.create(config)
+
+
+def find_job_for_material(
+    api_client: APIClient,
+    material_id: str,
+    workflow_name: str,
+    owner_id: str,
+    statuses: Iterable[str] = ("finished",),
+) -> Optional[dict]:
+    """
+    Finds a job for a material and workflow name under the given owner, filtered by status.
+
+    Args:
+        api_client (APIClient): API client instance carrying the authorization context.
+        material_id (str): The job's `_material._id`.
+        workflow_name (str): Exact workflow name the job was created with.
+        owner_id (str): Account ID the job must belong to.
+        statuses (Iterable[str]): Job statuses that count as a match.
+
+    Returns:
+        dict, optional: The matching job, or None if none exists.
+    """
+    existing = api_client.jobs.list(
+        {
+            "_material._id": material_id,
+            "owner._id": owner_id,
+            "workflow.name": workflow_name,
+            "status": {"$in": list(statuses)},
+        },
+        {"limit": 1},
+    )
+    return existing[0] if existing else None
 
 
 def submit_jobs(endpoint: JobEndpoints, job_ids: List[str]) -> None:

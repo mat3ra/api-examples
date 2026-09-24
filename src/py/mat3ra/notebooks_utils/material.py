@@ -1,3 +1,4 @@
+from .core.entity.material.api import load_material
 from .core.entity.material.io import get_materials, load_material_from_folder, load_materials_from_folder, set_materials
 
 __all__ = [
@@ -5,4 +6,5 @@ __all__ = [
     "set_materials",
     "load_materials_from_folder",
     "load_material_from_folder",
+    "load_material",
 ]

@@ -2,7 +2,7 @@ from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
 import pytest
-from mat3ra.notebooks_utils.core.entity.job.api import create_job
+from mat3ra.notebooks_utils.core.entity.job.api import create_job, find_job_for_material
 
 OWNER_ID = "account-1"
 PROJECT_ID = "project-1"
@@ -31,6 +31,8 @@ MATERIALS_SET: Dict[str, Any] = {
     "isEntitySet": True,
 }
 CREATED_JOB: Dict[str, Any] = {"_id": "job-1", "name": JOB_PREFIX}
+EXISTING_JOB: Dict[str, Any] = {"_id": "job-0", "name": "Fixed-cell Relaxation V_B pbe-us", "status": "finished"}
+RELAX_WORKFLOW_NAME = "Fixed-cell Relaxation V_B pbe-us"
 
 
 @pytest.mark.parametrize(
@@ -70,3 +72,43 @@ def test_create_job_sets_materials_set_when_provided(workflow, materials_set, ex
         assert config["_materials"] == [{"_id": "m-initial"}, {"_id": "m-final"}]
     else:
         assert "_materials" not in config
+
+
+@pytest.mark.parametrize(
+    "statuses",
+    [("finished",), ("submitted", "queued", "active")],
+)
+def test_find_job_for_material_returns_the_job_when_found(statuses):
+    client = MagicMock()
+    client.jobs.list.return_value = [EXISTING_JOB]
+
+    job = find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, statuses=statuses)
+
+    assert job == EXISTING_JOB
+    client.jobs.list.assert_called_once_with(
+        {
+            "_material._id": MATERIAL_INITIAL["_id"],
+            "owner._id": OWNER_ID,
+            "workflow.name": RELAX_WORKFLOW_NAME,
+            "status": {"$in": list(statuses)},
+        },
+        {"limit": 1},
+    )
+
+
+def test_find_job_for_material_returns_none_when_not_found():
+    client = MagicMock()
+    client.jobs.list.return_value = []
+
+    job = find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID)
+
+    assert job is None
+
+
+def test_find_job_for_material_defaults_to_finished_only():
+    client = MagicMock()
+    client.jobs.list.return_value = []
+
+    find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID)
+
+    assert client.jobs.list.call_args.args[0]["status"] == {"$in": ["finished"]}
