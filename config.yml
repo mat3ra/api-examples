@@ -51,6 +51,7 @@ notebooks:
       - emfs:/drive/packages/watchdog-2.3.1-py3-none-any.whl
   - name: specific_examples
     packages_pyodide:
+      - pandas
       - mat3ra-standata
 #      - mat3ra-notebooks-utils[utils_standata]
   - name: analyze_convex_hull
@@ -75,6 +76,7 @@ notebooks:
     packages_pyodide:
       - annotated_types>=0.6.0
       - jinja2
+      - pandas
       - emfs:/drive/packages/pydantic_core-2.18.2-py3-none-any.whl
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
       - mat3ra-standata
