@@ -238,12 +238,7 @@ DEFECTIVE_HASH = "hash-defective"
 RELAXED_HASH = "hash-relaxed"
 DEFECTIVE_MATERIAL = SimpleNamespace(hash=DEFECTIVE_HASH)
 SAVED_DEFECTIVE: Dict[str, Any] = {"_id": "m-defective", "name": "B-vacancy h-BN", "hash": DEFECTIVE_HASH}
-FINISHED_JOB: Dict[str, Any] = {
-    "_id": "job-1",
-    "name": "Fixed-cell Relaxation",
-    "status": "finished",
-    "_material": {"_id": "m-defective"},
-}
+FINISHED_JOB: Dict[str, Any] = {"_id": "job-1", "name": "Fixed-cell Relaxation", "status": "finished"}
 RELAXED_MATERIAL_DOC: Dict[str, Any] = {
     **Materials.get_by_name_first_match("Silicon"),
     "name": "B-vacancy h-BN relaxed",
@@ -277,7 +272,7 @@ def test_find_relaxed_material_returns_final_structure_from_the_job():
     client.jobs.request.assert_called_once_with(
         "GET",
         client.jobs.name,
-        params={"ownerId": OWNER_ID, "status": "finished"},
+        params={"materialId": [SAVED_DEFECTIVE["_id"]], "ownerId": OWNER_ID, "status": "finished"},
         headers=client.jobs.headers,
     )
     client.properties.get_for_job.assert_called_once_with(FINISHED_JOB["_id"], "final_structure")
@@ -309,14 +304,8 @@ def test_find_relaxed_material_returns_none_when_material_is_not_on_the_platform
     client.jobs.request.return_value = []
 
     assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID) is None
-    # JobsList has no flat material-id filter, so this account's finished jobs are always fetched
-    # unfiltered by material and narrowed to matching material ids in Python (see find_relaxed_material).
-    client.jobs.request.assert_called_once_with(
-        "GET",
-        client.jobs.name,
-        params={"ownerId": OWNER_ID, "status": "finished"},
-        headers=client.jobs.headers,
-    )
+    # No matching materials -> nothing to filter jobs by, so the jobs endpoint is never queried.
+    client.jobs.request.assert_not_called()
 
 
 def test_find_relaxed_material_returns_none_when_no_job_exists():
@@ -350,28 +339,21 @@ def test_find_relaxed_material_checks_every_same_hash_material():
 
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
-    # As above: the material-id narrowing happens in Python, not in the jobs query itself.
     client.jobs.request.assert_called_once_with(
         "GET",
         client.jobs.name,
-        params={"ownerId": OWNER_ID, "status": "finished"},
+        params={
+            "materialId": [other_material["_id"], SAVED_DEFECTIVE["_id"]],
+            "ownerId": OWNER_ID,
+            "status": "finished",
+        },
         headers=client.jobs.headers,
     )
 
 
 def test_find_relaxed_material_skips_a_final_structure_with_the_same_hash():
-    scf_job: Dict[str, Any] = {
-        "_id": "job-scf",
-        "name": "Total Energy",
-        "status": "finished",
-        "_material": {"_id": "m-defective"},
-    }
-    relax_job: Dict[str, Any] = {
-        "_id": "job-relax",
-        "name": "Fixed-cell Relaxation",
-        "status": "finished",
-        "_material": {"_id": "m-defective"},
-    }
+    scf_job: Dict[str, Any] = {"_id": "job-scf", "name": "Total Energy", "status": "finished"}
+    relax_job: Dict[str, Any] = {"_id": "job-relax", "name": "Fixed-cell Relaxation", "status": "finished"}
     client = MagicMock()
     client.materials.request.return_value = [SAVED_DEFECTIVE]
     client.jobs.request.return_value = [scf_job, relax_job]

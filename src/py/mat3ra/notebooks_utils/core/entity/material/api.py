@@ -103,16 +103,17 @@ def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Opt
         params={"hashes": material.hash, "ownerId": owner_id},
         headers=api_client.materials.headers,
     )
-    ids = {m["_id"] for m in matching_materials}
-    # JobsList has no flat "materialId"/"_material._id" filter, so fetch this account's finished
-    # jobs (flat ownerId + status params) and narrow to these material ids in Python.
-    finished_jobs = api_client.jobs.request(
+    ids = [m["_id"] for m in matching_materials]
+    if not ids:
+        return None
+    # JobsList's flat "materialId" param ($in-matches _material._id/_materials._id server-side -
+    # see JobDAO#filterByMaterialId), so no need to fetch every finished job and narrow in Python.
+    matching_jobs = api_client.jobs.request(
         "GET",
         api_client.jobs.name,
-        params={"ownerId": owner_id, "status": "finished"},
+        params={"materialId": ids, "ownerId": owner_id, "status": "finished"},
         headers=api_client.jobs.headers,
     )
-    matching_jobs = [job for job in finished_jobs if job.get("_material", {}).get("_id") in ids]
     for job in matching_jobs:
         properties = api_client.properties.get_for_job(job["_id"], PropertyName.non_scalar.final_structure.value)
         if not properties:
