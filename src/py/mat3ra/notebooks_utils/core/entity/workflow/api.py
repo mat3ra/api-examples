@@ -14,7 +14,16 @@ def get_or_create_workflow(api_client: APIClient, workflow: Workflow, owner_id: 
     Returns:
         dict: The workflow dict (existing or newly created).
     """
-    existing = api_client.workflows.list({"hash": workflow.hash, "owner._id": owner_id})
+    # Using .request() with flat params instead of .list(): .list() always wraps its argument as
+    # a query=<json> blob, which the workflows list endpoint (migrated to a validated use case)
+    # silently drops since it only accepts flat, declared keys - "hash" and "ownerId" are those
+    # flat equivalents.
+    existing = api_client.workflows.request(
+        "GET",
+        api_client.workflows.name,
+        params={"hash": workflow.hash, "ownerId": owner_id},
+        headers=api_client.workflows.headers,
+    )
     if existing:
         print(f"♻️  Reusing already existing Workflow: {existing[0]['_id']}")
         return existing[0]

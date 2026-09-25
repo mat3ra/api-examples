@@ -15,7 +15,7 @@ TOTAL_ENERGY_PROPERTY = {"data": {"value": -12.34}, "precision": {"value": 0.001
 def _client():
     client = MagicMock()
     client.materials.get.return_value = MATERIAL
-    client.properties.list.return_value = [TOTAL_ENERGY_PROPERTY]
+    client.properties.request.return_value = [TOTAL_ENERGY_PROPERTY]
     client.my_account.id = OWNER_ACCOUNT_ID
     # entity_cache is often None right after auth -- this must not be relied on.
     client.my_account.entity_cache = None
@@ -28,13 +28,15 @@ def test_find_total_energy_for_material_defaults_to_my_account_scope():
     result = find_total_energy_for_material(client, MATERIAL_ID)
 
     client.materials.get.assert_called_once_with(MATERIAL_ID)
-    client.properties.list.assert_called_once_with(
-        query={
+    client.properties.request.assert_called_once_with(
+        "GET",
+        client.properties.name,
+        params={
             "exabyteId": EXABYTE_ID,
             "slug": "total_energy",
-            "owner._id": OWNER_ACCOUNT_ID,
+            "ownerId": OWNER_ACCOUNT_ID,
         },
-        projection={"sort": {"precision.value": -1}, "limit": 1},
+        headers=client.properties.headers,
     )
     client.jobs.list.assert_not_called()
     assert result == TOTAL_ENERGY_PROPERTY
@@ -45,13 +47,15 @@ def test_find_total_energy_for_material_my_account_scope():
 
     find_total_energy_for_material(client, MATERIAL_ID, source="my_account")
 
-    client.properties.list.assert_called_once_with(
-        query={
+    client.properties.request.assert_called_once_with(
+        "GET",
+        client.properties.name,
+        params={
             "exabyteId": EXABYTE_ID,
             "slug": "total_energy",
-            "owner._id": OWNER_ACCOUNT_ID,
+            "ownerId": OWNER_ACCOUNT_ID,
         },
-        projection={"sort": {"precision.value": -1}, "limit": 1},
+        headers=client.properties.headers,
     )
 
 
@@ -60,13 +64,15 @@ def test_find_total_energy_for_material_curators_scope():
 
     find_total_energy_for_material(client, MATERIAL_ID, source="curators")
 
-    client.properties.list.assert_called_once_with(
-        query={
+    client.properties.request.assert_called_once_with(
+        "GET",
+        client.properties.name,
+        params={
             "exabyteId": EXABYTE_ID,
             "slug": "total_energy",
-            "owner.slug": "curators",
+            "ownerSlug": "curators",
         },
-        projection={"sort": {"precision.value": -1}, "limit": 1},
+        headers=client.properties.headers,
     )
 
 
@@ -75,12 +81,14 @@ def test_find_total_energy_for_material_public_scope_has_no_owner_filter():
 
     find_total_energy_for_material(client, MATERIAL_ID, source="public")
 
-    client.properties.list.assert_called_once_with(
-        query={
+    client.properties.request.assert_called_once_with(
+        "GET",
+        client.properties.name,
+        params={
             "exabyteId": EXABYTE_ID,
             "slug": "total_energy",
         },
-        projection={"sort": {"precision.value": -1}, "limit": 1},
+        headers=client.properties.headers,
     )
 
 
@@ -93,7 +101,7 @@ def test_find_total_energy_for_material_rejects_invalid_source():
 
 def test_find_total_energy_for_material_returns_none_when_no_property_found():
     client = _client()
-    client.properties.list.return_value = []
+    client.properties.request.return_value = []
 
     result = find_total_energy_for_material(client, MATERIAL_ID)
 
@@ -106,5 +114,5 @@ def test_find_total_energy_for_material_returns_none_when_material_has_no_exabyt
 
     result = find_total_energy_for_material(client, MATERIAL_ID)
 
-    client.properties.list.assert_not_called()
+    client.properties.request.assert_not_called()
     assert result is None
