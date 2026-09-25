@@ -8,7 +8,7 @@ from mat3ra.prode import PropertyName
 
 from ..property.api import get_properties_for_job
 from .analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
-from .io import load_material_from_folder
+from .io import load_materials_from_folder
 
 ORDERED_ENTITY_SET_TYPE = "ordered"
 UNORDERED_ENTITY_SET_TYPE = "unordered"
@@ -38,28 +38,34 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
 
 def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) -> Material:
     """
-    Loads a material by exact name from a folder (substring-matched, accepted only on an exact
-    name) or the owner's platform collection.
+    Loads a material by name from a folder or the owner's platform collection. An exact name wins;
+    otherwise the name, matched case-insensitively as a part of material names, must match exactly one.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
         folder (str): Folder to look in first, if it exists.
-        name (str): Exact material name to match.
-        owner_id (str): Account ID to search if the folder has no exact match.
+        name (str): Exact name, or a part of the name that only one material has.
+        owner_id (str): Account ID whose platform materials are searched.
 
     Returns:
         Material: The matching material.
 
     Raises:
-        ValueError: If no exact match exists in the folder or the account.
+        ValueError: If no material matches, or a partial name matches several materials.
     """
-    loaded = load_material_from_folder(folder, name, verbose=False) if os.path.isdir(folder) else None
-    if loaded is not None and loaded.name == name:
-        return loaded
-    matches = api_client.materials.list({"name": name, "owner._id": owner_id}, {"limit": 1})
+    candidates = load_materials_from_folder(folder, verbose=False) if os.path.isdir(folder) else []
+    query = {"name": {"$regex": re.escape(name), "$options": "i"}, "owner._id": owner_id}
+    candidates += [Material.create(data) for data in api_client.materials.list(query)]
+    matches: Dict[str, Any] = {}
+    for material in candidates:
+        if name.lower() in material.name.lower():
+            matches.setdefault(material.name, material)
+    if name in matches or len(matches) == 1:
+        return matches.get(name) or next(iter(matches.values()))
     if not matches:
         raise ValueError(f"No material named '{name}' in '{folder}' or in the account")
-    return Material.create(matches[0])
+    names = "; ".join(f"'{match}'" for match in matches)
+    raise ValueError(f"'{name}' matches {len(matches)} materials: {names}. Use a longer or the exact name.")
 
 
 def get_final_structure_for_job(api_client: APIClient, job_id: str) -> Material:
