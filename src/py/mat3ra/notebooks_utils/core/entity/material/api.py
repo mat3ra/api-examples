@@ -32,7 +32,9 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
     # silently drops since it only accepts flat, declared keys - "hashes" is the flat equivalent
     # of a single "hash" (it maps onto the same $in-based DAO filter).
     existing = api_client.materials.request(
-        "GET", api_client.materials.name, params={"hashes": material.hash, "ownerId": owner_id},
+        "GET",
+        api_client.materials.name,
+        params={"hashes": material.hash, "ownerId": owner_id},
         headers=api_client.materials.headers,
     )
     if existing:
@@ -64,7 +66,9 @@ def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) 
     if loaded is not None and loaded.name == name:
         return loaded
     matches = api_client.materials.request(
-        "GET", api_client.materials.name, params={"name": name, "ownerId": owner_id, "limit": 1},
+        "GET",
+        api_client.materials.name,
+        params={"name": name, "ownerId": owner_id, "limit": 1},
         headers=api_client.materials.headers,
     )
     if not matches:
@@ -94,14 +98,18 @@ def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Opt
         Material, optional: The relaxed structure, or None if none exists.
     """
     matching_materials = api_client.materials.request(
-        "GET", api_client.materials.name, params={"hashes": material.hash, "ownerId": owner_id},
+        "GET",
+        api_client.materials.name,
+        params={"hashes": material.hash, "ownerId": owner_id},
         headers=api_client.materials.headers,
     )
     ids = {m["_id"] for m in matching_materials}
     # JobsList has no flat "materialId"/"_material._id" filter, so fetch this account's finished
     # jobs (flat ownerId + status params) and narrow to these material ids in Python.
     finished_jobs = api_client.jobs.request(
-        "GET", api_client.jobs.name, params={"ownerId": owner_id, "status": "finished"},
+        "GET",
+        api_client.jobs.name,
+        params={"ownerId": owner_id, "status": "finished"},
         headers=api_client.jobs.headers,
     )
     matching_jobs = [job for job in finished_jobs if job.get("_material", {}).get("_id") in ids]
@@ -160,18 +168,24 @@ def _require_material_for_owner(api_client: APIClient, query: dict, owner_id: st
     # account's materials and filters in Python instead.
     if "_id" in query:
         matches = api_client.materials.request(
-            "GET", api_client.materials.name, params={"id": query["_id"], "ownerId": owner_id},
+            "GET",
+            api_client.materials.name,
+            params={"id": query["_id"], "ownerId": owner_id},
             headers=api_client.materials.headers,
         )
     elif "hash" in query:
         matches = api_client.materials.request(
-            "GET", api_client.materials.name, params={"hashes": query["hash"], "ownerId": owner_id},
+            "GET",
+            api_client.materials.name,
+            params={"hashes": query["hash"], "ownerId": owner_id},
             headers=api_client.materials.headers,
         )
     else:
         scaled_hash = query["scaledHash"]
         account_materials = api_client.materials.request(
-            "GET", api_client.materials.name, params={"ownerId": owner_id},
+            "GET",
+            api_client.materials.name,
+            params={"ownerId": owner_id},
             headers=api_client.materials.headers,
         )
         matches = [m for m in account_materials if m.get("scaledHash") == scaled_hash]
@@ -223,7 +237,9 @@ def find_material_set(
     # "name", so that part is applied in Python instead (entity sets per account are few, so
     # fetching them all and filtering here is cheap).
     account_entity_sets = api_client.materials.request(
-        "GET", api_client.materials.name, params={"ownerId": owner_id, "isEntitySet": "true"},
+        "GET",
+        api_client.materials.name,
+        params={"ownerId": owner_id, "isEntitySet": "true"},
         headers=api_client.materials.headers,
     )
     name_pattern = re.compile(re.escape(material_set_name), re.IGNORECASE)
@@ -254,7 +270,8 @@ def list_materials_in_set(api_client: APIClient, owner_id: str, material_set: Di
     # declared keys ("isEntitySet": "false" is the exact-match equivalent of "$ne": True for a
     # boolean field), unlike the dot-notation "inSet._id" .list() sent before.
     matches = api_client.materials.request(
-        "GET", api_client.materials.name,
+        "GET",
+        api_client.materials.name,
         params={"ownerId": owner_id, "setId": material_set_id, "isEntitySet": "false"},
         headers=api_client.materials.headers,
     )

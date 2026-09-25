@@ -19,7 +19,9 @@ def get_or_create_workflow(api_client: APIClient, workflow: Workflow, owner_id: 
     # silently drops since it only accepts flat, declared keys - "hash" and "ownerId" are those
     # flat equivalents.
     existing = api_client.workflows.request(
-        "GET", api_client.workflows.name, params={"hash": workflow.hash, "ownerId": owner_id},
+        "GET",
+        api_client.workflows.name,
+        params={"hash": workflow.hash, "ownerId": owner_id},
         headers=api_client.workflows.headers,
     )
     if existing:

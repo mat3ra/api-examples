@@ -21,7 +21,9 @@ def get_default_project(api_client: APIClient, owner_id: str) -> dict:
         ValueError: If the account has no default project.
     """
     projects = api_client.projects.request(
-        "GET", api_client.projects.name, params={"isDefault": "true", "ownerId": owner_id},
+        "GET",
+        api_client.projects.name,
+        params={"isDefault": "true", "ownerId": owner_id},
         headers=api_client.projects.headers,
     )
     if not projects:

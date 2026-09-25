@@ -26,9 +26,7 @@ def _get_properties_for_job(
     params = {"jobId": job_id}
     if property_name:
         params["slug"] = property_name
-    holders = client.properties.request(
-        "GET", client.properties.name, params=params, headers=client.properties.headers
-    )
+    holders = client.properties.request("GET", client.properties.name, params=params, headers=client.properties.headers)
     if unit_id:
         holders = [h for h in holders if h.get("source", {}).get("info", {}).get("unitId") == unit_id]
     return [holder["data"] for holder in holders]
@@ -71,9 +69,7 @@ def get_property_holder_for_job(
     # why, and note this function (unlike get_properties_for_job) needs the full property holder,
     # not just its "data" sub-dict.
     params = {"jobId": job_id, "slug": property_name}
-    holders = client.properties.request(
-        "GET", client.properties.name, params=params, headers=client.properties.headers
-    )
+    holders = client.properties.request("GET", client.properties.name, params=params, headers=client.properties.headers)
     if unit_id:
         holders = [h for h in holders if h.get("source", {}).get("info", {}).get("unitId") == unit_id]
     if not holders:
