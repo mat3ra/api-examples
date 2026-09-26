@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
 import pytest
+from mat3ra.made.material import Material
 from mat3ra.notebooks_utils.core.entity.material.api import (
     find_material_set,
     find_relaxed_material,
@@ -13,6 +14,7 @@ from mat3ra.notebooks_utils.core.entity.material.api import (
     list_materials_by_set,
     list_materials_in_set,
     load_material,
+    select_material_by_name,
 )
 from mat3ra.standata.materials import Materials
 
@@ -423,3 +425,29 @@ def test_get_final_structure_for_job(properties, error):
     assert material.basis.elements.values == ["Si", "Si"]
     client.properties.get_for_job.assert_called_once_with(JOB_ID, "final_structure")
     client.materials.get.assert_called_once_with(FINAL_STRUCTURE_MATERIAL_ID)
+
+
+@pytest.mark.parametrize(
+    ("names", "name", "expected_name"),
+    [
+        ([SILICON_RELAXED, SILICON], SILICON, SILICON),
+        ([SILICON_RELAXED], "relaxed", SILICON_RELAXED),
+        ([SILICON, SILICON], SILICON, SILICON),
+    ],
+)
+def test_select_material_by_name_takes_the_exact_name_or_a_unique_partial_one(names, name, expected_name):
+    material = select_material_by_name([Material.create(_silicon_named(candidate)) for candidate in names], name)
+
+    assert material.name == expected_name
+
+
+@pytest.mark.parametrize(
+    ("names", "name", "error"),
+    [
+        ([SILICON], "Germanium", "No material named 'Germanium'"),
+        ([SILICON_RELAXED, SILICON_SUPERCELL], "Silicon ", "matches 2 materials"),
+    ],
+)
+def test_select_material_by_name_raises_when_the_name_is_missing_or_ambiguous(names, name, error):
+    with pytest.raises(ValueError, match=error):
+        select_material_by_name([Material.create(_silicon_named(candidate)) for candidate in names], name)

@@ -36,10 +36,40 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
     return created
 
 
+def select_material_by_name(materials: List[Material], name: str) -> Material:
+    """
+    Picks one material by name. An exact name wins; otherwise the name, matched case-insensitively
+    as a part of material names, must match exactly one. Materials sharing a name count once: the
+    first of them is returned.
+
+    Args:
+        materials (List[Material]): Materials to choose from.
+        name (str): Exact name, or a part of the name that only one material has.
+
+    Returns:
+        Material: The matching material.
+
+    Raises:
+        ValueError: If no material matches, or a partial name matches several materials.
+    """
+    matches: Dict[str, Material] = {}
+    for material in materials:
+        if name.lower() in material.name.lower():
+            matches.setdefault(material.name, material)
+    if name in matches:
+        return matches[name]
+    if len(matches) == 1:
+        return next(iter(matches.values()))
+    if not matches:
+        raise ValueError(f"No material named '{name}'")
+    names = "; ".join(f"'{match}'" for match in matches)
+    raise ValueError(f"'{name}' matches {len(matches)} materials: {names}. Use a longer or the exact name.")
+
+
 def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) -> Material:
     """
-    Loads a material by name from a folder or the owner's platform collection. An exact name wins;
-    otherwise the name, matched case-insensitively as a part of material names, must match exactly one.
+    Loads a material by name from a folder or the owner's platform collection, chosen as in
+    `select_material_by_name`.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -56,16 +86,7 @@ def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) 
     candidates = load_materials_from_folder(folder, verbose=False) if os.path.isdir(folder) else []
     query = {"name": {"$regex": re.escape(name), "$options": "i"}, "owner._id": owner_id}
     candidates += [Material.create(data) for data in api_client.materials.list(query)]
-    matches: Dict[str, Any] = {}
-    for material in candidates:
-        if name.lower() in material.name.lower():
-            matches.setdefault(material.name, material)
-    if name in matches or len(matches) == 1:
-        return matches.get(name) or next(iter(matches.values()))
-    if not matches:
-        raise ValueError(f"No material named '{name}' in '{folder}' or in the account")
-    names = "; ".join(f"'{match}'" for match in matches)
-    raise ValueError(f"'{name}' matches {len(matches)} materials: {names}. Use a longer or the exact name.")
+    return select_material_by_name(candidates, name)
 
 
 def get_final_structure_for_job(api_client: APIClient, job_id: str) -> Material:

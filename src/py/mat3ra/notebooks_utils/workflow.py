@@ -111,6 +111,31 @@ def apply_scf_kgrid(
     return workflow
 
 
+# TODO: move to Wode
+def set_assignment_value(workflow: Workflow, unit_name: str, value: str) -> Workflow:
+    """
+    Sets the value of the assignment units named `unit_name` in every subworkflow that has one.
+
+    Args:
+        workflow: Workflow with subworkflows.
+        unit_name: Name of the assignment unit, e.g. "assign-charge".
+        value: The unit's new value, as the Python expression the workflow evaluates, e.g. "-1".
+
+    Raises:
+        ValueError: If no subworkflow has a unit of that name.
+    """
+    subworkflows = [
+        subworkflow for subworkflow in workflow.subworkflows if subworkflow.get_unit_by_name(name=unit_name)
+    ]
+    if not subworkflows:
+        raise ValueError(f"The workflow has no '{unit_name}' unit.")
+    for subworkflow in subworkflows:
+        unit = subworkflow.get_unit_by_name(name=unit_name)
+        unit.value = value
+        subworkflow.set_unit(unit)
+    return workflow
+
+
 def apply_planewave_cutoffs(workflow: Workflow, wavefunction, density, *, unit_name: str = "pw_relax") -> Workflow:
     """Attaches an edited planewave cutoffs context to units named `unit_name`."""
     context = PlanewaveCutoffsContextProvider(
