@@ -1,0 +1,11 @@
+# The measurement upload: pip install -r requirements.txt
+#
+# api-client, standata and esse are pinned to the branch carrying the REST endpoints, the instrument
+# registry entries and the Sample/Measurement schemas. They become version pins when it releases.
+
+mat3ra-api-client @ git+https://github.com/mat3ra/api-client.git@feature/SOF-8051
+mat3ra-standata @ git+https://github.com/mat3ra/standata.git@feature/SOF-8051
+mat3ra-esse @ git+https://github.com/mat3ra/esse.git@feature/SOF-8051
+mat3ra-notebooks-utils[api]
+ipywidgets
+requests
