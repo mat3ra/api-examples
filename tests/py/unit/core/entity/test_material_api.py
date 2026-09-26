@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
 import pytest
+from mat3ra.made.material import Material
 from mat3ra.notebooks_utils.core.entity.material.api import (
     find_material_set,
     find_relaxed_material,
@@ -13,6 +14,7 @@ from mat3ra.notebooks_utils.core.entity.material.api import (
     list_materials_by_set,
     list_materials_in_set,
     load_material,
+    select_material_by_name,
 )
 from mat3ra.standata.materials import Materials
 
@@ -53,6 +55,14 @@ SET_MEMBER_MATERIALS_OUT_OF_ORDER: List[Dict[str, Any]] = [
 ]
 EXPECTED_ORDERED_IDS = ["m-initial", "m-image", "m-final"]
 EXPECTED_SINGLE_MEMBER_IDS = ["m-initial"]
+
+SILICON = "Silicon"
+SILICON_RELAXED = "Silicon relaxed"
+SILICON_SUPERCELL = "Silicon 2x2x2"
+
+
+def _silicon_named(name: str) -> Dict[str, Any]:
+    return {**Materials.get_by_name_first_match("Silicon"), "name": name}
 
 
 def _client_with_list_responses(responses: List[List[Dict[str, Any]]]) -> MagicMock:
@@ -349,48 +359,47 @@ def test_find_relaxed_material_skips_a_final_structure_with_the_same_hash():
     assert client.properties.get_for_job.call_count == 2
 
 
-SILICON_NAMED = {**Materials.get_by_name_first_match("Silicon"), "name": "Silicon"}
-
-
-def test_load_material_finds_an_exact_match_in_the_folder(tmp_path):
-    (tmp_path / "silicon.json").write_text(json.dumps(SILICON_NAMED))
+@pytest.mark.parametrize(
+    ("folder_names", "account_names", "name", "expected_name"),
+    [
+        ([SILICON, SILICON_RELAXED], [], SILICON, SILICON),
+        ([], [SILICON_SUPERCELL, SILICON], SILICON, SILICON),
+        ([], [SILICON_RELAXED], "relaxed", SILICON_RELAXED),
+        ([SILICON_RELAXED], [SILICON_RELAXED], "RELAXED", SILICON_RELAXED),
+    ],
+)
+def test_load_material_takes_the_exact_name_or_a_unique_partial_one(
+    tmp_path, folder_names, account_names, name, expected_name
+):
+    for index, folder_name in enumerate(folder_names):
+        (tmp_path / f"material-{index}.json").write_text(json.dumps(_silicon_named(folder_name)))
     client = MagicMock()
+    client.materials.list.return_value = [_silicon_named(account_name) for account_name in account_names]
 
-    material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
+    material = load_material(client, str(tmp_path), name, OWNER_ID)
 
-    assert material.name == "Silicon"
-    client.materials.list.assert_not_called()
+    assert material.name == expected_name
+    assert client.materials.list.call_args.args[0] == {
+        "name": {"$regex": re.escape(name), "$options": "i"},
+        "owner._id": OWNER_ID,
+    }
 
 
-def test_load_material_falls_back_to_the_account(tmp_path):
-    (tmp_path / "silicon.json").write_text(json.dumps(Materials.get_by_name_first_match("Silicon")))
+@pytest.mark.parametrize(
+    ("folder_names", "account_names", "name", "error"),
+    [
+        ([], [], "Germanium", "No material named 'Germanium'"),
+        ([SILICON_RELAXED], [SILICON_SUPERCELL], "Silicon ", "matches 2 materials"),
+    ],
+)
+def test_load_material_raises_when_the_name_is_missing_or_ambiguous(tmp_path, folder_names, account_names, name, error):
+    for index, folder_name in enumerate(folder_names):
+        (tmp_path / f"material-{index}.json").write_text(json.dumps(_silicon_named(folder_name)))
     client = MagicMock()
-    client.materials.list.return_value = [SILICON_NAMED]
+    client.materials.list.return_value = [_silicon_named(account_name) for account_name in account_names]
 
-    material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
-
-    assert material.name == "Silicon"
-    client.materials.list.assert_called_once_with({"name": "Silicon", "owner._id": OWNER_ID}, {"limit": 1})
-
-
-def test_load_material_raises_when_neither_has_it(tmp_path):
-    client = MagicMock()
-    client.materials.list.return_value = []
-
-    with pytest.raises(ValueError, match="Germanium"):
-        load_material(client, str(tmp_path), "Germanium", OWNER_ID)
-
-
-def test_load_material_falls_through_a_folder_near_miss(tmp_path):
-    (tmp_path / "silicon.json").write_text(json.dumps(SILICON_NAMED))
-    (tmp_path / "silicon relaxed.json").write_text(json.dumps({**SILICON_NAMED, "name": "Silicon relaxed"}))
-    client = MagicMock()
-    client.materials.list.return_value = [SILICON_NAMED]
-
-    material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
-
-    assert material.name == "Silicon"
-    client.materials.list.assert_called_once_with({"name": "Silicon", "owner._id": OWNER_ID}, {"limit": 1})
+    with pytest.raises(ValueError, match=error):
+        load_material(client, str(tmp_path), name, OWNER_ID)
 
 
 JOB_ID = "job-1"
@@ -416,3 +425,29 @@ def test_get_final_structure_for_job(properties, error):
     assert material.basis.elements.values == ["Si", "Si"]
     client.properties.get_for_job.assert_called_once_with(JOB_ID, "final_structure")
     client.materials.get.assert_called_once_with(FINAL_STRUCTURE_MATERIAL_ID)
+
+
+@pytest.mark.parametrize(
+    ("names", "name", "expected_name"),
+    [
+        ([SILICON_RELAXED, SILICON], SILICON, SILICON),
+        ([SILICON_RELAXED], "relaxed", SILICON_RELAXED),
+        ([SILICON, SILICON], SILICON, SILICON),
+    ],
+)
+def test_select_material_by_name_takes_the_exact_name_or_a_unique_partial_one(names, name, expected_name):
+    material = select_material_by_name([Material.create(_silicon_named(candidate)) for candidate in names], name)
+
+    assert material.name == expected_name
+
+
+@pytest.mark.parametrize(
+    ("names", "name", "error"),
+    [
+        ([SILICON], "Germanium", "No material named 'Germanium'"),
+        ([SILICON_RELAXED, SILICON_SUPERCELL], "Silicon ", "matches 2 materials"),
+    ],
+)
+def test_select_material_by_name_raises_when_the_name_is_missing_or_ambiguous(names, name, error):
+    with pytest.raises(ValueError, match=error):
+        select_material_by_name([Material.create(_silicon_named(candidate)) for candidate in names], name)

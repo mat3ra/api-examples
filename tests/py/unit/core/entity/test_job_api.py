@@ -2,7 +2,11 @@ from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
 import pytest
-from mat3ra.notebooks_utils.core.entity.job.api import create_job, find_job_for_material
+from mat3ra.notebooks_utils.core.entity.job.api import (
+    create_job,
+    find_job_for_material,
+    find_job_for_material_with_property,
+)
 
 OWNER_ID = "account-1"
 PROJECT_ID = "project-1"
@@ -33,6 +37,7 @@ MATERIALS_SET: Dict[str, Any] = {
 CREATED_JOB: Dict[str, Any] = {"_id": "job-1", "name": JOB_PREFIX}
 EXISTING_JOB: Dict[str, Any] = {"_id": "job-0", "name": "Fixed-cell Relaxation V_B pbe-us", "status": "finished"}
 RELAX_WORKFLOW_NAME = "Fixed-cell Relaxation V_B pbe-us"
+CHARGE_TAGS = ["charge:-1"]
 
 
 @pytest.mark.parametrize(
@@ -75,6 +80,27 @@ def test_create_job_sets_materials_set_when_provided(workflow, materials_set, ex
 
 
 @pytest.mark.parametrize(
+    ("tags", "expected_tags"),
+    [(None, None), (CHARGE_TAGS, CHARGE_TAGS)],
+)
+def test_create_job_sets_tags_when_provided(tags, expected_tags):
+    client = MagicMock()
+    client.jobs.create.return_value = CREATED_JOB
+
+    create_job(
+        api_client=client,
+        materials=MATERIALS,
+        workflow=dict(SINGLE_MATERIAL_WORKFLOW),
+        project_id=PROJECT_ID,
+        owner_id=OWNER_ID,
+        prefix=JOB_PREFIX,
+        tags=tags,
+    )
+
+    assert client.jobs.create.call_args.args[0].get("tags") == expected_tags
+
+
+@pytest.mark.parametrize(
     "statuses",
     [("finished",), ("submitted", "queued", "active")],
 )
@@ -112,3 +138,40 @@ def test_find_job_for_material_defaults_to_finished_only():
     find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID)
 
     assert client.jobs.list.call_args.args[0]["status"] == {"$in": ["finished"]}
+
+
+PROPERTY_NAME = "total_energy"
+JOB_WITHOUT_PROPERTY: Dict[str, Any] = {"_id": "job-2", "name": "Band Gap", "status": "finished"}
+
+
+def test_find_job_for_material_with_property_returns_the_first_job_that_reported_it():
+    client = MagicMock()
+    client.jobs.list.return_value = [JOB_WITHOUT_PROPERTY, EXISTING_JOB]
+    client.properties.get_for_job.side_effect = lambda job_id, property_name: (
+        [{"name": property_name}] if job_id == EXISTING_JOB["_id"] else []
+    )
+
+    job = find_job_for_material_with_property(
+        client, MATERIAL_INITIAL["_id"], PROPERTY_NAME, OWNER_ID, tags=CHARGE_TAGS
+    )
+
+    assert job == EXISTING_JOB
+    client.jobs.list.assert_called_once_with(
+        {
+            "_material._id": MATERIAL_INITIAL["_id"],
+            "owner._id": OWNER_ID,
+            "status": "finished",
+            "tags": {"$all": CHARGE_TAGS},
+        }
+    )
+
+
+def test_find_job_for_material_with_property_returns_none_when_no_job_reported_it():
+    client = MagicMock()
+    client.jobs.list.return_value = [JOB_WITHOUT_PROPERTY]
+    client.properties.get_for_job.return_value = []
+
+    job = find_job_for_material_with_property(client, MATERIAL_INITIAL["_id"], PROPERTY_NAME, OWNER_ID)
+
+    assert job is None
+    assert "tags" not in client.jobs.list.call_args.args[0]

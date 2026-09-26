@@ -5,6 +5,7 @@ from mat3ra.notebooks_utils.workflow import (
     apply_scf_kgrid,
     kgrid_from_density,
     patch_workflow_qe_input,
+    set_assignment_value,
 )
 from mat3ra.standata.workflows import WorkflowStandata
 from mat3ra.wode.workflows import Workflow
@@ -136,3 +137,20 @@ def test_apply_planewave_cutoffs_updates_pw_relax_context(wavefunction, density)
     cutoffs_item = next(item for item in unit.context if item.get("name") == "cutoffs")
     assert cutoffs_item["data"]["wavefunction"] == float(wavefunction)
     assert cutoffs_item["data"]["density"] == float(density)
+
+
+def test_set_assignment_value_sets_every_unit_of_that_name():
+    config = WorkflowStandata.filter_by_application("espresso").get_by_name_first_match(SURFACE_ENERGY_WORKFLOW)
+    workflow = set_assignment_value(Workflow.create(config), "assign-bulk-id", "'bulk-1'")
+    units = [
+        subworkflow.get_unit_by_name(name="assign-bulk-id")
+        for subworkflow in workflow.subworkflows
+        if subworkflow.get_unit_by_name(name="assign-bulk-id")
+    ]
+    assert units
+    assert all(unit.value == "'bulk-1'" for unit in units)
+
+
+def test_set_assignment_value_raises_for_an_unknown_unit():
+    with pytest.raises(ValueError, match="no 'assign-nothing' unit"):
+        set_assignment_value(_relax_workflow(), "assign-nothing", "1")

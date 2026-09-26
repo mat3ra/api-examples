@@ -75,6 +75,7 @@ def create_job(
     prefix: str,
     compute: Optional[dict] = None,
     materials_set: Optional[Dict[str, Any]] = None,
+    tags: Optional[List[str]] = None,
 ) -> Union[dict, List[dict]]:
     """
     Creates jobs using pre-serialised material and workflow dicts.
@@ -89,6 +90,7 @@ def create_job(
         compute (dict, optional): Compute configuration dict.
         materials_set (dict, optional): Ordered/unordered materials set document
             (same contract as the job designer `_materialsSet`).
+        tags (list[str], optional): Job tags, e.g. ["charge:-1"].
 
     Returns:
         dict | list[dict]: Created job(s).
@@ -112,6 +114,9 @@ def create_job(
 
     if compute:
         config["compute"] = compute
+
+    if tags:
+        config["tags"] = list(tags)
 
     return api_client.jobs.create(config)
 
@@ -146,6 +151,36 @@ def find_job_for_material(
         {"limit": 1},
     )
     return existing[0] if existing else None
+
+
+def find_job_for_material_with_property(
+    api_client: APIClient,
+    material_id: str,
+    property_name: str,
+    owner_id: str,
+    tags: Optional[List[str]] = None,
+) -> Optional[dict]:
+    """
+    Finds a finished job on a material that reported the given property, optionally among the jobs
+    carrying every one of `tags` (e.g. ["charge:0"] for a reference computed in the neutral state).
+
+    Args:
+        api_client (APIClient): API client instance carrying the authorization context.
+        material_id (str): The job's `_material._id`.
+        property_name (str): Property the job must have reported, e.g. "total_energy".
+        owner_id (str): Account ID the job must belong to.
+        tags (List[str], optional): Tags the job must all carry.
+
+    Returns:
+        dict, optional: The first matching job, or None if none exists.
+    """
+    query: Dict[str, Any] = {"_material._id": material_id, "owner._id": owner_id, "status": "finished"}
+    if tags:
+        query["tags"] = {"$all": list(tags)}
+    jobs = api_client.jobs.list(query)
+    return next(
+        (job for job in jobs if api_client.properties.get_for_job(job["_id"], property_name=property_name)), None
+    )
 
 
 def submit_jobs(endpoint: JobEndpoints, job_ids: List[str]) -> None:
