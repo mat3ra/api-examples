@@ -6,7 +6,6 @@ from mat3ra.notebooks_utils.core.entity.job.api import (
     create_job,
     find_job_for_material,
     find_job_for_material_with_property,
-    get_kgrid_of_job,
     get_kgrid_query,
 )
 
@@ -197,14 +196,6 @@ RELAX_KGRID_QUERY: Dict[str, Any] = {
 )
 def test_get_kgrid_query(kgrid, unit_name, expected_query):
     assert get_kgrid_query(kgrid, unit_name) == expected_query
-
-
-@pytest.mark.parametrize(
-    ("context", "expected_kgrid"), [([{"name": "kgrid", "data": {"dimensions": [4, 4, 4]}}], [4, 4, 4]), ([], None)]
-)
-def test_get_kgrid_of_job(context, expected_kgrid):
-    job = {"workflow": {"subworkflows": [{"units": [{"name": "pw_scf", "context": context}]}]}}
-    assert get_kgrid_of_job(job) == expected_kgrid
 
 
 def test_find_job_for_material_with_property_matches_the_pw_scf_kgrid():

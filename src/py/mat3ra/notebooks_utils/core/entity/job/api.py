@@ -171,13 +171,6 @@ def get_kgrid_query(kgrid: Optional[List[int]], unit_name: str = "pw_scf") -> Di
     return {"workflow.subworkflows.units": {"$elemMatch": {"name": unit_name, "context": kgrid_context}}}
 
 
-def get_kgrid_of_job(job: dict) -> Optional[List[int]]:
-    """The k-grid dimensions the job's `pw_scf` unit ran on, read where `get_kgrid_query` matches; None if unset."""
-    units = [unit for subworkflow in job["workflow"]["subworkflows"] for unit in subworkflow["units"]]
-    contexts = [item for unit in units if unit["name"] == "pw_scf" for item in unit["context"]]
-    return next((item["data"]["dimensions"] for item in contexts if item["name"] == "kgrid"), None)
-
-
 def find_job_for_material_with_property(
     api_client: APIClient,
     material_id: str,
