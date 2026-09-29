@@ -153,16 +153,30 @@ def find_job_for_material(
     return existing[0] if existing else None
 
 
+def get_kgrid_query(kgrid: Optional[List[int]], unit_name: str = "pw_scf") -> Dict[str, Any]:
+    """
+    `jobs.list` condition for jobs whose `unit_name` unit ran on `kgrid` (empty when `kgrid` is None), matched where
+    `apply_scf_kgrid` sets it: `workflow.subworkflows[].units[name].context[name="kgrid"].data.dimensions`.
+    A job created without an explicit k-grid has no such context and never matches.
+    """
+    if kgrid is None:
+        return {}
+    kgrid_context = {"$elemMatch": {"name": "kgrid", "data.dimensions": list(kgrid)}}
+    return {"workflow.subworkflows.units": {"$elemMatch": {"name": unit_name, "context": kgrid_context}}}
+
+
 def find_job_for_material_with_property(
     api_client: APIClient,
     material_id: str,
     property_name: str,
     owner_id: str,
     tags: Optional[List[str]] = None,
+    kgrid: Optional[List[int]] = None,
 ) -> Optional[dict]:
     """
     Finds a finished job on a material that reported the given property, optionally among the jobs
-    carrying every one of `tags` (e.g. ["charge:0"] for a reference computed in the neutral state).
+    carrying every one of `tags` (e.g. ["charge:0"] for a reference computed in the neutral state)
+    and among those whose `pw_scf` unit ran on `kgrid`.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -170,6 +184,7 @@ def find_job_for_material_with_property(
         property_name (str): Property the job must have reported, e.g. "total_energy".
         owner_id (str): Account ID the job must belong to.
         tags (List[str], optional): Tags the job must all carry.
+        kgrid (List[int], optional): K-grid dimensions the job's `pw_scf` unit ran on, see `get_kgrid_query`.
 
     Returns:
         dict, optional: The first matching job, or None if none exists.
@@ -177,7 +192,7 @@ def find_job_for_material_with_property(
     query: Dict[str, Any] = {"_material._id": material_id, "owner._id": owner_id, "status": "finished"}
     if tags:
         query["tags"] = {"$all": list(tags)}
-    jobs = api_client.jobs.list(query)
+    jobs = api_client.jobs.list({**query, **get_kgrid_query(kgrid)})
     return next(
         (job for job in jobs if api_client.properties.get_for_job(job["_id"], property_name=property_name)), None
     )

@@ -175,3 +175,24 @@ def test_find_job_for_material_with_property_returns_none_when_no_job_reported_i
 
     assert job is None
     assert "tags" not in client.jobs.list.call_args.args[0]
+
+
+KGRID_QUERY: Dict[str, Any] = {
+    "workflow.subworkflows.units": {
+        "$elemMatch": {"name": "pw_scf", "context": {"$elemMatch": {"name": "kgrid", "data.dimensions": [4, 4, 4]}}}
+    }
+}
+
+
+@pytest.mark.parametrize(("kgrid", "expected_kgrid_query"), [(None, {}), ([4, 4, 4], KGRID_QUERY)])
+def test_find_job_for_material_with_property_matches_the_pw_scf_kgrid(kgrid, expected_kgrid_query):
+    client = MagicMock()
+    client.jobs.list.return_value = [EXISTING_JOB]
+    client.properties.get_for_job.return_value = [{"name": PROPERTY_NAME}]
+
+    job = find_job_for_material_with_property(client, MATERIAL_INITIAL["_id"], PROPERTY_NAME, OWNER_ID, kgrid=kgrid)
+
+    assert job == EXISTING_JOB
+    client.jobs.list.assert_called_once_with(
+        {"_material._id": MATERIAL_INITIAL["_id"], "owner._id": OWNER_ID, "status": "finished", **expected_kgrid_query}
+    )
