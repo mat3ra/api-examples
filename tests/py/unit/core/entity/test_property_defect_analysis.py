@@ -9,8 +9,11 @@ from mat3ra.notebooks_utils.core.entity.property.defect_analysis import (
     STABLE_TO_COLUMN,
     evaluate_finite_size_fit,
     fit_finite_size,
+    flatten_scope_track,
     get_charge_state_table,
+    get_chemical_potential_combination,
     get_formation_energies_vs_fermi_level,
+    get_formation_energy_at_chemical_potentials,
 )
 
 # GaAs As-vacancy formation energies at the VBM (eV), 2x2x2 cell, from the QuantumATK tutorial.
@@ -58,3 +61,44 @@ def test_fit_finite_size_fits_the_cubic_term_with_four_sizes():
 def test_fit_finite_size_needs_two_sizes():
     with pytest.raises(ValueError, match="at least two"):
         fit_finite_size([10.0], [2.3])
+
+
+# scopeTrack globals of the m-HfO2 jobs rxCNizLKg7hkrPgAh (Zr_Hf) and mpxeDWYNKPBr6zc8Z (V_O).
+ZR_HF_SCOPE_TRACK = [
+    {"scope": {"global": {"DELTA_N_BY_SYMBOL": {"Hf": -1, "O": 0, "Zr": 1}}}},
+    {"scope": {"global": {"DEFECT_FORMATION_ENERGY": 0.3664}}},
+]
+V_O_SCOPE_TRACK = [
+    {"scope": {"global": {"DELTA_N_BY_SYMBOL": {"O": -1, "Hf": 0}}}},
+    {"scope": {"global": {"DEFECT_FORMATION_ENERGY": 6.356}}},
+]
+ELEMENTAL = {"O": 0.0, "Hf": 0.0, "Zr": 0.0}
+O_RICH = {"O": 0.0, "Hf": -10.6926, "Zr": -10.3396}
+O_POOR = {"O": -5.346, "Hf": 0.0}
+
+
+@pytest.mark.parametrize(
+    "scope_track, delta_mu, expected",
+    [
+        (ZR_HF_SCOPE_TRACK, ELEMENTAL, 0.3664),
+        (ZR_HF_SCOPE_TRACK, O_RICH, 0.0134),
+        (V_O_SCOPE_TRACK, O_POOR, 1.010),
+        (V_O_SCOPE_TRACK, O_RICH, 6.356),  # Zr is not an element of the job, so its delta_mu is ignored
+    ],
+)
+def test_get_formation_energy_at_chemical_potentials(scope_track, delta_mu, expected):
+    scope = flatten_scope_track(scope_track)
+    assert get_formation_energy_at_chemical_potentials(scope, delta_mu) == pytest.approx(expected, abs=1e-4)
+
+
+def test_get_formation_energy_at_chemical_potentials_raises_on_a_missing_element():
+    with pytest.raises(KeyError):
+        get_formation_energy_at_chemical_potentials(flatten_scope_track(ZR_HF_SCOPE_TRACK), O_POOR)
+
+
+@pytest.mark.parametrize(
+    "delta_n_by_symbol, expected",
+    [({"O": -1, "Hf": 0}, "Δμ_O"), ({"Zr": 1, "Hf": -1, "O": 0}, "Δμ_Hf − Δμ_Zr"), ({"O": -2}, "2Δμ_O")],
+)
+def test_get_chemical_potential_combination(delta_n_by_symbol, expected):
+    assert get_chemical_potential_combination(delta_n_by_symbol) == expected
