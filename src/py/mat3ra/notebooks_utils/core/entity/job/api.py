@@ -127,9 +127,12 @@ def find_job_for_material(
     workflow_name: str,
     owner_id: str,
     statuses: Iterable[str] = ("finished",),
+    kgrid: Optional[List[int]] = None,
+    unit_name: str = "pw_scf",
 ) -> Optional[dict]:
     """
-    Finds a job for a material and workflow name under the given owner, filtered by status.
+    Finds a job for a material and workflow name under the given owner, filtered by status and,
+    optionally, by the k-grid its `unit_name` unit ran on.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -137,6 +140,8 @@ def find_job_for_material(
         workflow_name (str): Exact workflow name the job was created with.
         owner_id (str): Account ID the job must belong to.
         statuses (Iterable[str]): Job statuses that count as a match.
+        kgrid (List[int], optional): K-grid dimensions the job's `unit_name` unit ran on, see `get_kgrid_query`.
+        unit_name (str): Name of the unit the k-grid was set on.
 
     Returns:
         dict, optional: The matching job, or None if none exists.
@@ -147,6 +152,7 @@ def find_job_for_material(
             "owner._id": owner_id,
             "workflow.name": workflow_name,
             "status": {"$in": list(statuses)},
+            **get_kgrid_query(kgrid, unit_name),
         },
         {"limit": 1},
     )

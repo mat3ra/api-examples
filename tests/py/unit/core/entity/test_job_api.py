@@ -196,3 +196,15 @@ def test_find_job_for_material_with_property_matches_the_pw_scf_kgrid(kgrid, exp
     client.jobs.list.assert_called_once_with(
         {"_material._id": MATERIAL_INITIAL["_id"], "owner._id": OWNER_ID, "status": "finished", **expected_kgrid_query}
     )
+
+
+def test_find_job_for_material_matches_the_kgrid():
+    client = MagicMock()
+    client.jobs.list.return_value = [EXISTING_JOB]
+
+    job = find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, kgrid=[4, 4, 4])
+
+    assert job == EXISTING_JOB
+    assert (
+        client.jobs.list.call_args.args[0]["workflow.subworkflows.units"] == KGRID_QUERY["workflow.subworkflows.units"]
+    )
