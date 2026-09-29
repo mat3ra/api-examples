@@ -359,14 +359,24 @@ def test_find_relaxed_material_skips_a_final_structure_with_the_same_hash():
     assert client.properties.get_for_job.call_count == 2
 
 
-def test_find_relaxed_material_matches_the_relaxation_kgrid():
+@pytest.mark.parametrize(
+    ("kgrid", "expected_unit_condition"),
+    [
+        (None, {"name": "pw_vc-relax", "context.name": {"$ne": "kgrid"}}),
+        (
+            [4, 4, 4],
+            {"name": "pw_vc-relax", "context": {"$elemMatch": {"name": "kgrid", "data.dimensions": [4, 4, 4]}}},
+        ),
+    ],
+)
+def test_find_relaxed_material_matches_the_relaxation_kgrid(kgrid, expected_unit_condition):
     client = MagicMock()
     client.materials.list.return_value = [SAVED_DEFECTIVE]
     client.jobs.list.return_value = [FINISHED_JOB]
     client.properties.get_for_job.return_value = [{"materialId": "m-relaxed"}]
     client.materials.get.return_value = RELAXED_MATERIAL_DOC
 
-    relaxed = find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, kgrid=[4, 4, 4], unit_name="pw_vc-relax")
+    relaxed = find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, kgrid=kgrid, unit_name="pw_vc-relax")
 
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
@@ -375,12 +385,7 @@ def test_find_relaxed_material_matches_the_relaxation_kgrid():
             "_material._id": {"$in": [SAVED_DEFECTIVE["_id"]]},
             "owner._id": OWNER_ID,
             "status": "finished",
-            "workflow.subworkflows.units": {
-                "$elemMatch": {
-                    "name": "pw_vc-relax",
-                    "context": {"$elemMatch": {"name": "kgrid", "data.dimensions": [4, 4, 4]}},
-                }
-            },
+            "workflow.subworkflows.units": {"$elemMatch": expected_unit_condition},
         }
     )
 

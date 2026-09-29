@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from mat3ra.notebooks_utils.core.entity.job.api import (
+    ANY_KGRID,
     create_job,
     find_job_for_material,
     find_job_for_material_with_property,
@@ -182,9 +183,15 @@ KGRID_QUERY: Dict[str, Any] = {
         "$elemMatch": {"name": "pw_scf", "context": {"$elemMatch": {"name": "kgrid", "data.dimensions": [4, 4, 4]}}}
     }
 }
+DEFAULT_KGRID_QUERY: Dict[str, Any] = {
+    "workflow.subworkflows.units": {"$elemMatch": {"name": "pw_scf", "context.name": {"$ne": "kgrid"}}}
+}
 
 
-@pytest.mark.parametrize(("kgrid", "expected_kgrid_query"), [(None, {}), ([4, 4, 4], KGRID_QUERY)])
+@pytest.mark.parametrize(
+    ("kgrid", "expected_kgrid_query"),
+    [(ANY_KGRID, {}), (None, DEFAULT_KGRID_QUERY), ([4, 4, 4], KGRID_QUERY)],
+)
 def test_find_job_for_material_with_property_matches_the_pw_scf_kgrid(kgrid, expected_kgrid_query):
     client = MagicMock()
     client.jobs.list.return_value = [EXISTING_JOB]
@@ -198,13 +205,13 @@ def test_find_job_for_material_with_property_matches_the_pw_scf_kgrid(kgrid, exp
     )
 
 
-def test_find_job_for_material_matches_the_kgrid():
+@pytest.mark.parametrize(("kgrid", "expected_kgrid_query"), [(None, DEFAULT_KGRID_QUERY), ([4, 4, 4], KGRID_QUERY)])
+def test_find_job_for_material_matches_the_kgrid(kgrid, expected_kgrid_query):
     client = MagicMock()
     client.jobs.list.return_value = [EXISTING_JOB]
 
-    job = find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, kgrid=[4, 4, 4])
+    job = find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, kgrid=kgrid)
 
     assert job == EXISTING_JOB
-    assert (
-        client.jobs.list.call_args.args[0]["workflow.subworkflows.units"] == KGRID_QUERY["workflow.subworkflows.units"]
-    )
+    kgrid_key = "workflow.subworkflows.units"
+    assert client.jobs.list.call_args.args[0][kgrid_key] == expected_kgrid_query[kgrid_key]

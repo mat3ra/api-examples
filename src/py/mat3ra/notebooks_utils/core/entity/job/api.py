@@ -4,6 +4,7 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 from mat3ra.api_client import APIClient, JobEndpoints
 
 MATERIALS_SET_ENTITY_CLASS = "Material"
+ANY_KGRID = "any"
 
 
 def save_files(job_id: str, job_endpoint: JobEndpoints, filename_on_cloud: str, filename_on_disk: str) -> None:
@@ -127,7 +128,7 @@ def find_job_for_material(
     workflow_name: str,
     owner_id: str,
     statuses: Iterable[str] = ("finished",),
-    kgrid: Optional[List[int]] = None,
+    kgrid: Union[List[int], str, None] = ANY_KGRID,
     unit_name: str = "pw_scf",
 ) -> Optional[dict]:
     """
@@ -140,7 +141,8 @@ def find_job_for_material(
         workflow_name (str): Exact workflow name the job was created with.
         owner_id (str): Account ID the job must belong to.
         statuses (Iterable[str]): Job statuses that count as a match.
-        kgrid (List[int], optional): K-grid dimensions the job's `unit_name` unit ran on, see `get_kgrid_query`.
+        kgrid (List[int], optional): K-grid the job's `unit_name` unit ran on, None for the platform default,
+            see `get_kgrid_query`.
         unit_name (str): Name of the unit the k-grid was set on.
 
     Returns:
@@ -159,16 +161,19 @@ def find_job_for_material(
     return existing[0] if existing else None
 
 
-def get_kgrid_query(kgrid: Optional[List[int]], unit_name: str = "pw_scf") -> Dict[str, Any]:
+def get_kgrid_query(kgrid: Union[List[int], str, None], unit_name: str = "pw_scf") -> Dict[str, Any]:
     """
-    `jobs.list` condition for jobs whose `unit_name` unit ran on `kgrid` (empty when `kgrid` is None), matched where
-    `apply_scf_kgrid` sets it: `workflow.subworkflows[].units[name].context[name="kgrid"].data.dimensions`.
-    A job created without an explicit k-grid has no such context and never matches.
+    `jobs.list` condition on the k-grid of the job's `unit_name` unit, read where `apply_scf_kgrid` sets it:
+    `workflow.subworkflows[].units[name].context[name="kgrid"].data.dimensions`. `kgrid` is the dimensions to match,
+    None for the platform's default grid (a unit without a kgrid context), or ANY_KGRID for no condition.
     """
-    if kgrid is None:
+    if kgrid == ANY_KGRID:
         return {}
-    kgrid_context = {"$elemMatch": {"name": "kgrid", "data.dimensions": list(kgrid)}}
-    return {"workflow.subworkflows.units": {"$elemMatch": {"name": unit_name, "context": kgrid_context}}}
+    if kgrid is None:
+        unit = {"name": unit_name, "context.name": {"$ne": "kgrid"}}
+    else:
+        unit = {"name": unit_name, "context": {"$elemMatch": {"name": "kgrid", "data.dimensions": list(kgrid)}}}
+    return {"workflow.subworkflows.units": {"$elemMatch": unit}}
 
 
 def find_job_for_material_with_property(
@@ -177,7 +182,7 @@ def find_job_for_material_with_property(
     property_name: str,
     owner_id: str,
     tags: Optional[List[str]] = None,
-    kgrid: Optional[List[int]] = None,
+    kgrid: Union[List[int], str, None] = ANY_KGRID,
 ) -> Optional[dict]:
     """
     Finds a finished job on a material that reported the given property, optionally among the jobs
@@ -190,7 +195,8 @@ def find_job_for_material_with_property(
         property_name (str): Property the job must have reported, e.g. "total_energy".
         owner_id (str): Account ID the job must belong to.
         tags (List[str], optional): Tags the job must all carry.
-        kgrid (List[int], optional): K-grid dimensions the job's `pw_scf` unit ran on, see `get_kgrid_query`.
+        kgrid (List[int], optional): K-grid the job's `pw_scf` unit ran on, None for the platform default,
+            see `get_kgrid_query`.
 
     Returns:
         dict, optional: The first matching job, or None if none exists.
