@@ -72,18 +72,17 @@ V_O_SCOPE_TRACK = [
     {"scope": {"global": {"DELTA_N_BY_SYMBOL": {"O": -1, "Hf": 0}}}},
     {"scope": {"global": {"DEFECT_FORMATION_ENERGY": 6.356}}},
 ]
-ELEMENTAL = {"O": 0.0, "Hf": 0.0, "Zr": 0.0}
-O_RICH = {"O": 0.0, "Hf": -10.6926, "Zr": -10.3396}
-O_POOR = {"O": -5.346, "Hf": 0.0}
+ZR_HF_DELTA_MU = {"O": 0.0, "Hf": -10.693, "Zr": -10.340}
+V_O_DELTA_MU = {"O": -5.346, "Hf": 0.0}
 
 
 @pytest.mark.parametrize(
     "scope_track, delta_mu, expected",
     [
-        (ZR_HF_SCOPE_TRACK, ELEMENTAL, 0.3664),
-        (ZR_HF_SCOPE_TRACK, O_RICH, 0.0134),
-        (V_O_SCOPE_TRACK, O_POOR, 1.010),
-        (V_O_SCOPE_TRACK, O_RICH, 6.356),  # Zr is not an element of the job, so its delta_mu is ignored
+        (ZR_HF_SCOPE_TRACK, {"O": 0.0, "Hf": 0.0, "Zr": 0.0}, 0.3664),
+        (ZR_HF_SCOPE_TRACK, ZR_HF_DELTA_MU, 0.0134),
+        (V_O_SCOPE_TRACK, V_O_DELTA_MU, 1.010),
+        (V_O_SCOPE_TRACK, ZR_HF_DELTA_MU, 6.356),  # Zr is not an element of the job, so its delta_mu is ignored
     ],
 )
 def test_get_formation_energy_at_chemical_potentials(scope_track, delta_mu, expected):
@@ -93,7 +92,7 @@ def test_get_formation_energy_at_chemical_potentials(scope_track, delta_mu, expe
 
 def test_get_formation_energy_at_chemical_potentials_raises_on_a_missing_element():
     with pytest.raises(KeyError):
-        get_formation_energy_at_chemical_potentials(flatten_scope_track(ZR_HF_SCOPE_TRACK), O_POOR)
+        get_formation_energy_at_chemical_potentials(flatten_scope_track(ZR_HF_SCOPE_TRACK), V_O_DELTA_MU)
 
 
 @pytest.mark.parametrize(
