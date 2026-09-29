@@ -1,12 +1,12 @@
 import os
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from mat3ra.api_client import APIClient
 from mat3ra.made.material import Material
 from mat3ra.prode import PropertyName
 
-from ..job.api import ANY_KGRID, get_kgrid_query
+from ..job.api import get_kgrid_query
 from ..property.api import get_properties_for_job
 from .analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
 from .io import load_materials_from_folder
@@ -99,11 +99,7 @@ def get_final_structure_for_job(api_client: APIClient, job_id: str) -> Material:
 
 
 def find_relaxed_material(
-    api_client: APIClient,
-    material,
-    owner_id: str,
-    kgrid: Union[List[int], str, None] = ANY_KGRID,
-    unit_name: str = "pw_scf",
+    api_client: APIClient, material, owner_id: str, kgrid: Optional[List[int]] = None, unit_name: str = "pw_scf"
 ) -> Optional[Material]:
     """
     Finds a relaxed version of a material: the final structure of a finished job on a material
@@ -114,8 +110,7 @@ def find_relaxed_material(
         api_client (APIClient): API client instance carrying the authorization context.
         material: mat3ra-made Material object (must have a .hash property).
         owner_id (str): Account ID under which to search.
-        kgrid (List[int], optional): K-grid the relaxation ran on, None for the platform default,
-            see `get_kgrid_query`.
+        kgrid (List[int], optional): Exact k-grid dimensions the relaxation ran on; None for no condition.
         unit_name (str): Name of the relaxation unit, e.g. "pw_vc-relax".
 
     Returns:
