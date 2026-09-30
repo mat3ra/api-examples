@@ -157,6 +157,7 @@ async def run_interruptible_loop_async(
     *,
     channel_name: str = ABORT_CHANNEL_NAME,
     show_controls: bool = True,
+    abort_button_text: str = "Abort",
 ) -> None:
     """
     Wraps an async loop around a "poll" function that returns True to continue, False to stop.
@@ -172,7 +173,7 @@ async def run_interruptible_loop_async(
     broadcast_channel_abort_controller.start(asyncio.current_task())  # type: ignore
 
     if show_controls and ENVIRONMENT == EnvironmentsEnum.PYODIDE:
-        display_abort_controls_in_current_cell_output(channel_name=channel_name, abort_button_text="Abort")
+        display_abort_controls_in_current_cell_output(channel_name=channel_name, abort_button_text=abort_button_text)
 
     try:
         while await loop_body(broadcast_channel_abort_controller.fetch_abort_signal):
