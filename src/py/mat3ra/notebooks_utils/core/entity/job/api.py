@@ -8,6 +8,7 @@ from typing import Any, Awaitable, Dict, Iterable, List, Optional, Union
 import requests
 from mat3ra.api_client import APIClient, JobEndpoints
 
+from ....auth import reauthenticate
 from ....primitive.environment import is_pyodide_environment
 
 MATERIALS_SET_ENTITY_CLASS = "Material"
@@ -68,7 +69,8 @@ async def get_jobs_statuses_by_ids_async(
 ) -> List[str]:
     """
     Gets jobs statuses by their IDs without blocking the event loop: through the browser's fetch in pyodide,
-    in a worker thread otherwise.
+    in a worker thread otherwise. A rejected access token (401) is replaced through the device login once and the
+    request repeated.
 
     Args:
         endpoint (JobEndpoints): Job endpoint object from the Exabyte API Client
@@ -86,7 +88,13 @@ async def get_jobs_statuses_by_ids_async(
             return _list_jobs_with_fetch(endpoint, query, projection, abort_signal)
         return asyncio.get_running_loop().run_in_executor(None, endpoint.list, query, projection)
 
-    jobs = await asyncio.wait_for(request_jobs(), timeout)
+    try:
+        jobs = await asyncio.wait_for(request_jobs(), timeout)
+    except requests.HTTPError as error:
+        if error.response.status_code != 401:
+            raise
+        await reauthenticate(endpoint._auth)
+        jobs = await asyncio.wait_for(request_jobs(), timeout)
     return [job["status"] for job in jobs]
 
 

@@ -1,9 +1,11 @@
 import asyncio
+import contextlib
 import threading
 from typing import Any, Dict, List
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+import requests
 from mat3ra.notebooks_utils.core.entity.job.api import (
     create_job,
     find_job_for_material,
@@ -269,3 +271,32 @@ async def test_get_jobs_statuses_by_ids_async_raises_when_the_request_times_out(
     with pytest.raises(asyncio.TimeoutError):
         await get_jobs_statuses_by_ids_async(endpoint, [CREATED_JOB["_id"]], timeout=REQUEST_TIMEOUT_SECONDS)
     release_request.set()
+
+
+HTTP_ERROR_401 = requests.HTTPError("Error 401.", response=MagicMock(status_code=401))
+HTTP_ERROR_500 = requests.HTTPError("Error 500.", response=MagicMock(status_code=500))
+JOBS_WITH_STATUSES: List[Dict[str, Any]] = [{"status": "active"}, {"status": "finished"}]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("list_results", "expectation", "expected_reauthentications"),
+    [
+        ([HTTP_ERROR_401, JOBS_WITH_STATUSES], contextlib.nullcontext(), 1),
+        ([HTTP_ERROR_401, HTTP_ERROR_401], pytest.raises(requests.HTTPError), 1),
+        ([HTTP_ERROR_500], pytest.raises(requests.HTTPError), 0),
+    ],
+    ids=["401 once", "401 twice", "500"],
+)
+async def test_get_jobs_statuses_by_ids_async_reauthenticates_once_on_401(
+    monkeypatch, list_results, expectation, expected_reauthentications
+):
+    reauthenticate = AsyncMock()
+    monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.reauthenticate", reauthenticate)
+    endpoint = MagicMock()
+    endpoint.list.side_effect = list_results
+
+    with expectation:
+        assert await get_jobs_statuses_by_ids_async(endpoint, [CREATED_JOB["_id"]]) == ["active", "finished"]
+    assert reauthenticate.await_args_list == [((endpoint._auth,),)] * expected_reauthentications
+    assert endpoint.list.call_count == len(list_results)
