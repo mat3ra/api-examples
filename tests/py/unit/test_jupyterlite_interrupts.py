@@ -65,7 +65,7 @@ async def test_wait_for_jobs_to_finish_async_raises_user_abort_error_while_the_s
 
     def list_jobs(query, projection):
         release_request.wait(BLOCKED_REQUEST_SECONDS)
-        return [{"status": "active"}]
+        return [{"status": "finished"}]
 
     endpoint = MagicMock()
     endpoint.list.side_effect = list_jobs
