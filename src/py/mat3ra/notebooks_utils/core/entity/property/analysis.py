@@ -54,15 +54,14 @@ def get_results_table(phase_diagram: PhaseDiagram, entries_data: List[PhaseStabi
         DataFrame with formula, material ID, energies, stability, and decomposition.
     """
     results = []
-    for i, entry in enumerate(phase_diagram.all_entries):
+    for entry in phase_diagram.all_entries:
         energy_above_hull = phase_diagram.get_e_above_hull(entry)
         decomposition = phase_diagram.get_decomposition(entry.composition)
         decomposition_str = " + ".join([e.composition.reduced_formula for e in decomposition])
-        data = entries_data[i]
         results.append(
             {
                 "Formula": entry.composition.reduced_formula,
-                "Material ID": data.get("material_id", ""),
+                "Material ID": entry.entry_id,
                 "E/atom (eV)": round(entry.energy_per_atom, 4),
                 "Eform/atom (eV)": round(phase_diagram.get_form_energy_per_atom(entry), 4),
                 "Above hull (eV)": round(energy_above_hull, 4),
