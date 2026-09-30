@@ -1,3 +1,4 @@
+import re
 import urllib.request
 from typing import Any, Dict, Iterable, List, Optional, Union
 
@@ -127,9 +128,12 @@ def find_job_for_material(
     workflow_name: str,
     owner_id: str,
     statuses: Iterable[str] = ("finished",),
+    kgrid: Optional[List[int]] = None,
+    unit_name: str = "pw_scf",
 ) -> Optional[dict]:
     """
-    Finds a job for a material and workflow name under the given owner, filtered by status.
+    Finds a job for a material and workflow name under the given owner, filtered by status and,
+    optionally, by the k-grid its `unit_name` unit ran on.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -137,6 +141,8 @@ def find_job_for_material(
         workflow_name (str): Exact workflow name the job was created with.
         owner_id (str): Account ID the job must belong to.
         statuses (Iterable[str]): Job statuses that count as a match.
+        kgrid (List[int], optional): Exact k-grid dimensions the job's `unit_name` unit ran on; None for no condition.
+        unit_name (str): Name of the unit the k-grid was set on.
 
     Returns:
         dict, optional: The matching job, or None if none exists.
@@ -147,10 +153,37 @@ def find_job_for_material(
             "owner._id": owner_id,
             "workflow.name": workflow_name,
             "status": {"$in": list(statuses)},
+            **get_kgrid_query(kgrid, unit_name),
         },
         {"limit": 1},
     )
     return existing[0] if existing else None
+
+
+def get_kgrid_query(kgrid: Optional[List[int]], unit_name: str = "pw_scf") -> Dict[str, Any]:
+    """
+    `jobs.list` condition for jobs whose `unit_name` unit ran on `kgrid` (empty when `kgrid` is None), matched where
+    `apply_scf_kgrid` sets it: `workflow.subworkflows[].units[name].context[name="kgrid"].data.dimensions`.
+    A job created without an explicit k-grid has no such context and never matches.
+    """
+    if kgrid is None:
+        return {}
+    kgrid_context = {"$elemMatch": {"name": "kgrid", "data.dimensions": list(kgrid)}}
+    return {"workflow.subworkflows.units": {"$elemMatch": {"name": unit_name, "context": kgrid_context}}}
+
+
+def get_kgrid_of_job(job: Dict[str, Any], unit_name: str = "pw_scf") -> Optional[List[int]]:
+    """
+    K-grid dimensions the job's `unit_name` unit ran on: its `kgrid` context, or, for a job created without one, the
+    grid the platform rendered into the unit's input, `workflow.subworkflows[].units[name].input[0].rendered`.
+    """
+    units = [unit for subworkflow in job["workflow"]["subworkflows"] for unit in subworkflow["units"]]
+    unit = next(unit for unit in units if unit["name"] == unit_name)
+    kgrid_context = next((item for item in unit["context"] if item["name"] == "kgrid"), None)
+    if kgrid_context:
+        return kgrid_context["data"]["dimensions"]
+    match = re.search(r"K_POINTS automatic\s+(\d+)\s+(\d+)\s+(\d+)", unit["input"][0]["rendered"])
+    return [int(dimension) for dimension in match.groups()] if match else None
 
 
 def find_job_for_material_with_property(
@@ -159,10 +192,12 @@ def find_job_for_material_with_property(
     property_name: str,
     owner_id: str,
     tags: Optional[List[str]] = None,
+    kgrid: Optional[List[int]] = None,
 ) -> Optional[dict]:
     """
     Finds a finished job on a material that reported the given property, optionally among the jobs
-    carrying every one of `tags` (e.g. ["charge:0"] for a reference computed in the neutral state).
+    carrying every one of `tags` (e.g. ["charge:0"] for a reference computed in the neutral state)
+    and among those whose `pw_scf` unit ran on `kgrid`.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -170,6 +205,7 @@ def find_job_for_material_with_property(
         property_name (str): Property the job must have reported, e.g. "total_energy".
         owner_id (str): Account ID the job must belong to.
         tags (List[str], optional): Tags the job must all carry.
+        kgrid (List[int], optional): Exact k-grid dimensions the job's `pw_scf` unit ran on; None for no condition.
 
     Returns:
         dict, optional: The first matching job, or None if none exists.
@@ -177,7 +213,7 @@ def find_job_for_material_with_property(
     query: Dict[str, Any] = {"_material._id": material_id, "owner._id": owner_id, "status": "finished"}
     if tags:
         query["tags"] = {"$all": list(tags)}
-    jobs = api_client.jobs.list(query)
+    jobs = api_client.jobs.list({**query, **get_kgrid_query(kgrid)})
     return next(
         (job for job in jobs if api_client.properties.get_for_job(job["_id"], property_name=property_name)), None
     )

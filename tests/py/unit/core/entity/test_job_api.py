@@ -6,6 +6,8 @@ from mat3ra.notebooks_utils.core.entity.job.api import (
     create_job,
     find_job_for_material,
     find_job_for_material_with_property,
+    get_kgrid_of_job,
+    get_kgrid_query,
 )
 
 OWNER_ID = "account-1"
@@ -175,3 +177,77 @@ def test_find_job_for_material_with_property_returns_none_when_no_job_reported_i
 
     assert job is None
     assert "tags" not in client.jobs.list.call_args.args[0]
+
+
+SCF_KGRID_QUERY: Dict[str, Any] = {
+    "workflow.subworkflows.units": {
+        "$elemMatch": {"name": "pw_scf", "context": {"$elemMatch": {"name": "kgrid", "data.dimensions": [4, 4, 4]}}}
+    }
+}
+RELAX_KGRID_QUERY: Dict[str, Any] = {
+    "workflow.subworkflows.units": {
+        "$elemMatch": {"name": "pw_relax", "context": {"$elemMatch": {"name": "kgrid", "data.dimensions": [4, 4, 4]}}}
+    }
+}
+
+
+@pytest.mark.parametrize(
+    ("kgrid", "unit_name", "expected_query"),
+    [(None, "pw_relax", {}), ([4, 4, 4], "pw_scf", SCF_KGRID_QUERY), ([4, 4, 4], "pw_relax", RELAX_KGRID_QUERY)],
+)
+def test_get_kgrid_query(kgrid, unit_name, expected_query):
+    assert get_kgrid_query(kgrid, unit_name) == expected_query
+
+
+def test_find_job_for_material_with_property_matches_the_pw_scf_kgrid():
+    client = MagicMock()
+    client.jobs.list.return_value = [EXISTING_JOB]
+    client.properties.get_for_job.return_value = [{"name": PROPERTY_NAME}]
+
+    job = find_job_for_material_with_property(client, MATERIAL_INITIAL["_id"], PROPERTY_NAME, OWNER_ID, kgrid=[4, 4, 4])
+
+    assert job == EXISTING_JOB
+    assert SCF_KGRID_QUERY.items() <= client.jobs.list.call_args.args[0].items()
+
+
+def test_find_job_for_material_matches_the_kgrid_of_the_unit():
+    client = MagicMock()
+    client.jobs.list.return_value = [EXISTING_JOB]
+
+    job = find_job_for_material(
+        client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, kgrid=[4, 4, 4], unit_name="pw_relax"
+    )
+
+    assert job == EXISTING_JOB
+    assert RELAX_KGRID_QUERY.items() <= client.jobs.list.call_args.args[0].items()
+
+
+# The pw_scf unit with a kgrid context, input not rendered yet, and as production job BLmZo5WZfFXKKTb2H stores a job
+# created without a grid: no context, the platform's grid rendered into the input.
+KGRID_CONTEXT: Dict[str, Any] = {
+    "name": "kgrid",
+    "isEdited": True,
+    "data": {"dimensions": [4, 4, 4], "shifts": [0, 0, 0], "gridMetricType": "KPPRA", "gridMetricValue": 768},
+    "extraData": {"materialHash": "041d30e32f91e2eeb14c74298dffd08b"},
+}
+RENDERED_INPUT = (
+    "CELL_PARAMETERS angstrom\n   0.000000000    0.000000000    5.326038000\nK_POINTS automatic\n1 1 1 0 0 0 \n"
+)
+UNIT_WITH_KGRID_CONTEXT: Dict[str, Any] = {
+    "name": "pw_scf",
+    "context": [KGRID_CONTEXT],
+    "input": [{"template": {"name": "pw_scf.in"}, "rendered": "", "isManuallyChanged": False}],
+}
+UNIT_WITH_RENDERED_INPUT: Dict[str, Any] = {
+    "name": "pw_scf",
+    "context": [],
+    "input": [{"template": {"name": "pw_scf.in"}, "rendered": RENDERED_INPUT, "isManuallyChanged": False}],
+}
+
+
+@pytest.mark.parametrize(
+    ("unit", "expected_kgrid"),
+    [(UNIT_WITH_KGRID_CONTEXT, [4, 4, 4]), (UNIT_WITH_RENDERED_INPUT, [1, 1, 1])],
+)
+def test_get_kgrid_of_job(unit, expected_kgrid):
+    assert get_kgrid_of_job({"workflow": {"subworkflows": [{"units": [unit]}]}}) == expected_kgrid
