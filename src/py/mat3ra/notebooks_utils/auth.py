@@ -28,13 +28,16 @@ REFRESH_TOKEN_ENV_VAR = "OIDC_REFRESH_TOKEN"
 
 async def _authenticate_oidc_with_cache(force=False):
     oidc_url = get_oidc_base_url()
-    cached = None if force else await load_token(oidc_url)
+    access_token = os.environ.get(ACCESS_TOKEN_ENV_VAR)
+    token_data = {"access_token": access_token} if access_token else await load_token(oidc_url)
 
-    if cached:
+    if token_data and not force:
         try:
-            APIClient.authenticate(access_token=cached["access_token"]).list_accounts()
-            store_token_data_in_environment(cached)
+            APIClient.authenticate(access_token=token_data["access_token"]).list_accounts()
+            store_token_data_in_environment(token_data)
             return
+        except KeyError:
+            pass
         except requests.HTTPError as error:
             if error.response.status_code != 401:
                 raise
@@ -69,7 +72,7 @@ async def authenticate(force=False, globals_dict=None):
 
     if data_from_host:
         await authenticate_jupyterlite(data_from_host)
-    elif ACCESS_TOKEN_ENV_VAR not in os.environ or force:
+    else:
         await _authenticate_oidc_with_cache(force)
 
 
