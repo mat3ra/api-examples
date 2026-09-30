@@ -40,6 +40,7 @@ async def _authenticate_oidc_with_cache(force=False):
                 raise
 
     await delete_token(oidc_url)
+    os.environ.pop(ACCESS_TOKEN_ENV_VAR, None)
     token_data = await authenticate_oidc(show_popup=show_device_flow_popup)
     await save_token(oidc_url, token_data)
 

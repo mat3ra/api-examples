@@ -44,6 +44,7 @@ def display_abort_controls_in_current_cell_output(
             <div style="display:flex; align-items:center; gap:12px; margin:8px 0;">
               <button
                 id="{element_id}_button"
+                data-mat3ra-abort-channel="{channel_name}"
                 style="
                   background:#d32f2f; color:white; border:none; padding:8px 14px;
                   border-radius:6px; cursor:pointer; font-weight:600;
@@ -58,15 +59,20 @@ def display_abort_controls_in_current_cell_output(
             (function() {{
               const channelName = {channel_name!r};
 
-              // Install ESC broadcaster once per page; ESC aborts the loop of the notebook in focus only
-              if (!window.__mat3raAbortChannels) {{
-                window.__mat3raAbortChannels = new Map();
+              // Install ESC broadcaster once per page; ESC aborts the loops of the notebook in focus,
+              // or the only loop on the page when the focus is outside any notebook
+              if (!window.__mat3raEscapeAbortByPanelInstalled) {{
+                window.__mat3raEscapeAbortByPanelInstalled = true;
                 document.addEventListener("keydown", (event) => {{
-                  const notebookPanel = document.querySelector(".jp-NotebookPanel.jp-mod-current");
-                  window.__mat3raAbortChannels.forEach((buttonChannel, buttonElement) => {{
-                    if (event.key === "Escape" && notebookPanel?.contains(buttonElement)) {{
-                      buttonChannel.postMessage({{ type: "abort", source: "escape" }});
-                    }}
+                  if (event.key !== "Escape") return;
+                  const notebookPanel = document.activeElement?.closest(".jp-NotebookPanel");
+                  const abortButtons = (notebookPanel || document)
+                    .querySelectorAll("button[data-mat3ra-abort-channel]");
+                  if (!notebookPanel && abortButtons.length !== 1) return;
+                  abortButtons.forEach((abortButton) => {{
+                    const escapeChannel = new BroadcastChannel(abortButton.dataset.mat3raAbortChannel);
+                    escapeChannel.postMessage({{ type: "abort", source: "escape" }});
+                    escapeChannel.close();
                   }});
                 }}, true);
               }}
@@ -76,7 +82,6 @@ def display_abort_controls_in_current_cell_output(
               const buttonElement = document.getElementById("{element_id}_button");
               const statusElement = document.getElementById("{element_id}_status");
               if (!buttonElement) return;
-              window.__mat3raAbortChannels.set(buttonElement, buttonChannel);
 
               buttonElement.addEventListener("click", () => {{
                 buttonChannel.postMessage({{ type: "abort", source: "button" }});
@@ -95,11 +100,13 @@ def display_abort_controls_in_current_cell_output(
 class BroadcastChannelAbortController(BaseModel):
     """
     WebWorker-side receiver. Works only in pyodide (emscripten).
-    An abort message cancels the task running the loop and aborts the fetch given `fetch_abort_signal`.
-    In regular Python: start() does nothing and `fetch_abort_signal` stays None.
+    An abort message sets `is_aborted`, cancels the task running the loop and aborts the fetch given
+    `fetch_abort_signal`.
+    In regular Python: start() does nothing, `is_aborted` stays False and `fetch_abort_signal` stays None.
     """
 
     channel_name: str = ABORT_CHANNEL_NAME
+    is_aborted: bool = False
 
     def model_post_init(self, __context: Any) -> None:
         self._broadcast_channel = None
@@ -125,6 +132,7 @@ class BroadcastChannelAbortController(BaseModel):
         def on_message(event) -> None:
             message = getattr(event, "data", None)
             if message and getattr(message, "type", None) == "abort":
+                self.is_aborted = True
                 self._fetch_abort_controller.abort()  # type: ignore
                 task.cancel()
 
@@ -168,6 +176,8 @@ async def run_interruptible_loop_async(
 
     try:
         while await loop_body(broadcast_channel_abort_controller.fetch_abort_signal):
+            if broadcast_channel_abort_controller.is_aborted:
+                raise UserAbortError("Aborted by user.")
             await asyncio.sleep(poll_interval_seconds)
     except asyncio.CancelledError:
         raise UserAbortError("Aborted by user.") from None

@@ -25,7 +25,7 @@ async def abandoned_device_login(show_popup):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("device_login", "expectation", "expected_access_token", "expected_cached_access_token"),
+    ("device_login", "expectation", "expected_access_token", "expected_stored_access_token"),
     [
         (completed_device_login, contextlib.nullcontext(), "new-token", "new-token"),
         (abandoned_device_login, pytest.raises(TimeoutError), "stale-token", None),
@@ -33,7 +33,7 @@ async def abandoned_device_login(show_popup):
     ids=["login completed", "login abandoned"],
 )
 async def test_reauthenticate(
-    monkeypatch, tmp_path, device_login, expectation, expected_access_token, expected_cached_access_token
+    monkeypatch, tmp_path, device_login, expectation, expected_access_token, expected_stored_access_token
 ):
     monkeypatch.setattr(file_token_store, "_FILE_PATH", str(tmp_path / "oidc_token_cache.json"))
     monkeypatch.setattr(auth, "authenticate_oidc", device_login)
@@ -46,7 +46,8 @@ async def test_reauthenticate(
         await auth.reauthenticate(auth_context)
 
     assert auth_context.access_token == expected_access_token
-    assert (await file_token_store.read()).get(oidc_base_url, {}).get("access_token") == expected_cached_access_token
+    assert os.environ.get(ACCESS_TOKEN_ENV_VAR) == expected_stored_access_token
+    assert (await file_token_store.read()).get(oidc_base_url, {}).get("access_token") == expected_stored_access_token
 
 
 @pytest.mark.asyncio
@@ -68,8 +69,7 @@ async def test_authenticate_validates_the_cached_token(
     api_client = MagicMock()
     api_client.authenticate.return_value.list_accounts.side_effect = accounts_side_effect
     monkeypatch.setattr(auth, "APIClient", api_client)
-    monkeypatch.setenv(ACCESS_TOKEN_ENV_VAR, STALE_TOKEN_DATA["access_token"])
-    monkeypatch.delenv(ACCESS_TOKEN_ENV_VAR)
+    monkeypatch.delenv(ACCESS_TOKEN_ENV_VAR, raising=False)
     await token_store.save_token(auth.get_oidc_base_url(), STALE_TOKEN_DATA)
 
     with expectation:

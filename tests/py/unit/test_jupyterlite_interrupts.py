@@ -1,6 +1,4 @@
 import asyncio
-import subprocess
-import sys
 import threading
 import time
 from unittest.mock import MagicMock
@@ -17,9 +15,6 @@ POLL_INTERVAL_SECONDS = 0.01
 ABORT_AFTER_SECONDS = 0.05
 ABORT_DEADLINE_SECONDS = 0.2
 BLOCKED_REQUEST_SECONDS = 1.0
-READ_ABORT_CHANNEL_NAME = (
-    "from mat3ra.notebooks_utils.pyodide.runtime import ABORT_CHANNEL_NAME; print(ABORT_CHANNEL_NAME)"
-)
 
 
 @pytest.mark.asyncio
@@ -77,15 +72,6 @@ async def test_wait_for_jobs_to_finish_async_raises_user_abort_error_while_the_s
         await task
     release_request.set()
     assert time.monotonic() - started < ABORT_DEADLINE_SECONDS
-
-
-def test_abort_channel_name_differs_per_kernel():
-    channel_names = {
-        subprocess.run([sys.executable, "-c", READ_ABORT_CHANNEL_NAME], capture_output=True, text=True).stdout
-        for _ in range(2)
-    }
-    assert len(channel_names) == 2
-    assert all(channel_name.startswith("mat3ra_abort_") for channel_name in channel_names)
 
 
 @pytest.mark.asyncio

@@ -12,6 +12,7 @@ from ....auth import reauthenticate
 from ....primitive.environment import is_pyodide_environment
 
 MATERIALS_SET_ENTITY_CLASS = "Material"
+DEFAULT_STATUS_TIMEOUT_SECONDS = 30
 
 
 def save_files(job_id: str, job_endpoint: JobEndpoints, filename_on_cloud: str, filename_on_disk: str) -> None:
@@ -32,25 +33,10 @@ def save_files(job_id: str, job_endpoint: JobEndpoints, filename_on_cloud: str, 
         outp.write(server_response.read())
 
 
-def get_jobs_statuses_by_ids(endpoint: JobEndpoints, job_ids: List[str]) -> List[str]:
-    """
-    Gets jobs statues by their IDs.
-
-    Args:
-        endpoint (JobEndpoints): Job endpoint object from the Exabyte API Client
-        job_ids (list): list of job IDs to get the status for
-
-    Returns:
-        list: list of job statuses
-    """
-    jobs = endpoint.list({"_id": {"$in": job_ids}}, {"fields": {"status": 1}})
-    return [job["status"] for job in jobs]
-
-
 async def _list_jobs_with_fetch(endpoint: JobEndpoints, query: dict, projection: dict, abort_signal: Any) -> List[dict]:
     """
     `endpoint.list` through the browser's fetch, which leaves the event loop free while the request is in flight.
-    Raises `requests.HTTPError` on an error status, as the API client does.
+    Raises `requests.HTTPError` on an error status.
     """
     from pyodide.http import pyfetch  # type: ignore
 
@@ -65,12 +51,16 @@ async def _list_jobs_with_fetch(endpoint: JobEndpoints, query: dict, projection:
 
 
 async def get_jobs_statuses_by_ids_async(
-    endpoint: JobEndpoints, job_ids: List[str], timeout: float = 30, abort_signal: Any = None
+    endpoint: JobEndpoints,
+    job_ids: List[str],
+    timeout: float = DEFAULT_STATUS_TIMEOUT_SECONDS,
+    abort_signal: Any = None,
 ) -> List[str]:
     """
     Gets jobs statuses by their IDs without blocking the event loop: through the browser's fetch in pyodide,
-    in a worker thread otherwise. A rejected access token (401) is replaced through the device login once and the
-    request repeated.
+    in a worker thread otherwise. Natively, a request that times out or is cancelled keeps its worker thread until the
+    API client's own timeout. A rejected access token (401) is replaced through the device login once and the request
+    repeated.
 
     Args:
         endpoint (JobEndpoints): Job endpoint object from the Exabyte API Client
@@ -91,7 +81,7 @@ async def get_jobs_statuses_by_ids_async(
     try:
         jobs = await asyncio.wait_for(request_jobs(), timeout)
     except requests.HTTPError as error:
-        if error.response.status_code != 401:
+        if error.response.status_code != 401 or not endpoint._auth.access_token:
             raise
         await reauthenticate(endpoint._auth)
         jobs = await asyncio.wait_for(request_jobs(), timeout)

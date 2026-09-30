@@ -5,20 +5,16 @@ from typing import Any, List
 from mat3ra.api_client import JobEndpoints
 from mat3ra.utils.extra.tabulate import pretty_print
 
-from ..core.entity.job.api import (
-    create_job,
-    get_jobs_statuses_by_ids,
-    get_jobs_statuses_by_ids_async,
-    save_files,
-    submit_jobs,
-)
+from ..core.entity.job.api import create_job, get_jobs_statuses_by_ids_async, save_files, submit_jobs
 from ..pyodide.runtime import interruptible_polling_loop
 
 
 # Contains no external dependencies, only uses the API client,
 # so can be used in both regular Python and Pyodide environments.
 @interruptible_polling_loop()
-async def wait_for_jobs_to_finish_async(endpoint: JobEndpoints, job_ids: List[str], abort_signal: Any) -> bool:
+async def wait_for_jobs_to_finish_async(
+    endpoint: JobEndpoints, job_ids: List[str], *, abort_signal: Any = None
+) -> bool:
     """
     Waits for jobs to finish and prints their statuses.
     A job is considered finished if it is not in "pre-submission", "submitted", or "active" status.
@@ -47,7 +43,6 @@ async def wait_for_jobs_to_finish_async(endpoint: JobEndpoints, job_ids: List[st
 
 __all__ = [
     "create_job",
-    "get_jobs_statuses_by_ids",
     "save_files",
     "submit_jobs",
     "wait_for_jobs_to_finish_async",
