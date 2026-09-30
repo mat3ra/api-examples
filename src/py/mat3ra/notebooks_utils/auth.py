@@ -13,7 +13,8 @@ Two paths depending on environment:
 import inspect
 import os
 
-from mat3ra.api_client import ACCESS_TOKEN_ENV_VAR, AuthContext
+import requests
+from mat3ra.api_client import ACCESS_TOKEN_ENV_VAR, APIClient, AuthContext
 
 from .core.api.auth import authenticate_oidc, get_oidc_base_url, store_token_data_in_environment
 from .io import get_data
@@ -30,9 +31,15 @@ async def _authenticate_oidc_with_cache(force=False):
     cached = None if force else await load_token(oidc_url)
 
     if cached:
-        store_token_data_in_environment(cached)
-        return
+        try:
+            APIClient.authenticate(access_token=cached["access_token"]).list_accounts()
+            store_token_data_in_environment(cached)
+            return
+        except requests.HTTPError as error:
+            if error.response.status_code != 401:
+                raise
 
+    await delete_token(oidc_url)
     token_data = await authenticate_oidc(show_popup=show_device_flow_popup)
     await save_token(oidc_url, token_data)
 
@@ -70,6 +77,5 @@ async def reauthenticate(auth_context: AuthContext) -> None:
     Replaces an access token the platform rejected: drops it from the token cache, runs the device login and sets the
     new token on `auth_context`, which every endpoint of the API client reads per request.
     """
-    await delete_token(get_oidc_base_url())
     await _authenticate_oidc_with_cache(force=True)
     auth_context.access_token = os.environ[ACCESS_TOKEN_ENV_VAR]
