@@ -1,13 +1,13 @@
 """Formation energies of charged defects: dependence on the Fermi level, on the supercell size and on the chemical
 potentials.
 
-Pure computation — no API calls, no display. Kept apart from `analysis.py`, which imports pymatgen's
+No display. Kept apart from `analysis.py`, which imports pymatgen's
 phase diagram module at load time; that module needs tqdm, which JupyterLite does not install.
 
 The Fermi level is the electron chemical potential mu_e, measured from the valence band maximum (VBM).
 """
 
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, NamedTuple, Sequence
 
 import numpy as np
 import pandas as pd
@@ -111,14 +111,33 @@ def evaluate_finite_size_fit(fit: Dict[str, float], inverse_lengths: Sequence[fl
     return fit["E_inf"] + fit["a"] * inverse_lengths_array + fit.get("b", 0.0) * inverse_lengths_array**3
 
 
-def flatten_scope_track(scope_track: List[dict]) -> Dict[str, Any]:
+class DefectJobResult(NamedTuple):
+    formation_energy: float
+    delta_n_by_symbol: Dict[str, int]
+    reference_energies_per_atom: Dict[str, float]
+
+
+def _flatten_scope_track(scope_track: List[dict]) -> Dict[str, Any]:
     """The global scope of a job's `scopeTrack`, later values overriding earlier ones."""
     return {key: value for item in scope_track for key, value in item["scope"]["global"].items()}
 
 
-def get_formation_energy_at_chemical_potentials(scope: Dict[str, Any], delta_mu: Dict[str, float]) -> float:
+def get_defect_job_result(api_client, job_id: str) -> DefectJobResult:
+    """The result of a finished Defect Formation Energy job, read from its scope."""
+    scope = _flatten_scope_track(api_client.jobs.get(job_id)["scopeTrack"])
+    return DefectJobResult(
+        formation_energy=scope["DEFECT_FORMATION_ENERGY"],
+        delta_n_by_symbol=scope["DELTA_N_BY_SYMBOL"],
+        reference_energies_per_atom={
+            element: contribution["total_energy_per_atom"]
+            for element, contribution in scope["TE_CONTRIBUTIONS_BY_SYMBOL"].items()
+        },
+    )
+
+
+def get_formation_energy_at_chemical_potentials(result: DefectJobResult, delta_mu: Dict[str, float]) -> float:
     """
-    Defect formation energy at the chemical potentials mu_i = E_i + delta_mu[i], from its job's flattened scope.
+    Defect formation energy at the chemical potentials mu_i = E_i + delta_mu[i].
 
     E_i is the elemental energy per atom the job used, so the stored value is the one at delta_mu = 0:
     E_f(delta_mu) = E_f - sum_i dN_i * delta_mu[i].
@@ -126,8 +145,8 @@ def get_formation_energy_at_chemical_potentials(scope: Dict[str, Any], delta_mu:
     Raises:
         KeyError: If `delta_mu` has no value for an element of the job, including one with dN_i = 0.
     """
-    return scope["DEFECT_FORMATION_ENERGY"] - sum(
-        count * delta_mu[element] for element, count in scope["DELTA_N_BY_SYMBOL"].items()
+    return result.formation_energy - sum(
+        count * delta_mu[element] for element, count in result.delta_n_by_symbol.items()
     )
 
 

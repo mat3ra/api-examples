@@ -4,7 +4,7 @@ Kept apart from `plot.py`, which imports pymatgen's phase diagram module at load
 needs tqdm, which JupyterLite does not install.
 """
 
-from typing import Dict
+from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -66,4 +66,19 @@ def plot_finite_size_fits(results: pd.DataFrame, fits: Dict[int, Dict[str, float
         xaxis_title="1 / L (1/Angstrom), L = V^(1/3)",
         yaxis_title="Formation energy at the VBM (eV)",
     )
+    return figure
+
+
+def plot_formation_energy_vs_chemical_potentials(
+    lines: Dict[str, Tuple[float, float]], x_label: str, title: str
+) -> go.Figure:
+    """One line per name, from (0, E_f at delta_mu = 0) to (x, E_f at delta_mu), with x their difference."""
+    figure = go.Figure()
+    for name, (formation_energy, formation_energy_at_chemical_potentials) in lines.items():
+        figure.add_scatter(
+            x=[0, formation_energy_at_chemical_potentials - formation_energy],
+            y=[formation_energy, formation_energy_at_chemical_potentials],
+            name=name,
+        )
+    figure.update_layout(title=title, xaxis_title=x_label, yaxis_title="Formation energy at the VBM (eV)")
     return figure

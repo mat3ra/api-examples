@@ -1,5 +1,7 @@
 """Unit tests for charged-defect formation energy analysis."""
 
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
 from mat3ra.notebooks_utils.core.entity.property.defect_analysis import (
@@ -7,11 +9,12 @@ from mat3ra.notebooks_utils.core.entity.property.defect_analysis import (
     FORMATION_ENERGY_AT_VBM_COLUMN,
     STABLE_FROM_COLUMN,
     STABLE_TO_COLUMN,
+    DefectJobResult,
     evaluate_finite_size_fit,
     fit_finite_size,
-    flatten_scope_track,
     get_charge_state_table,
     get_chemical_potential_combination,
+    get_defect_job_result,
     get_formation_energies_vs_fermi_level,
     get_formation_energy_at_chemical_potentials,
 )
@@ -64,35 +67,55 @@ def test_fit_finite_size_needs_two_sizes():
 
 
 # scopeTrack globals of the m-HfO2 jobs rxCNizLKg7hkrPgAh (Zr_Hf) and mpxeDWYNKPBr6zc8Z (V_O).
-ZR_HF_SCOPE_TRACK = [
-    {"scope": {"global": {"DELTA_N_BY_SYMBOL": {"Hf": -1, "O": 0, "Zr": 1}}}},
-    {"scope": {"global": {"DEFECT_FORMATION_ENERGY": 0.3664}}},
-]
-V_O_SCOPE_TRACK = [
-    {"scope": {"global": {"DELTA_N_BY_SYMBOL": {"O": -1, "Hf": 0}}}},
-    {"scope": {"global": {"DEFECT_FORMATION_ENERGY": 6.356}}},
-]
+HAFNIUM = {"total_energy_per_atom": -2160.2365}
+OXYGEN = {"total_energy_per_atom": -437.4523}
+ZIRCONIUM = {"total_energy_per_atom": -1349.0462}
+ZR_HF_JOB = {
+    "scopeTrack": [
+        {"scope": {"global": {"DELTA_N_BY_SYMBOL": {"Hf": -1, "O": 0, "Zr": 1}}}},
+        {"scope": {"global": {"TE_CONTRIBUTIONS_BY_SYMBOL": {"Hf": HAFNIUM, "O": OXYGEN, "Zr": ZIRCONIUM}}}},
+        {"scope": {"global": {"DEFECT_FORMATION_ENERGY": 0.3664}}},
+    ]
+}
+V_O_JOB = {
+    "scopeTrack": [
+        {"scope": {"global": {"DELTA_N_BY_SYMBOL": {"O": -1, "Hf": 0}}}},
+        {"scope": {"global": {"TE_CONTRIBUTIONS_BY_SYMBOL": {"Hf": HAFNIUM, "O": OXYGEN}}}},
+        {"scope": {"global": {"DEFECT_FORMATION_ENERGY": 6.356}}},
+    ]
+}
+ZR_HF_RESULT = DefectJobResult(
+    0.3664, {"Hf": -1, "O": 0, "Zr": 1}, {"Hf": -2160.2365, "O": -437.4523, "Zr": -1349.0462}
+)
+V_O_RESULT = DefectJobResult(6.356, {"O": -1, "Hf": 0}, {"Hf": -2160.2365, "O": -437.4523})
 ZR_HF_DELTA_MU = {"O": 0.0, "Hf": -10.693, "Zr": -10.340}
 V_O_DELTA_MU = {"O": -5.346, "Hf": 0.0}
 
 
+@pytest.mark.parametrize("job, expected", [(ZR_HF_JOB, ZR_HF_RESULT), (V_O_JOB, V_O_RESULT)])
+def test_get_defect_job_result(job, expected):
+    api_client = MagicMock()
+    api_client.jobs.get.return_value = job
+    assert get_defect_job_result(api_client, "job-1") == expected
+    api_client.jobs.get.assert_called_once_with("job-1")
+
+
 @pytest.mark.parametrize(
-    "scope_track, delta_mu, expected",
+    "result, delta_mu, expected",
     [
-        (ZR_HF_SCOPE_TRACK, {"O": 0.0, "Hf": 0.0, "Zr": 0.0}, 0.3664),
-        (ZR_HF_SCOPE_TRACK, ZR_HF_DELTA_MU, 0.0134),
-        (V_O_SCOPE_TRACK, V_O_DELTA_MU, 1.010),
-        (V_O_SCOPE_TRACK, ZR_HF_DELTA_MU, 6.356),  # Zr is not an element of the job, so its delta_mu is ignored
+        (ZR_HF_RESULT, {"O": 0.0, "Hf": 0.0, "Zr": 0.0}, 0.3664),
+        (ZR_HF_RESULT, ZR_HF_DELTA_MU, 0.0134),
+        (V_O_RESULT, V_O_DELTA_MU, 1.010),
+        (V_O_RESULT, ZR_HF_DELTA_MU, 6.356),  # Zr is not an element of the job, so its delta_mu is ignored
     ],
 )
-def test_get_formation_energy_at_chemical_potentials(scope_track, delta_mu, expected):
-    scope = flatten_scope_track(scope_track)
-    assert get_formation_energy_at_chemical_potentials(scope, delta_mu) == pytest.approx(expected, abs=1e-4)
+def test_get_formation_energy_at_chemical_potentials(result, delta_mu, expected):
+    assert get_formation_energy_at_chemical_potentials(result, delta_mu) == pytest.approx(expected, abs=1e-4)
 
 
 def test_get_formation_energy_at_chemical_potentials_raises_on_a_missing_element():
     with pytest.raises(KeyError):
-        get_formation_energy_at_chemical_potentials(flatten_scope_track(ZR_HF_SCOPE_TRACK), V_O_DELTA_MU)
+        get_formation_energy_at_chemical_potentials(ZR_HF_RESULT, V_O_DELTA_MU)
 
 
 @pytest.mark.parametrize(
