@@ -1,6 +1,5 @@
 import asyncio
 import contextlib
-import sys
 import threading
 from types import SimpleNamespace
 from typing import Any, Dict, List
@@ -342,7 +341,7 @@ FETCH_RESPONSE_401 = SimpleNamespace(ok=False, status=401)
 )
 async def test_list_jobs_with_fetch(monkeypatch, access_token, response, expectation, expected_headers):
     pyfetch = AsyncMock(return_value=response)
-    monkeypatch.setitem(sys.modules, "pyodide.http", SimpleNamespace(pyfetch=pyfetch))
+    monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.pyfetch", pyfetch)
     endpoint = JobEndpoints(*JOB_ENDPOINT_ARGUMENTS, auth=AuthContext(access_token=access_token))
 
     with expectation:

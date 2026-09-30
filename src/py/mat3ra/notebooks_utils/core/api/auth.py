@@ -10,6 +10,11 @@ from mat3ra.api_client import ACCESS_TOKEN_ENV_VAR, CLIENT_ID, SCOPE, APIEnv, bu
 from ...primitive.environment import is_pyodide_environment
 from ...pyodide.runtime import run_interruptible_loop_async
 
+try:
+    from pyodide.http import pyfetch  # type: ignore
+except ImportError:
+    pyfetch = None
+
 REFRESH_TOKEN_ENV_VAR = "OIDC_REFRESH_TOKEN"
 TOKEN_REQUEST_TIMEOUT_SECONDS = 10
 FORM_HEADERS = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -65,8 +70,6 @@ async def _request_token_data_with_fetch(token_url: str, form_data: dict, abort_
     """
     `_request_token_data` through the browser's fetch, which leaves the event loop free while the request is in flight.
     """
-    from pyodide.http import pyfetch  # type: ignore
-
     body = urllib.parse.urlencode(form_data, doseq=True)
     response = await pyfetch(token_url, method="POST", body=body, headers=FORM_HEADERS, signal=abort_signal)
     return await response.json() if response.status == 200 else {}
@@ -79,7 +82,7 @@ async def _poll_for_token_data(
     polling_interval_seconds: int,
     expires_in_seconds: int,
 ) -> dict:
-    """Polls for the token until the device login is confirmed; in pyodide, Cancel login and ESC stop it at once."""
+    """Polls for the token until the device login is confirmed; in pyodide, ESC stops it at once."""
     token_url = f"{oidc_base_url}/token"
     form_data = {
         "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
@@ -103,7 +106,9 @@ async def _poll_for_token_data(
         token_data.update(await asyncio.wait_for(request_token_data(abort_signal), TOKEN_REQUEST_TIMEOUT_SECONDS))
         return not token_data
 
-    await run_interruptible_loop_async(poll_step, polling_interval_seconds, abort_button_text="Cancel login")
+    await run_interruptible_loop_async(
+        poll_step, polling_interval_seconds, show_button=False, abort_hint_text="Press ESC to cancel"
+    )
     return token_data
 
 

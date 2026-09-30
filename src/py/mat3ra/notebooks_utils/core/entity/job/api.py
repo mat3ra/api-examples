@@ -11,6 +11,11 @@ from mat3ra.api_client import APIClient, JobEndpoints
 from ....auth import reauthenticate
 from ....primitive.environment import is_pyodide_environment
 
+try:
+    from pyodide.http import pyfetch  # type: ignore
+except ImportError:
+    pyfetch = None
+
 MATERIALS_SET_ENTITY_CLASS = "Material"
 DEFAULT_STATUS_TIMEOUT_SECONDS = 30
 
@@ -38,8 +43,6 @@ async def _list_jobs_with_fetch(endpoint: JobEndpoints, query: dict, projection:
     `endpoint.list` through the browser's fetch, which leaves the event loop free while the request is in flight.
     Raises `requests.HTTPError` on an error status.
     """
-    from pyodide.http import pyfetch  # type: ignore
-
     parameters = urllib.parse.urlencode({"query": json.dumps(query), "projection": json.dumps(projection)})
     url = urllib.parse.urljoin(endpoint.conn.preamble, f"{endpoint.name}?{parameters}")
     response = await pyfetch(url, headers=endpoint._get_bearer_headers() or endpoint.headers, signal=abort_signal)
@@ -71,7 +74,8 @@ async def get_jobs_statuses_by_ids_async(
     Returns:
         list: list of job statuses
     """
-    query, projection = {"_id": {"$in": job_ids}}, {"fields": {"status": 1}}
+    query = {"_id": {"$in": job_ids}}
+    projection = {"fields": {"status": 1}}
 
     def request_jobs() -> Awaitable[List[dict]]:
         if is_pyodide_environment():

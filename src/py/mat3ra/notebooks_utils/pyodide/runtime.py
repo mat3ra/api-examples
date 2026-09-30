@@ -14,7 +14,6 @@ except Exception:
     HTML = None
     display = None
 
-# One channel per kernel process: an abort reaches the loops of this kernel only.
 ABORT_CHANNEL_NAME = f"mat3ra_abort_{uuid.uuid4().hex}"
 
 
@@ -25,6 +24,8 @@ class UserAbortError(RuntimeError):
 def display_abort_controls_in_current_cell_output(
     channel_name: str = ABORT_CHANNEL_NAME,
     abort_button_text: str = "Stop polling",
+    abort_hint_text: str = "Press ESC to abort",
+    show_button: bool = True,
 ) -> None:
     """
     Shows:
@@ -37,21 +38,24 @@ def display_abort_controls_in_current_cell_output(
         return
 
     element_id = f"abort_controls_{uuid.uuid4().hex}"
+    button_html = f"""
+              <button
+                id="{element_id}_button"
+                style="
+                  background:#d32f2f; color:white; border:none; padding:8px 14px;
+                  border-radius:6px; cursor:pointer; font-weight:600;
+                "
+              >{abort_button_text}</button>"""
 
     display(
         HTML(
             f"""
             <div style="display:flex; align-items:center; gap:12px; margin:8px 0;">
-              <button
-                id="{element_id}_button"
+              {button_html if show_button else ""}
+              <span
                 data-mat3ra-abort-channel="{channel_name}"
-                style="
-                  background:#d32f2f; color:white; border:none; padding:8px 14px;
-                  border-radius:6px; cursor:pointer; font-weight:600;
-                "
-              >{abort_button_text}</button>
-
-              <span style="font-family:monospace; opacity:0.85;">Press ESC to abort</span>
+                style="font-family:monospace; opacity:0.85;"
+              >{abort_hint_text}</span>
               <span id="{element_id}_status" style="font-family:monospace; opacity:0.85;"></span>
             </div>
 
@@ -59,18 +63,16 @@ def display_abort_controls_in_current_cell_output(
             (function() {{
               const channelName = {channel_name!r};
 
-              // Install ESC broadcaster once per page; ESC aborts the loops of the notebook in focus,
-              // or the only loop on the page when the focus is outside any notebook
+              // Install ESC broadcaster once per page
               if (!window.__mat3raEscapeAbortByPanelInstalled) {{
                 window.__mat3raEscapeAbortByPanelInstalled = true;
                 document.addEventListener("keydown", (event) => {{
                   if (event.key !== "Escape") return;
                   const notebookPanel = document.activeElement?.closest(".jp-NotebookPanel");
-                  const abortButtons = (notebookPanel || document)
-                    .querySelectorAll("button[data-mat3ra-abort-channel]");
-                  if (!notebookPanel && abortButtons.length !== 1) return;
-                  abortButtons.forEach((abortButton) => {{
-                    const escapeChannel = new BroadcastChannel(abortButton.dataset.mat3raAbortChannel);
+                  const abortHints = (notebookPanel || document).querySelectorAll("[data-mat3ra-abort-channel]");
+                  if (!notebookPanel && abortHints.length !== 1) return;
+                  abortHints.forEach((abortHint) => {{
+                    const escapeChannel = new BroadcastChannel(abortHint.dataset.mat3raAbortChannel);
                     escapeChannel.postMessage({{ type: "abort", source: "escape" }});
                     escapeChannel.close();
                   }});
@@ -157,7 +159,9 @@ async def run_interruptible_loop_async(
     *,
     channel_name: str = ABORT_CHANNEL_NAME,
     show_controls: bool = True,
+    show_button: bool = True,
     abort_button_text: str = "Abort",
+    abort_hint_text: str = "Press ESC to abort",
 ) -> None:
     """
     Wraps an async loop around a "poll" function that returns True to continue, False to stop.
@@ -173,7 +177,12 @@ async def run_interruptible_loop_async(
     broadcast_channel_abort_controller.start(asyncio.current_task())  # type: ignore
 
     if show_controls and ENVIRONMENT == EnvironmentsEnum.PYODIDE:
-        display_abort_controls_in_current_cell_output(channel_name=channel_name, abort_button_text=abort_button_text)
+        display_abort_controls_in_current_cell_output(
+            channel_name=channel_name,
+            abort_button_text=abort_button_text,
+            abort_hint_text=abort_hint_text,
+            show_button=show_button,
+        )
 
     try:
         while await loop_body(broadcast_channel_abort_controller.fetch_abort_signal):
