@@ -1,11 +1,19 @@
+import asyncio
+import contextlib
+import threading
+from types import SimpleNamespace
 from typing import Any, Dict, List
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+import requests
+from mat3ra.api_client import AuthContext, JobEndpoints
 from mat3ra.notebooks_utils.core.entity.job.api import (
+    _list_jobs_with_fetch,
     create_job,
     find_job_for_material,
     find_job_for_material_with_property,
+    get_jobs_statuses_by_ids_async,
     get_kgrid_of_job,
     get_kgrid_query,
 )
@@ -251,3 +259,91 @@ UNIT_WITH_RENDERED_INPUT: Dict[str, Any] = {
 )
 def test_get_kgrid_of_job(unit, expected_kgrid):
     assert get_kgrid_of_job({"workflow": {"subworkflows": [{"units": [unit]}]}}) == expected_kgrid
+
+
+REQUEST_TIMEOUT_SECONDS = 0.05
+BLOCKED_REQUEST_SECONDS = 1.0
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_statuses_by_ids_async_raises_when_the_request_times_out():
+    release_request = threading.Event()
+    endpoint = MagicMock()
+    endpoint.list.side_effect = lambda query, projection: release_request.wait(BLOCKED_REQUEST_SECONDS)
+
+    with pytest.raises(asyncio.TimeoutError):
+        await get_jobs_statuses_by_ids_async(endpoint, [CREATED_JOB["_id"]], timeout=REQUEST_TIMEOUT_SECONDS)
+    release_request.set()
+
+
+HTTP_ERROR_401 = requests.HTTPError("Error 401.", response=MagicMock(status_code=401))
+HTTP_ERROR_500 = requests.HTTPError("Error 500.", response=MagicMock(status_code=500))
+JOBS_WITH_STATUSES: List[Dict[str, Any]] = [{"status": "active"}, {"status": "finished"}]
+ACCESS_TOKEN = "access-token-1"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("access_token", "list_results", "expectation", "expected_reauthentications"),
+    [
+        (ACCESS_TOKEN, [HTTP_ERROR_401, JOBS_WITH_STATUSES], contextlib.nullcontext(), 1),
+        (ACCESS_TOKEN, [HTTP_ERROR_401, HTTP_ERROR_401], pytest.raises(requests.HTTPError), 1),
+        (ACCESS_TOKEN, [HTTP_ERROR_500], pytest.raises(requests.HTTPError), 0),
+        (None, [HTTP_ERROR_401], pytest.raises(requests.HTTPError), 0),
+    ],
+    ids=["401 once", "401 twice", "500", "401 with X-Auth headers"],
+)
+async def test_get_jobs_statuses_by_ids_async_reauthenticates_once_on_401(
+    monkeypatch, access_token, list_results, expectation, expected_reauthentications
+):
+    reauthenticate = AsyncMock()
+    monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.reauthenticate", reauthenticate)
+    endpoint = MagicMock()
+    endpoint._auth.access_token = access_token
+    endpoint.list.side_effect = list_results
+
+    with expectation:
+        assert await get_jobs_statuses_by_ids_async(endpoint, [CREATED_JOB["_id"]]) == ["active", "finished"]
+    assert reauthenticate.await_args_list == [((endpoint._auth,),)] * expected_reauthentications
+    assert endpoint.list.call_count == len(list_results)
+
+
+AUTH_TOKEN = "auth-token-1"
+JOB_ENDPOINT_ARGUMENTS = ("platform.mat3ra.com", 443, OWNER_ID, AUTH_TOKEN, "2018-10-01", True)
+JOBS_QUERY: Dict[str, Any] = {"_id": {"$in": [CREATED_JOB["_id"]]}}
+STATUS_PROJECTION: Dict[str, Any] = {"fields": {"status": 1}}
+JOBS_FETCH_URL = (
+    "https://platform.mat3ra.com:443/api/2018-10-01/jobs"
+    "?query=%7B%22_id%22%3A+%7B%22%24in%22%3A+%5B%22job-1%22%5D%7D%7D"
+    "&projection=%7B%22fields%22%3A+%7B%22status%22%3A+1%7D%7D"
+)
+BEARER_HEADERS = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+X_AUTH_HEADERS = {"X-Account-Id": OWNER_ID, "X-Auth-Token": AUTH_TOKEN, "Content-Type": "application/json"}
+ABORT_SIGNAL = "abort-signal"
+FETCH_RESPONSE_OK = SimpleNamespace(ok=True, status=200, json=AsyncMock(return_value={"data": JOBS_WITH_STATUSES}))
+FETCH_RESPONSE_401 = SimpleNamespace(ok=False, status=401)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("access_token", "response", "expectation", "expected_headers"),
+    [
+        (ACCESS_TOKEN, FETCH_RESPONSE_OK, contextlib.nullcontext(), BEARER_HEADERS),
+        (None, FETCH_RESPONSE_OK, contextlib.nullcontext(), X_AUTH_HEADERS),
+        (
+            ACCESS_TOKEN,
+            FETCH_RESPONSE_401,
+            pytest.raises(requests.HTTPError, check=lambda error: error.response.status_code == 401),
+            BEARER_HEADERS,
+        ),
+    ],
+    ids=["bearer token", "X-Auth headers", "401"],
+)
+async def test_list_jobs_with_fetch(monkeypatch, access_token, response, expectation, expected_headers):
+    pyfetch = AsyncMock(return_value=response)
+    monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.pyfetch", pyfetch)
+    endpoint = JobEndpoints(*JOB_ENDPOINT_ARGUMENTS, auth=AuthContext(access_token=access_token))
+
+    with expectation:
+        assert await _list_jobs_with_fetch(endpoint, JOBS_QUERY, STATUS_PROJECTION, ABORT_SIGNAL) == JOBS_WITH_STATUSES
+    pyfetch.assert_awaited_once_with(JOBS_FETCH_URL, headers=expected_headers, signal=ABORT_SIGNAL)

@@ -13,26 +13,37 @@ Two paths depending on environment:
 import inspect
 import os
 
-from mat3ra.api_client import ACCESS_TOKEN_ENV_VAR
+import requests
+from mat3ra.api_client import ACCESS_TOKEN_ENV_VAR, APIClient, AuthContext
 
 from .core.api.auth import authenticate_oidc, get_oidc_base_url, store_token_data_in_environment
 from .io import get_data
 from .ipython.ui import show_device_flow_popup
 from .primitive.environment import is_pyodide_environment
 from .pyodide.api.auth import authenticate_jupyterlite
-from .token_store import load_token, save_token
+from .token_store import delete_token, load_token, save_token
 
 REFRESH_TOKEN_ENV_VAR = "OIDC_REFRESH_TOKEN"
 
 
 async def _authenticate_oidc_with_cache(force=False):
     oidc_url = get_oidc_base_url()
-    cached = None if force else await load_token(oidc_url)
+    access_token = os.environ.get(ACCESS_TOKEN_ENV_VAR)
+    token_data = {"access_token": access_token} if access_token else await load_token(oidc_url)
 
-    if cached:
-        store_token_data_in_environment(cached)
-        return
+    if token_data and not force:
+        try:
+            APIClient.authenticate(access_token=token_data["access_token"]).list_accounts()
+            store_token_data_in_environment(token_data)
+            return
+        except KeyError:
+            pass
+        except requests.HTTPError as error:
+            if error.response.status_code != 401:
+                raise
 
+    await delete_token(oidc_url)
+    os.environ.pop(ACCESS_TOKEN_ENV_VAR, None)
     token_data = await authenticate_oidc(show_popup=show_device_flow_popup)
     await save_token(oidc_url, token_data)
 
@@ -61,5 +72,14 @@ async def authenticate(force=False, globals_dict=None):
 
     if data_from_host:
         await authenticate_jupyterlite(data_from_host)
-    elif ACCESS_TOKEN_ENV_VAR not in os.environ or force:
+    else:
         await _authenticate_oidc_with_cache(force)
+
+
+async def reauthenticate(auth_context: AuthContext) -> None:
+    """
+    Replaces an access token the platform rejected: drops it from the token cache, runs the device login and sets the
+    new token on `auth_context`, which every endpoint of the API client reads per request.
+    """
+    await _authenticate_oidc_with_cache(force=True)
+    auth_context.access_token = os.environ[ACCESS_TOKEN_ENV_VAR]

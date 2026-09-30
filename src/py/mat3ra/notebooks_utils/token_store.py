@@ -31,3 +31,9 @@ async def load_token(oidc_url: str) -> Optional[dict]:
     if not entry or entry.get("expires_at", 0) <= time.time() + _EXPIRY_BUFFER:
         return None
     return entry
+
+
+async def delete_token(oidc_url: str) -> None:
+    cache = await _read()
+    cache.pop(oidc_url, None)
+    await _write(cache)

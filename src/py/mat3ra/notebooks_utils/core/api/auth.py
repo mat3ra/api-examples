@@ -1,12 +1,23 @@
 import asyncio
 import os
 import time
-from typing import Callable, Optional
+import urllib.parse
+from typing import Any, Awaitable, Callable, Optional
 
 import requests
 from mat3ra.api_client import ACCESS_TOKEN_ENV_VAR, CLIENT_ID, SCOPE, APIEnv, build_oidc_base_url
 
+from ...primitive.environment import is_pyodide_environment
+from ...pyodide.runtime import run_interruptible_loop_async
+
+try:
+    from pyodide.http import pyfetch  # type: ignore
+except ImportError:
+    pyfetch = None
+
 REFRESH_TOKEN_ENV_VAR = "OIDC_REFRESH_TOKEN"
+TOKEN_REQUEST_TIMEOUT_SECONDS = 10
+FORM_HEADERS = {"Content-Type": "application/x-www-form-urlencoded"}
 
 
 def get_oidc_base_url() -> str:
@@ -50,6 +61,20 @@ def store_token_data_in_environment(token_data: dict) -> None:
         os.environ[REFRESH_TOKEN_ENV_VAR] = token_data["refresh_token"]
 
 
+def _request_token_data(token_url: str, form_data: dict) -> dict:
+    response = requests.post(token_url, data=form_data, headers=FORM_HEADERS, timeout=TOKEN_REQUEST_TIMEOUT_SECONDS)
+    return response.json() if response.status_code == 200 else {}
+
+
+async def _request_token_data_with_fetch(token_url: str, form_data: dict, abort_signal: Any) -> dict:
+    """
+    `_request_token_data` through the browser's fetch, which leaves the event loop free while the request is in flight.
+    """
+    body = urllib.parse.urlencode(form_data, doseq=True)
+    response = await pyfetch(token_url, method="POST", body=body, headers=FORM_HEADERS, signal=abort_signal)
+    return await response.json() if response.status == 200 else {}
+
+
 async def _poll_for_token_data(
     oidc_base_url: str,
     client_id: str,
@@ -57,25 +82,34 @@ async def _poll_for_token_data(
     polling_interval_seconds: int,
     expires_in_seconds: int,
 ) -> dict:
+    """Polls for the token until the device login is confirmed; in pyodide, ESC stops it at once."""
+    token_url = f"{oidc_base_url}/token"
+    form_data = {
+        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+        "device_code": device_code,
+        "client_id": client_id,
+        "redirect_uris": [],
+        "response_types": [],
+        "token_endpoint_auth_method": "none",
+    }
     deadline_seconds = time.time() + expires_in_seconds
-    while time.time() < deadline_seconds:
-        token_response = requests.post(
-            f"{oidc_base_url}/token",
-            data={
-                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                "device_code": device_code,
-                "client_id": client_id,
-                "redirect_uris": [],
-                "response_types": [],
-                "token_endpoint_auth_method": "none",
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=10,
-        )
-        if token_response.status_code == 200:
-            return token_response.json()
-        await asyncio.sleep(polling_interval_seconds)
-    raise Exception("Timeout waiting for authorization.")
+    token_data: dict = {}
+
+    def request_token_data(abort_signal: Any) -> Awaitable[dict]:
+        if is_pyodide_environment():
+            return _request_token_data_with_fetch(token_url, form_data, abort_signal)
+        return asyncio.get_running_loop().run_in_executor(None, _request_token_data, token_url, form_data)
+
+    async def poll_step(abort_signal: Any) -> bool:
+        if time.time() >= deadline_seconds:
+            raise Exception("Timeout waiting for authorization.")
+        token_data.update(await asyncio.wait_for(request_token_data(abort_signal), TOKEN_REQUEST_TIMEOUT_SECONDS))
+        return not token_data
+
+    await run_interruptible_loop_async(
+        poll_step, polling_interval_seconds, show_button=False, abort_hint_text="Press ESC to cancel"
+    )
+    return token_data
 
 
 async def authenticate_oidc(
