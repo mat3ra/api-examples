@@ -1,3 +1,4 @@
+import re
 import urllib.request
 from typing import Any, Dict, Iterable, List, Optional, Union
 
@@ -169,6 +170,20 @@ def get_kgrid_query(kgrid: Optional[List[int]], unit_name: str = "pw_scf") -> Di
         return {}
     kgrid_context = {"$elemMatch": {"name": "kgrid", "data.dimensions": list(kgrid)}}
     return {"workflow.subworkflows.units": {"$elemMatch": {"name": unit_name, "context": kgrid_context}}}
+
+
+def get_kgrid_of_job(job: Dict[str, Any], unit_name: str = "pw_scf") -> Optional[List[int]]:
+    """
+    K-grid dimensions the job's `unit_name` unit ran on: its `kgrid` context, or, for a job created without one, the
+    grid the platform rendered into the unit's input, `workflow.subworkflows[].units[name].input[0].rendered`.
+    """
+    units = [unit for subworkflow in job["workflow"]["subworkflows"] for unit in subworkflow["units"]]
+    unit = next(unit for unit in units if unit["name"] == unit_name)
+    kgrid_context = next((item for item in unit["context"] if item["name"] == "kgrid"), None)
+    if kgrid_context:
+        return kgrid_context["data"]["dimensions"]
+    match = re.search(r"K_POINTS automatic\s+(\d+)\s+(\d+)\s+(\d+)", unit["input"][0]["rendered"])
+    return [int(dimension) for dimension in match.groups()] if match else None
 
 
 def find_job_for_material_with_property(
