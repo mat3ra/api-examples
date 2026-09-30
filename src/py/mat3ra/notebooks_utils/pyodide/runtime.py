@@ -183,7 +183,8 @@ def interruptible_polling_loop(
     show_controls: bool = True,
 ):
     """
-    Turns a poll-step function into an async loop. Wrapped fn returns True to continue, False to stop.
+    Turns a poll-step function into an async loop. Wrapped fn takes `abort_signal` for its request and returns
+    True to continue, False to stop.
     ESC/Abort (notebooks) raises UserAbortError at once, during a poll or the sleep; Ctrl+C natively.
     Poll interval: kwarg poll_interval_kwarg_name, else default_poll_interval_seconds.
     """
@@ -194,7 +195,7 @@ def interruptible_polling_loop(
             poll_interval_seconds = float(kwargs.pop(poll_interval_kwarg_name, default_poll_interval_seconds))
 
             async def loop_body(abort_signal: Any) -> bool:
-                result = poll_step_function(*args, **kwargs)
+                result = poll_step_function(*args, abort_signal=abort_signal, **kwargs)
                 should_continue = await result if inspect.isawaitable(result) else result
                 return bool(should_continue)
 

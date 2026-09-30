@@ -1,8 +1,14 @@
+import asyncio
+import json
 import re
+import urllib.parse
 import urllib.request
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Awaitable, Dict, Iterable, List, Optional, Union
 
+import requests
 from mat3ra.api_client import APIClient, JobEndpoints
+
+from ....primitive.environment import is_pyodide_environment
 
 MATERIALS_SET_ENTITY_CLASS = "Material"
 
@@ -37,6 +43,50 @@ def get_jobs_statuses_by_ids(endpoint: JobEndpoints, job_ids: List[str]) -> List
         list: list of job statuses
     """
     jobs = endpoint.list({"_id": {"$in": job_ids}}, {"fields": {"status": 1}})
+    return [job["status"] for job in jobs]
+
+
+async def _list_jobs_with_fetch(endpoint: JobEndpoints, query: dict, projection: dict, abort_signal: Any) -> List[dict]:
+    """
+    `endpoint.list` through the browser's fetch, which leaves the event loop free while the request is in flight.
+    Raises `requests.HTTPError` on an error status, as the API client does.
+    """
+    from pyodide.http import pyfetch  # type: ignore
+
+    parameters = urllib.parse.urlencode({"query": json.dumps(query), "projection": json.dumps(projection)})
+    url = urllib.parse.urljoin(endpoint.conn.preamble, f"{endpoint.name}?{parameters}")
+    response = await pyfetch(url, headers=endpoint._get_bearer_headers() or endpoint.headers, signal=abort_signal)
+    if not response.ok:
+        error_response = requests.Response()
+        error_response.status_code = response.status
+        raise requests.HTTPError(f"Error {response.status}.", response=error_response)
+    return (await response.json())["data"]
+
+
+async def get_jobs_statuses_by_ids_async(
+    endpoint: JobEndpoints, job_ids: List[str], timeout: float = 30, abort_signal: Any = None
+) -> List[str]:
+    """
+    Gets jobs statuses by their IDs without blocking the event loop: through the browser's fetch in pyodide,
+    in a worker thread otherwise.
+
+    Args:
+        endpoint (JobEndpoints): Job endpoint object from the Exabyte API Client
+        job_ids (list): list of job IDs to get the status for
+        timeout (float): seconds to wait for the response before raising asyncio.TimeoutError
+        abort_signal: JS AbortSignal that aborts the fetch in pyodide
+
+    Returns:
+        list: list of job statuses
+    """
+    query, projection = {"_id": {"$in": job_ids}}, {"fields": {"status": 1}}
+
+    def request_jobs() -> Awaitable[List[dict]]:
+        if is_pyodide_environment():
+            return _list_jobs_with_fetch(endpoint, query, projection, abort_signal)
+        return asyncio.get_running_loop().run_in_executor(None, endpoint.list, query, projection)
+
+    jobs = await asyncio.wait_for(request_jobs(), timeout)
     return [job["status"] for job in jobs]
 
 

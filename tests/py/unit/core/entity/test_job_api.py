@@ -1,3 +1,5 @@
+import asyncio
+import threading
 from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
@@ -6,6 +8,7 @@ from mat3ra.notebooks_utils.core.entity.job.api import (
     create_job,
     find_job_for_material,
     find_job_for_material_with_property,
+    get_jobs_statuses_by_ids_async,
     get_kgrid_of_job,
     get_kgrid_query,
 )
@@ -251,3 +254,18 @@ UNIT_WITH_RENDERED_INPUT: Dict[str, Any] = {
 )
 def test_get_kgrid_of_job(unit, expected_kgrid):
     assert get_kgrid_of_job({"workflow": {"subworkflows": [{"units": [unit]}]}}) == expected_kgrid
+
+
+REQUEST_TIMEOUT_SECONDS = 0.05
+BLOCKED_REQUEST_SECONDS = 1.0
+
+
+@pytest.mark.asyncio
+async def test_get_jobs_statuses_by_ids_async_raises_when_the_request_times_out():
+    release_request = threading.Event()
+    endpoint = MagicMock()
+    endpoint.list.side_effect = lambda query, projection: release_request.wait(BLOCKED_REQUEST_SECONDS)
+
+    with pytest.raises(asyncio.TimeoutError):
+        await get_jobs_statuses_by_ids_async(endpoint, [CREATED_JOB["_id"]], timeout=REQUEST_TIMEOUT_SECONDS)
+    release_request.set()
