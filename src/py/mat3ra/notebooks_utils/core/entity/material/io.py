@@ -137,11 +137,7 @@ def load_material_from_folder(folder_path: str, name: str, verbose: bool = True)
     name_lower = name.lower()
     resulting_material = None
 
-    # An exact name is a different question from a substring, so it is asked first: otherwise
-    # "X" matches "X with a defect" and the caller is handed the wrong material.
-    filenames = sorted(os.listdir(folder_path), key=lambda f: (os.path.splitext(f)[0].lower() != name_lower, f))
-
-    for filename in filenames:
+    for filename in sorted(os.listdir(folder_path)):
         if filename.endswith(".json") and name_lower in os.path.splitext(filename)[0].lower():
             with open(os.path.join(folder_path, filename), "r") as file:
                 data = json.load(file)
@@ -151,7 +147,7 @@ def load_material_from_folder(folder_path: str, name: str, verbose: bool = True)
 
     if not resulting_material:
         materials = load_materials_from_folder(folder_path, verbose=verbose)
-        for material in sorted(materials, key=lambda m: m.name.lower() != name_lower):
+        for material in materials:
             if name_lower in material.name.lower():
                 resulting_material = material
                 break
