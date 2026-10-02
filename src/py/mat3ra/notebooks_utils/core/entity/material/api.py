@@ -6,9 +6,10 @@ from mat3ra.api_client import APIClient
 from mat3ra.made.material import Material
 from mat3ra.prode import PropertyName
 
+from ..job.api import get_kgrid_query
 from ..property.api import get_properties_for_job
 from .analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
-from .io import load_material_from_folder
+from .io import load_materials_from_folder
 
 ORDERED_ENTITY_SET_TYPE = "ordered"
 UNORDERED_ENTITY_SET_TYPE = "unordered"
@@ -36,30 +37,57 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
     return created
 
 
-def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) -> Material:
+def select_material_by_name(materials: List[Material], name: str) -> Material:
     """
-    Loads a material by exact name from a folder (substring-matched, accepted only on an exact
-    name) or the owner's platform collection.
+    Picks one material by name. An exact name wins; otherwise the name, matched case-insensitively
+    as a part of material names, must match exactly one. Materials sharing a name count once: the
+    first of them is returned.
 
     Args:
-        api_client (APIClient): API client instance carrying the authorization context.
-        folder (str): Folder to look in first, if it exists.
-        name (str): Exact material name to match.
-        owner_id (str): Account ID to search if the folder has no exact match.
+        materials (List[Material]): Materials to choose from.
+        name (str): Exact name, or a part of the name that only one material has.
 
     Returns:
         Material: The matching material.
 
     Raises:
-        ValueError: If no exact match exists in the folder or the account.
+        ValueError: If no material matches, or a partial name matches several materials.
     """
-    loaded = load_material_from_folder(folder, name, verbose=False) if os.path.isdir(folder) else None
-    if loaded is not None and loaded.name == name:
-        return loaded
-    matches = api_client.materials.list({"name": name, "owner._id": owner_id}, {"limit": 1})
+    matches: Dict[str, Material] = {}
+    for material in materials:
+        if name.lower() in material.name.lower():
+            matches.setdefault(material.name, material)
+    if name in matches:
+        return matches[name]
+    if len(matches) == 1:
+        return next(iter(matches.values()))
     if not matches:
-        raise ValueError(f"No material named '{name}' in '{folder}' or in the account")
-    return Material.create(matches[0])
+        raise ValueError(f"No material named '{name}'")
+    names = "; ".join(f"'{match}'" for match in matches)
+    raise ValueError(f"'{name}' matches {len(matches)} materials: {names}. Use a longer or the exact name.")
+
+
+def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) -> Material:
+    """
+    Loads a material by name from a folder or the owner's platform collection, chosen as in
+    `select_material_by_name`.
+
+    Args:
+        api_client (APIClient): API client instance carrying the authorization context.
+        folder (str): Folder to look in first, if it exists.
+        name (str): Exact name, or a part of the name that only one material has.
+        owner_id (str): Account ID whose platform materials are searched.
+
+    Returns:
+        Material: The matching material.
+
+    Raises:
+        ValueError: If no material matches, or a partial name matches several materials.
+    """
+    candidates = load_materials_from_folder(folder, verbose=False) if os.path.isdir(folder) else []
+    query = {"name": {"$regex": re.escape(name), "$options": "i"}, "owner._id": owner_id}
+    candidates += [Material.create(data) for data in api_client.materials.list(query)]
+    return select_material_by_name(candidates, name)
 
 
 def get_final_structure_for_job(api_client: APIClient, job_id: str) -> Material:
@@ -70,22 +98,27 @@ def get_final_structure_for_job(api_client: APIClient, job_id: str) -> Material:
     return Material.create(api_client.materials.get(properties[-1]["materialId"]))
 
 
-def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Optional[Material]:
+def find_relaxed_material(
+    api_client: APIClient, material, owner_id: str, kgrid: Optional[List[int]] = None, unit_name: str = "pw_scf"
+) -> Optional[Material]:
     """
     Finds a relaxed version of a material: the final structure of a finished job on a material
-    with the same structural hash, where the geometry has changed.
+    with the same structural hash, where the geometry has changed, optionally among the jobs whose
+    `unit_name` unit ran on `kgrid`.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
         material: mat3ra-made Material object (must have a .hash property).
         owner_id (str): Account ID under which to search.
+        kgrid (List[int], optional): Exact k-grid dimensions the relaxation ran on; None for no condition.
+        unit_name (str): Name of the relaxation unit, e.g. "pw_vc-relax".
 
     Returns:
         Material, optional: The relaxed structure, or None if none exists.
     """
     ids = [m["_id"] for m in api_client.materials.list({"hash": material.hash, "owner._id": owner_id})]
     query = {"_material._id": {"$in": ids}, "owner._id": owner_id, "status": "finished"}
-    for job in api_client.jobs.list(query):
+    for job in api_client.jobs.list({**query, **get_kgrid_query(kgrid, unit_name)}):
         properties = api_client.properties.get_for_job(job["_id"], PropertyName.non_scalar.final_structure.value)
         if not properties:
             continue
