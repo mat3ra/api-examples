@@ -155,10 +155,16 @@ def ensure_set(endpoint, doc, owner_id, parent_id=None):
         return endpoint.create_set(body), True
 
     existing = found[0]
+    changes = {}
     merged = merge_metadata(existing.get("metadata") or {}, doc.get("metadata") or {})
     if merged != (existing.get("metadata") or {}):
-        endpoint.update_set(existing["_id"], {"metadata": merged})
-        existing = dict(existing, metadata=merged)
+        changes["metadata"] = merged
+    for key in ("description", "physicalId"):  # a Library's own fields, filled in when the set predates them
+        if doc.get(key) and not existing.get(key):
+            changes[key] = doc[key]
+    if changes:
+        endpoint.update_set(existing["_id"], changes)
+        existing = dict(existing, **changes)
     if parent_id and parent_id not in {s.get("_id") for s in existing.get("inSet", [])}:
         endpoint.move_to_set(existing["_id"], None, parent_id)
     return existing, False
