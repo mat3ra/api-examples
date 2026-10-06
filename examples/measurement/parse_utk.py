@@ -247,15 +247,15 @@ def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument=
     run_name = session.get("name") or run_dir.name
     reg = registration(recipe)
     sample_set = {"name": run_name, "entitySetType": "ordered", "metadata": {}}
-    # NLR's HTEM deposition record(s) for the piece, verbatim. UTK drops the file into
-    # the run folder as deposition*.json; --deposition overrides that.
+    # the Library: the piece itself. NLR's deposition record(s), when UTK dropped them into the run folder as
+    # deposition*.json or --deposition names them, are its synthesis.
     deposition_files = [Path(deposition)] if deposition else sorted(run_dir.glob("deposition*.json"))
-    if deposition_files:
-        deposition_records = []
-        for f in deposition_files:
-            d = json.loads(f.read_text())
-            deposition_records.extend(d if isinstance(d, list) else [d])
-        sample_set["metadata"]["deposition"] = deposition_records
+    synthesis = []
+    for f in deposition_files:
+        d = json.loads(f.read_text())
+        synthesis.extend(d if isinstance(d, list) else [d])
+    library = {"physicalId": physical_id, "name": physical_id, "description": "", "entitySetType": "unordered",
+               "metadata": {"synthesis": synthesis}}
     # the photograph of the piece: any image at the run-folder root
     images = [(f.name, f) for f in sorted(run_dir.iterdir()) if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
     # samples in recipe order (the set is ordered; the server assigns inSet.index as they are moved in)
@@ -307,7 +307,7 @@ def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument=
         files[label] = sample_files(label, recs, run_dir, slim_by_sample.get(label, []))
         prop = combine_pad(label, recs, run_dir) if recs else None
         (properties.append((label, unit, prop, 0)) if prop else skipped.append(label))
-    return {"physicalId": physical_id, "run": run_name, "sample_set": sample_set, "images": images, "samples": samples,
+    return {"physicalId": physical_id, "library": library, "run": run_name, "sample_set": sample_set, "images": images, "samples": samples,
             "measurement_set": measurement_set, "measurements": measurements, "files": files, "set_files": [],
             "records": records, "properties": properties, "skipped": skipped}
 

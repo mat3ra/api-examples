@@ -54,8 +54,10 @@ def validate(parsed):
     for label, uid, prop, rep in parsed["properties"]:
         # by the property's own name: NLR's thickness, atomic fractions and I-V curve are not the
         # hysteresis loop, and ESSE has no schema for them yet, so they are reported, not failed
-        schema_id = f"properties-directory/non-scalar/{prop['name'].replace('_', '-')}"
-        schema = schemas.get(schema_id) or schemas.get(schema_id.replace("non-scalar", "scalar"))
+        # by the property's own name, wherever the directory keeps it: scalar, non-scalar, structural
+        suffix = "/" + prop["name"].replace("_", "-")
+        schema = next((s for schema_id, s in schemas.items()
+                       if schema_id.startswith("properties-directory/") and schema_id.endswith(suffix)), None)
         if schema is None:
             unvalidated.add(prop["name"]); continue
         try:
@@ -140,19 +142,25 @@ def merge_metadata(existing, incoming):
     return merged
 
 
-def ensure_set(endpoint, doc, owner_id):
+def ensure_set(endpoint, doc, owner_id, parent_id=None):
     """The set with this name in the account, created when missing; returns (set, created).
     An existing set takes any metadata it does not have yet - a later upload may carry a
-    deposition record the set was created without."""
+    deposition record the set was created without - and is moved under `parent_id` when it
+    is not there already."""
     found = find(endpoint, {"isEntitySet": True, "name": doc["name"]}, owner_id, 5)
     if not found:
-        return endpoint.create_set(dict(doc, owner={"_id": owner_id})), True
+        body = dict(doc, owner={"_id": owner_id})
+        if parent_id:
+            body["parentSetId"] = parent_id
+        return endpoint.create_set(body), True
 
     existing = found[0]
     merged = merge_metadata(existing.get("metadata") or {}, doc.get("metadata") or {})
     if merged != (existing.get("metadata") or {}):
         endpoint.update_set(existing["_id"], {"metadata": merged})
         existing = dict(existing, metadata=merged)
+    if parent_id and parent_id not in {s.get("_id") for s in existing.get("inSet", [])}:
+        endpoint.move_to_set(existing["_id"], None, parent_id)
     return existing, False
 
 
@@ -182,16 +190,24 @@ def destination(name, set_id, measurement_ids):
     return f"measurements/{measurement_ids[label]}/{rest}"
 
 
-def upload(client, parsed, files=("records",)):
+def upload(client, parsed, files=("records",), properties=True):
     """The run onto its Sample Set: the set, its samples, the measurement set, one measurement per
     sample, the files and the properties. `files` names which groups to upload - see FILE_GROUPS;
     an empty list uploads none and keeps the raw records in each measurement's metadata instead.
     Idempotent: sets by run name, members by name/label; files re-put; properties posted only when
-    missing."""
+    missing. `properties=False` uploads the run without them - the platform rejects a property
+    whose name ESSE has no schema for, and the files still carry the data to derive them from."""
     uploads = run_files(parsed, files) if files else []
     run_name = parsed["run"]
     owner = {"_id": client.my_account.id}
-    sample_set, created_set = ensure_set(client.samples, parsed["sample_set"], owner["_id"])
+    # the Library: the physical piece, a set named by its physicalId that every Sample Set measured
+    # on it belongs to; its metadata carries the layout and synthesis
+    library_id = None
+    if parsed.get("library"):
+        library, created_library = ensure_set(client.samples, parsed["library"], owner["_id"])
+        library_id = library["_id"]
+        print(f"library {library_id} ({library['name']}{', created' if created_library else ''})")
+    sample_set, created_set = ensure_set(client.samples, parsed["sample_set"], owner["_id"], library_id)
     set_id = sample_set["_id"]
     in_set = {s.get("label"): s for s in find(client.samples, {"inSet._id": set_id, "isEntitySet": {"$ne": True}}, owner["_id"], 500)}
     sample_ids, created = {}, 0
@@ -230,10 +246,15 @@ def upload(client, parsed, files=("records",)):
                 if done % 200 == 0:
                     print(f"  files: {done}/{len(jobs)}", flush=True)
         print(f"files: {len(jobs)} put")
+    if not properties:
+        print(f"properties: skipped ({len(parsed['properties'])} not posted)")
+        return
     posted = 0
     for label, unit_id, prop, repetition in parsed["properties"]:  # properties/create is not idempotent: skip what is there
-        present = find(client.properties, {"source.info.origin._id": measurement_ids[label], "data.name": prop["name"],
-                                           "repetition": repetition}, owner["_id"], 1)
+        selector = {"source.info.origin._id": measurement_ids[label], "data.name": prop["name"], "repetition": repetition}
+        if "element" in prop:  # one measurement holds an elemental_ratio per element
+            selector["data.element"] = prop["element"]
+        present = find(client.properties, selector, owner["_id"], 1)
         if present:
             continue
         client.properties.create(dict(holder(prop, measurement_ids[label], sample_ids[label], unit_id, repetition), owner=owner))
@@ -251,6 +272,8 @@ def main():
     ap.add_argument("--files", nargs="*", default=["records"], metavar="GROUP",
                     help=f"which file groups to upload ({', '.join(FILE_GROUPS)}); pass --files with no value "
                          "to upload none and keep the raw records in each measurement's metadata")
+    ap.add_argument("--no-properties", action="store_true",
+                    help="upload the run without its properties - the files still carry everything they were derived from")
     ap.add_argument("--dry-run", action="store_true", help="validate the documents and stop")
     a = ap.parse_args()
 
@@ -266,7 +289,7 @@ def main():
     if a.account:
         client = APIClient.authenticate(account_id=account_id(client, a.account), **address)
     for run in runs:
-        upload(client, run, files=a.files)
+        upload(client, run, files=a.files, properties=not a.no_properties)
 
 
 if __name__ == "__main__":
