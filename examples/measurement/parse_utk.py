@@ -237,7 +237,7 @@ def sample_files(label, records, run_dir, slim_by_index):
     return out
 
 
-def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument="asylum-afm"):
+def parse(run_dir, physical_id, limit_records=None, deposition=None, instrument="instrument-1"):
     """The whole run folder as platform documents: sample set, samples, measurement set, one measurement per sample, files, one loop property per fully measured sample."""
     run_dir = Path(run_dir)
     recipe, session, all_records = load_run(run_dir)
@@ -327,7 +327,7 @@ def main():
     ap.add_argument("--out", default="parsed", help="directory for the run document and the records cut from the run (default: parsed/)")
     ap.add_argument("--limit-records", type=int, help="trial: only the first N records and the samples they belong to")
     ap.add_argument("--deposition", help="NLR HTEM record (json) kept in the run's sample set metadata")
-    ap.add_argument("--instrument", default="asylum-afm", help="identity of the machine the run was measured on (the run folder does not record it)")
+    ap.add_argument("--instrument", default="instrument-1", help="identity of the machine the run was measured on (the run folder does not record it)")
     ap.add_argument("--emit-example", help="write the property with the most loops to this path — the ESSE example")
     a = ap.parse_args()
 

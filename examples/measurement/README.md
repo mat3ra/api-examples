@@ -41,7 +41,7 @@ python parse_utk.py ~/data/From_UTK --physical-id PDAC_COM5_01448 --out parsed
 
 # NLR: an XRF map of the bare film on a grid, and a DC I-V sweep over the Pt pads patterned afterwards
 python parse_nlr.py ~/data/From_NLR --physical-id PDAC_COM5_01448 \
-    --xrf-instrument bruker-m4 --iv-instrument keithley-4200 --out parsed
+    --xrf-instrument instrument-2 --iv-instrument instrument-3 --out parsed
 ```
 
 `parsed/` now holds a run document per run, plus any file a parser derived. Read it — it is the whole upload,
