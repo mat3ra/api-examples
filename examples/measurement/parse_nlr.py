@@ -80,7 +80,7 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument, description=""
                                                 "al_at_pct": float(aluminium_at_pct), "sc_at_pct": float(scandium_at_pct)}}
         # NLR's columns become what ESSE already defines: composition is one elemental_ratio per
         # element, a fraction, not a property named after the element
-        xrf_properties += [(label, xrf_unit_id, {"name": "film_thickness", "value": float(thickness_um) * 1e-6, "units": "m"}, 0),
+        xrf_properties += [(label, xrf_unit_id, {"name": "film_thickness", "value": float(thickness_um), "units": "um"}, 0),
                            (label, xrf_unit_id, {"name": "elemental_ratio", "element": "Al", "value": float(aluminium_at_pct) / 100}, 0),
                            (label, xrf_unit_id, {"name": "elemental_ratio", "element": "Sc", "value": float(scandium_at_pct) / 100}, 0)]
     iv_run_name = f"{physical_id} DC IV"
