@@ -39,7 +39,7 @@ on the physical piece — every Sample carries it, and it is how the piece is fo
 # UTK: an Asylum SPM run folder (summary.json or recipe.json + records/ + loops/)
 python parse_utk.py ~/data/From_UTK --physical-id PDAC_COM5_01448 --out parsed
 
-# NLR: an XRF grid and a DC I-V sweep over the same pads
+# NLR: an XRF map of the bare film on a grid, and a DC I-V sweep over the Pt pads patterned afterwards
 python parse_nlr.py ~/data/From_NLR --physical-id PDAC_COM5_01448 \
     --xrf-instrument bruker-m4 --iv-instrument keithley-4200 --out parsed
 ```
