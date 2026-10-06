@@ -15,15 +15,15 @@ from mat3ra.api_client import APIClient
 
 from upload_run import account_id, base_url, find, holder
 
-# imageMetrics key -> the ESSE property it is. Metres in, metres out.
+# imageMetrics key -> the ESSE property it is, and the factor to its units. Metres in, nanometres out.
 METRICS = {
-    "rq_m": {"name": "areal_surface_texture", "parameter": "Sq", "units": "m"},
-    "ra_m": {"name": "areal_surface_texture", "parameter": "Sa", "units": "m"},
-    "grain_radius_median_m": {"name": "grain_size", "statistic": "median", "units": "m"},
-    "grain_radius_mean_m": {"name": "grain_size", "statistic": "mean", "units": "m"},
-    "grain_radius_std_m": {"name": "grain_size", "statistic": "std", "units": "m"},
-    "grain_radius_iqr_m": {"name": "grain_size", "statistic": "iqr", "units": "m"},
-    "grain_coverage": {"name": "grain_coverage"},
+    "rq_m": ({"name": "areal_surface_texture", "parameter": "Sq", "units": "nm"}, 1e9),
+    "ra_m": ({"name": "areal_surface_texture", "parameter": "Sa", "units": "nm"}, 1e9),
+    "grain_radius_median_m": ({"name": "grain_size", "statistic": "median", "units": "nm"}, 1e9),
+    "grain_radius_mean_m": ({"name": "grain_size", "statistic": "mean", "units": "nm"}, 1e9),
+    "grain_radius_std_m": ({"name": "grain_size", "statistic": "std", "units": "nm"}, 1e9),
+    "grain_radius_iqr_m": ({"name": "grain_size", "statistic": "iqr", "units": "nm"}, 1e9),
+    "grain_coverage": ({"name": "grain_coverage"}, 1),
 }
 
 
@@ -32,9 +32,9 @@ def properties_of(measurement):
     unit_id = measurement["workflow"]["subworkflows"][0]["units"][0]["flowchartId"]
     out = []
     for frame in (measurement.get("metadata") or {}).get("frames", []):
-        for key, shape in METRICS.items():
+        for key, (shape, factor) in METRICS.items():
             if key in frame.get("imageMetrics", {}):
-                out.append((unit_id, dict(shape, value=frame["imageMetrics"][key])))
+                out.append((unit_id, dict(shape, value=frame["imageMetrics"][key] * factor)))
     return out
 
 
