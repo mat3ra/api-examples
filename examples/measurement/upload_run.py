@@ -147,14 +147,21 @@ def ensure_set(endpoint, doc, owner_id, parent_id=None):
     An existing set takes any metadata it does not have yet - a later upload may carry a
     deposition record the set was created without - and is moved under `parent_id` when it
     is not there already."""
-    found = find(endpoint, {"isEntitySet": True, "name": doc["name"]}, owner_id, 5)
-    if not found:
+    candidates = find(endpoint, {"isEntitySet": True, "name": doc["name"]}, owner_id, 20)
+    if parent_id:
+        # the set is this run's only if it sits under this Library, or under no Library at all (an
+        # upload from before Libraries existed, adopted now); one under another piece is another run
+        libraries = {s["_id"] for s in find(endpoint, {"isEntitySet": True, "physicalId": {"$exists": True}}, owner_id, 100)}
+        def parents(candidate):
+            return {ref.get("_id") for ref in candidate.get("inSet", [])}
+        candidates = [c for c in candidates if parent_id in parents(c) or not (parents(c) & libraries)]
+    if not candidates:
         body = dict(doc, owner={"_id": owner_id})
         if parent_id:
             body["parentSetId"] = parent_id
         return endpoint.create_set(body), True
 
-    existing = found[0]
+    existing = candidates[0]
     changes = {}
     merged = merge_metadata(existing.get("metadata") or {}, doc.get("metadata") or {})
     if merged != (existing.get("metadata") or {}):
@@ -203,7 +210,14 @@ def upload(client, parsed, files=("records",), properties=True):
     Idempotent: sets by run name, members by name/label; files re-put; properties posted only when
     missing. `properties=False` uploads the run without them - the platform rejects a property
     whose name ESSE has no schema for, and the files still carry the data to derive them from."""
-    uploads = run_files(parsed, files) if files else []
+    groups = list(files or [])
+    if not properties and groups and "loops" not in groups and any(
+            name.startswith("loops/") for file_list in parsed.get("files", {}).values() for name, _ in file_list):
+        # the properties are derived from the loop arrays; with no properties posted the arrays are the
+        # only record of them, so they go up whatever the groups asked for
+        groups.append("loops")
+        print("properties skipped: uploading the loop arrays too, so they can be derived later")
+    uploads = run_files(parsed, groups) if groups else []
     run_name = parsed["run"]
     owner = {"_id": client.my_account.id}
     # the Library: the physical piece, a set named by its physicalId that every Sample Set measured

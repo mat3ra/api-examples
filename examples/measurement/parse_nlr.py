@@ -65,7 +65,10 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument, description=""
     xrf_workflow = standata_workflow(XRF_APPLICATION, "XRF Grid Map")
     xrf_unit_id = unit_id(xrf_workflow)
     grid = read_columns(grid_file)
-    synthesis = [json.loads(Path(f).read_text()) for f in deposition]
+    synthesis = []
+    for f in deposition:  # a file may hold one record or a list of them
+        record = json.loads(Path(f).read_text())
+        synthesis.extend(record if isinstance(record, list) else [record])
     library = {"physicalId": physical_id, "name": physical_id, "description": description,
                "entitySetType": "unordered",
                "metadata": {"frame": NLR_FRAME, "layout": provisional_layout(grid), "synthesis": synthesis}}
