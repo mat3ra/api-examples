@@ -14,7 +14,7 @@ def get_or_create_workflow(api_client: APIClient, workflow: Workflow, owner_id: 
     Returns:
         dict: The workflow dict (existing or newly created).
     """
-    existing = api_client.workflows.list({"hash": workflow.hash, "ownerId": owner_id, "globalSearch": True})
+    existing = api_client.workflows.list({"hash": workflow.hash, "owner._id": owner_id})
     if existing:
         print(f"♻️  Reusing already existing Workflow: {existing[0]['_id']}")
         return existing[0]

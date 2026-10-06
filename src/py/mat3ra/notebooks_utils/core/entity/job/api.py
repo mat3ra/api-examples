@@ -35,7 +35,7 @@ def get_jobs_statuses_by_ids(endpoint: JobEndpoints, job_ids: List[str]) -> List
     Returns:
         list: list of job statuses
     """
-    jobs = endpoint.list({"id": job_ids})
+    jobs = endpoint.list({"_id": {"$in": job_ids}}, {"fields": {"status": 1}})
     return [job["status"] for job in jobs]
 
 
@@ -138,13 +138,12 @@ def find_job_for_material(
     """
     existing = api_client.jobs.list(
         {
-            "materialId": material_id,
-            "ownerId": owner_id,
-            "workflowName": workflow_name,
-            "status": list(statuses),
-            "globalSearch": True,
-            "limit": 1,
-        }
+            "_material._id": material_id,
+            "owner._id": owner_id,
+            "workflow.name": workflow_name,
+            "status": {"$in": list(statuses)},
+        },
+        {"limit": 1},
     )
     return existing[0] if existing else None
 

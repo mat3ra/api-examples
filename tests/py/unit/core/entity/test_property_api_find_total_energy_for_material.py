@@ -32,9 +32,9 @@ def test_find_total_energy_for_material_defaults_to_my_account_scope():
         query={
             "exabyteId": EXABYTE_ID,
             "slug": "total_energy",
-            "ownerId": OWNER_ACCOUNT_ID,
+            "owner._id": OWNER_ACCOUNT_ID,
         },
-        projection={"sort": "-precision.value", "limit": 1},
+        projection={"sort": {"precision.value": -1}, "limit": 1},
     )
     client.jobs.list.assert_not_called()
     assert result == TOTAL_ENERGY_PROPERTY
@@ -49,9 +49,9 @@ def test_find_total_energy_for_material_my_account_scope():
         query={
             "exabyteId": EXABYTE_ID,
             "slug": "total_energy",
-            "ownerId": OWNER_ACCOUNT_ID,
+            "owner._id": OWNER_ACCOUNT_ID,
         },
-        projection={"sort": "-precision.value", "limit": 1},
+        projection={"sort": {"precision.value": -1}, "limit": 1},
     )
 
 
@@ -64,9 +64,9 @@ def test_find_total_energy_for_material_curators_scope():
         query={
             "exabyteId": EXABYTE_ID,
             "slug": "total_energy",
-            "ownerSlug": "curators",
+            "owner.slug": "curators",
         },
-        projection={"sort": "-precision.value", "limit": 1},
+        projection={"sort": {"precision.value": -1}, "limit": 1},
     )
 
 
@@ -80,7 +80,7 @@ def test_find_total_energy_for_material_public_scope_has_no_owner_filter():
             "exabyteId": EXABYTE_ID,
             "slug": "total_energy",
         },
-        projection={"sort": "-precision.value", "limit": 1},
+        projection={"sort": {"precision.value": -1}, "limit": 1},
     )
 
 

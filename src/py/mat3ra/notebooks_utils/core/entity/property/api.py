@@ -44,10 +44,13 @@ def get_property_holder_for_job(
     Returns:
         dict: Full property holder document.
     """
-    query = {"jobId": job_id, "propertyName": property_name}
+    query = {
+        "source.info.jobId": job_id,
+        "data.name": property_name,
+    }
     if unit_id:
-        query["unitId"] = unit_id
-    holders = client.properties.list(query)
+        query["source.info.unitId"] = unit_id
+    holders = client.properties.list(query=query)
     if not holders:
         raise ValueError(f"Property '{property_name}' not found for job '{job_id}'")
     return holders[0]
@@ -93,14 +96,14 @@ def find_total_energy_for_material(client: APIClient, material_id: str, source: 
         return None
     query = {"exabyteId": exabyte_id, "slug": "total_energy"}
     if source == "curators":
-        query["ownerSlug"] = "curators"
+        query["owner.slug"] = "curators"
     elif source == "my_account":
-        query["ownerId"] = client.my_account.id
+        query["owner._id"] = client.my_account.id
     elif source != "public":
         raise ValueError(f"Invalid source: {source!r}. Expected 'public', 'curators', or 'my_account'.")
     properties = client.properties.list(
         query=query,
-        projection={"sort": "-precision.value", "limit": 1},
+        projection={"sort": {"precision.value": -1}, "limit": 1},
     )
     return properties[0] if properties else None
 

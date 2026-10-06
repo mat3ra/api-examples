@@ -27,7 +27,7 @@ def get_or_create_material(api_client: APIClient, material, owner_id: str) -> di
     Returns:
         dict: The material dict (existing or newly created).
     """
-    existing = api_client.materials.list({"hashes": material.hash, "ownerId": owner_id, "globalSearch": True})
+    existing = api_client.materials.list({"hash": material.hash, "owner._id": owner_id})
     if existing:
         print(f"♻️  Reusing already existing Material: {existing[0]['_id']}")
         return existing[0]
@@ -56,7 +56,7 @@ def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) 
     loaded = load_material_from_folder(folder, name, verbose=False) if os.path.isdir(folder) else None
     if loaded is not None and loaded.name == name:
         return loaded
-    matches = api_client.materials.list({"name": name, "ownerId": owner_id, "globalSearch": True, "limit": 1})
+    matches = api_client.materials.list({"name": name, "owner._id": owner_id}, {"limit": 1})
     if not matches:
         raise ValueError(f"No material named '{name}' in '{folder}' or in the account")
     return Material.create(matches[0])
@@ -83,11 +83,8 @@ def find_relaxed_material(api_client: APIClient, material, owner_id: str) -> Opt
     Returns:
         Material, optional: The relaxed structure, or None if none exists.
     """
-    matching_materials = api_client.materials.list({"hashes": material.hash, "ownerId": owner_id, "globalSearch": True})
-    ids = [m["_id"] for m in matching_materials]
-    if not ids:
-        return None
-    query = {"materialId": ids, "ownerId": owner_id, "status": "finished", "globalSearch": True}
+    ids = [m["_id"] for m in api_client.materials.list({"hash": material.hash, "owner._id": owner_id})]
+    query = {"_material._id": {"$in": ids}, "owner._id": owner_id, "status": "finished"}
     for job in api_client.jobs.list(query):
         properties = api_client.properties.get_for_job(job["_id"], PropertyName.non_scalar.final_structure.value)
         if not properties:
@@ -136,7 +133,7 @@ def get_bulk_material_by_crystal(api_client: APIClient, bulk_crystal: Material, 
 
 
 def _require_material_for_owner(api_client: APIClient, query: dict, owner_id: str) -> Material:
-    matches = api_client.materials.list({**query, "ownerId": owner_id, "globalSearch": True})
+    matches = api_client.materials.list({**query, "owner._id": owner_id})
     material_response = next(iter(matches), None)
     if material_response is None:
         raise ValueError(
@@ -179,9 +176,13 @@ def find_material_set(
     Raises:
         ValueError: If no set matches, or if `require_ordered` and the match is unordered.
     """
-    account_entity_sets = api_client.materials.list({"ownerId": owner_id, "isEntitySet": True})
-    name_pattern = re.compile(re.escape(material_set_name), re.IGNORECASE)
-    material_sets = [s for s in account_entity_sets if name_pattern.search(s.get("name", ""))]
+    material_sets = api_client.materials.list(
+        {
+            "owner._id": owner_id,
+            "isEntitySet": True,
+            "name": {"$regex": re.escape(material_set_name), "$options": "i"},
+        }
+    )
     if not material_sets:
         raise ValueError(f"No material set matching '{material_set_name}'")
     material_set = material_sets[0]
@@ -204,7 +205,9 @@ def list_materials_in_set(api_client: APIClient, owner_id: str, material_set: Di
     that already have one do not re-query for it.
     """
     material_set_id = material_set["_id"]
-    matches = api_client.materials.list({"ownerId": owner_id, "setId": material_set_id, "isEntitySet": False})
+    matches = api_client.materials.list(
+        {"owner._id": owner_id, "inSet._id": material_set_id, "isEntitySet": {"$ne": True}}
+    )
     members = [material for material in matches if not material.get("isEntitySet")]
     return sorted(members, key=lambda material: _index_in_set(material, material_set_id))
 

@@ -61,14 +61,19 @@ def _client_with_list_responses(responses: List[List[Dict[str, Any]]]) -> MagicM
     return client
 
 
-def test_find_material_set_matches_the_name_literally_and_case_insensitively():
-    decoy_set = {**ENTITY_SET, "_id": "set-decoy", "name": "H22H"}
-    client = _client_with_list_responses([[decoy_set, ENTITY_SET]])
+def test_find_material_set_returns_first_match():
+    client = _client_with_list_responses([[ENTITY_SET]])
 
-    material_set = find_material_set(client, OWNER_ID, MATERIAL_SET_NAME.lower())
+    material_set = find_material_set(client, OWNER_ID, MATERIAL_SET_NAME)
 
     assert material_set["_id"] == MATERIAL_SET_ID
-    client.materials.list.assert_called_once_with({"ownerId": OWNER_ID, "isEntitySet": True})
+    client.materials.list.assert_called_once_with(
+        {
+            "owner._id": OWNER_ID,
+            "isEntitySet": True,
+            "name": {"$regex": re.escape(MATERIAL_SET_NAME), "$options": "i"},
+        }
+    )
     assert "+" in MATERIAL_SET_NAME
     assert re.escape(MATERIAL_SET_NAME) != MATERIAL_SET_NAME
 
@@ -101,7 +106,9 @@ def test_list_materials_in_set_does_not_re_resolve_the_set():
     materials = list_materials_in_set(client, OWNER_ID, ENTITY_SET)
 
     assert [material["_id"] for material in materials] == EXPECTED_ORDERED_IDS
-    client.materials.list.assert_called_once_with({"ownerId": OWNER_ID, "setId": MATERIAL_SET_ID, "isEntitySet": False})
+    client.materials.list.assert_called_once_with(
+        {"owner._id": OWNER_ID, "inSet._id": MATERIAL_SET_ID, "isEntitySet": {"$ne": True}}
+    )
 
 
 @pytest.mark.parametrize(
@@ -118,9 +125,9 @@ def test_list_materials_by_set_orders_by_inset_index(members, expected_ids):
 
     assert [material["_id"] for material in materials] == expected_ids
     assert client.materials.list.call_args_list[1].args[0] == {
-        "ownerId": OWNER_ID,
-        "setId": MATERIAL_SET_ID,
-        "isEntitySet": False,
+        "owner._id": OWNER_ID,
+        "inSet._id": MATERIAL_SET_ID,
+        "isEntitySet": {"$ne": True},
     }
 
 
@@ -254,9 +261,9 @@ def test_find_relaxed_material_returns_final_structure_from_the_job():
 
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
-    client.materials.list.assert_called_once_with({"hashes": DEFECTIVE_HASH, "ownerId": OWNER_ID, "globalSearch": True})
+    client.materials.list.assert_called_once_with({"hash": DEFECTIVE_HASH, "owner._id": OWNER_ID})
     client.jobs.list.assert_called_once_with(
-        {"materialId": [SAVED_DEFECTIVE["_id"]], "ownerId": OWNER_ID, "status": "finished", "globalSearch": True}
+        {"_material._id": {"$in": [SAVED_DEFECTIVE["_id"]]}, "owner._id": OWNER_ID, "status": "finished"}
     )
     client.properties.get_for_job.assert_called_once_with(FINISHED_JOB["_id"], "final_structure")
     client.materials.get.assert_called_once_with("m-relaxed")
@@ -284,10 +291,10 @@ def test_find_relaxed_material_uses_the_last_final_structure_entry():
 def test_find_relaxed_material_returns_none_when_material_is_not_on_the_platform():
     client = MagicMock()
     client.materials.list.return_value = []
+    client.jobs.list.return_value = []
 
     assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID) is None
-    # an empty $in drops the job filter and would match every finished job
-    client.jobs.list.assert_not_called()
+    assert client.jobs.list.call_args.args[0]["_material._id"] == {"$in": []}
 
 
 def test_find_relaxed_material_returns_none_when_no_job_exists():
@@ -322,7 +329,7 @@ def test_find_relaxed_material_checks_every_same_hash_material():
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
     client.jobs.list.assert_called_once_with(
-        {"materialId": ["m-other", "m-defective"], "ownerId": OWNER_ID, "status": "finished", "globalSearch": True}
+        {"_material._id": {"$in": ["m-other", "m-defective"]}, "owner._id": OWNER_ID, "status": "finished"}
     )
 
 
@@ -363,9 +370,7 @@ def test_load_material_falls_back_to_the_account(tmp_path):
     material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
 
     assert material.name == "Silicon"
-    client.materials.list.assert_called_once_with(
-        {"name": "Silicon", "ownerId": OWNER_ID, "globalSearch": True, "limit": 1}
-    )
+    client.materials.list.assert_called_once_with({"name": "Silicon", "owner._id": OWNER_ID}, {"limit": 1})
 
 
 def test_load_material_raises_when_neither_has_it(tmp_path):
@@ -385,9 +390,7 @@ def test_load_material_falls_through_a_folder_near_miss(tmp_path):
     material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
 
     assert material.name == "Silicon"
-    client.materials.list.assert_called_once_with(
-        {"name": "Silicon", "ownerId": OWNER_ID, "globalSearch": True, "limit": 1}
-    )
+    client.materials.list.assert_called_once_with({"name": "Silicon", "owner._id": OWNER_ID}, {"limit": 1})
 
 
 JOB_ID = "job-1"

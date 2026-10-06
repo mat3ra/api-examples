@@ -15,10 +15,10 @@ SILICON = Materials.get_by_name_first_match("Silicon")
     [
         (
             {"scaledHash": "scaled-hash-value", "hash": "hash-value", "_id": "material-id"},
-            {"id": "material-id"},
+            {"_id": "material-id"},
         ),
-        ({"scaledHash": "scaled-hash-value", "hash": "hash-value"}, {"hashes": "hash-value"}),
-        ({"scaledHash": "scaled-hash-value"}, {"scaledHashes": "scaled-hash-value"}),
+        ({"scaledHash": "scaled-hash-value", "hash": "hash-value"}, {"hash": "hash-value"}),
+        ({"scaledHash": "scaled-hash-value"}, {"scaledHash": "scaled-hash-value"}),
     ],
 )
 def test_resolve_bulk_query_prefers_id_then_hash_then_scaled_hash(extra_keys, expected):
@@ -27,8 +27,8 @@ def test_resolve_bulk_query_prefers_id_then_hash_then_scaled_hash(extra_keys, ex
 
 def test_resolve_bulk_query_computes_hash_when_none_present():
     query = resolve_bulk_query_from_crystal(SILICON)
-    assert set(query) == {"hashes"}
-    assert query["hashes"]
+    assert set(query) == {"hash"}
+    assert query["hash"]
 
 
 def test_slab_bulk_crystal_is_the_material_the_slab_was_built_from():
