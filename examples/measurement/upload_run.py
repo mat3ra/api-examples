@@ -126,6 +126,9 @@ def put_file(client, name, payload, owner_id):
             time.sleep(2 * (attempt + 1))
 
 
+REPLACED_WHOLE = ("layout", "dimensions", "frame")  # a layout is one thing, not a list that grows
+
+
 def merge_metadata(existing, incoming):
     """`incoming` on top of `existing`, keeping what neither replaces. A list grows by the entries it
     does not already hold - a re-upload brings deposition records the set has never seen,
@@ -133,7 +136,9 @@ def merge_metadata(existing, incoming):
     merged = dict(existing)
     for key, value in incoming.items():
         held = merged.get(key)
-        if isinstance(held, list) and isinstance(value, list):
+        if key in REPLACED_WHOLE:
+            merged[key] = value
+        elif isinstance(held, list) and isinstance(value, list):
             merged[key] = held + [v for v in value if v not in held]
         elif isinstance(held, dict) and isinstance(value, dict):
             merged[key] = merge_metadata(held, value)

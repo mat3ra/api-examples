@@ -25,7 +25,9 @@ def unit_id(workflow):
     """The execution unit a property of this workflow comes from."""
     return workflow["subworkflows"][0]["units"][0]["flowchartId"]
 
-NLR_FRAME = {"frame": "wafer", "units": "mm", "note": "x_mm, y_mm as delivered by NLR; corner and axes to be confirmed"}
+FRAME = {"origin": "wafer corner", "axes": "x, y", "units": "mm"}
+DIMENSIONS = {"shape": "square", "side": 50.8, "units": "mm"}  # a 2-inch substrate
+IV_COLUMNS = 11  # the I-V file lists its pads row by row, eleven to a row
 XRF_APPLICATION = "xrf-mapper"  # the standata application whose workflow this run records
 
 
@@ -37,22 +39,12 @@ def read_columns(path):
 IV_APPLICATION = "probe-station"
 
 
-def provisional_layout(grid):
-    """The pad pattern of the piece, as far as we know it. NLR has not delivered the electrode layout, so until
-    they do the pads are placed at the XRF grid positions, one per grid point, and say so. A real layout from
-    NLR replaces this function's output and nothing downstream changes."""
-    return [{"label": f"pad_r{int(row)}c{int(column)}",
-             "position": {"coordinates": [float(x_mm), float(y_mm)], "units": "mm"},
-             "extent": None, "stack": None,
-             "provisional": "placed at the XRF grid point; NLR's electrode layout not yet delivered"}
-            for row, column, x_mm, y_mm, *_ in grid]
-
-
 def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument, description="", deposition=()):
-    """NLR's delivery for one piece as three documents sharing one Library: the XRF map (grid points) and the
-    DC I-V sweep (pads). The I-V export has no pad identifier - one header word and N unlabelled rows - so each
-    row is assigned to the layout's pads in file order; `row_index` on every pad measurement records that, and
-    the layout itself is provisional until NLR delivers the electrode pattern."""
+    """NLR's delivery for one piece as two run documents sharing one Library: the XRF map, measured on the bare
+    film at the grid points, and the DC I-V sweep, measured on the Pt pads patterned afterwards. The pads are the
+    ones NLR probed: the I-V file lists them row by row, IV_COLUMNS to a row, so each pad gets its row and
+    column; where each pad sits on the wafer, and its size, come with NLR's pattern and are written onto the
+    same pads by label."""
     folder = Path(folder)
     grid_file = sorted(folder.rglob("*xrf_grid.txt"))[0]
     volts_file, amps_file = sorted(folder.rglob("IV_Volts.txt"))[0], sorted(folder.rglob("IV_Amps.txt"))[0]
@@ -71,7 +63,7 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument, description=""
         synthesis.extend(record if isinstance(record, list) else [record])
     library = {"physicalId": physical_id, "name": physical_id, "description": description,
                "entitySetType": "unordered",
-               "metadata": {"frame": NLR_FRAME, "layout": provisional_layout(grid), "synthesis": synthesis}}
+               "metadata": {"dimensions": DIMENSIONS, "frame": FRAME, "synthesis": synthesis}}
     samples, xrf_measurements, xrf_properties = {}, {}, []
     for row, column, x_mm, y_mm, thickness_um, aluminium_at_pct, scandium_at_pct in grid:
         label = f"r{int(row)}c{int(column)}"
@@ -81,7 +73,7 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument, description=""
             raise SystemExit(f"{grid_file.name}: pad {label} appears twice")
         samples[label] = {"name": f"{physical_id} {label}", "label": label, "physicalId": physical_id,
                           "position": {"coordinates": [float(x_mm), float(y_mm)], "units": "mm"},
-                          "metadata": {"frame": NLR_FRAME, "row": int(row), "column": int(column)}}
+                          "metadata": {"row": int(row), "column": int(column)}}
         xrf_measurements[label] = {"name": f"{xrf_run_name} {label}", "_sample": None, "workflow": xrf_workflow,
                                    "setup": {"name": xrf_instrument}, "status": "finished", "_records": [],
                                    "metadata": {"row": int(row), "column": int(column), "thickness_um": float(thickness_um),
@@ -91,23 +83,28 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument, description=""
         xrf_properties += [(label, xrf_unit_id, {"name": "film_thickness", "value": float(thickness_um) * 1e-6, "units": "m"}, 0),
                            (label, xrf_unit_id, {"name": "elemental_ratio", "element": "Al", "value": float(aluminium_at_pct) / 100}, 0),
                            (label, xrf_unit_id, {"name": "elemental_ratio", "element": "Sc", "value": float(scandium_at_pct) / 100}, 0)]
-    iv_run_name = f"{run_name} DC IV"
+    iv_run_name = f"{physical_id} DC IV"
     iv_workflow = standata_workflow(IV_APPLICATION, "DC I-V Sweep")
     iv_unit_id = unit_id(iv_workflow)
     volts = [[float(v) for v in cells] for cells in read_columns(volts_file)]
     amps = [[float(a) for a in cells] for cells in read_columns(amps_file)]
-    layout = library["metadata"]["layout"]
-    if not (len(layout) == len(volts) == len(amps)):
-        raise SystemExit(f"{volts_file.name}/{amps_file.name}: {len(volts)}/{len(amps)} rows for {len(layout)} pads in the layout")
+    if len(volts) != len(amps):
+        raise SystemExit(f"{volts_file.name}/{amps_file.name}: {len(volts)} and {len(amps)} rows")
+    if len(volts) % IV_COLUMNS:
+        raise SystemExit(f"{len(volts)} I-V rows do not fill rows of {IV_COLUMNS} pads")
     for row, (bias_row, current_row) in enumerate(zip(volts, amps)):
         if len(bias_row) != len(current_row):
             raise SystemExit(f"row {row}: {len(bias_row)} bias points but {len(current_row)} current points")
+    # the pads NLR probed, by their row and column in the file; positions and sizes come with NLR's pattern
+    layout = [{"label": f"pad_r{i // IV_COLUMNS}c{i % IV_COLUMNS:02d}", "row": i // IV_COLUMNS, "column": i % IV_COLUMNS,
+               "position": None, "extent": None, "stack": None} for i in range(len(volts))]
+    library["metadata"]["layout"] = layout
     iv_setup = {"name": iv_instrument, "settings": {"v_min": min(volts[0]), "v_max": max(volts[0]), "points": len(volts[0])}}
     pads, iv_measurements, iv_properties = {}, {}, []
     for index, (pad, bias, current) in enumerate(zip(layout, volts, amps)):
         label = pad["label"]
         pads[label] = {"name": f"{physical_id} {label}", "label": label, "physicalId": physical_id,
-                       "position": pad["position"], "metadata": {"frame": NLR_FRAME, "site": "pad", "layout": label}}
+                       "metadata": {"site": "pad", "row": pad["row"], "column": pad["column"]}}
         iv_measurements[label] = {"name": f"{iv_run_name} {label}", "_sample": None, "workflow": iv_workflow,
                                   "setup": iv_setup, "status": "finished", "_records": [], "metadata": {"row_index": index}}
         iv_properties.append((label, iv_unit_id, {"name": "current_voltage_curve", "xAxis": {"label": "voltage", "units": "V"},
@@ -118,7 +115,7 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument, description=""
              "measurements": xrf_measurements, "files": {}, "set_files": [(grid_file.name, grid_file)],
              "records": grid, "properties": xrf_properties},
             {"physicalId": physical_id, "library": library, "run": iv_run_name,
-             "sample_set": {"name": f"{run_name} pads", "entitySetType": "ordered", "metadata": {}}, "images": [],
+             "sample_set": {"name": f"{physical_id} pads", "entitySetType": "ordered", "metadata": {}}, "images": [],
              "samples": pads, "measurement_set": {"name": iv_run_name, "entitySetType": "ordered", "metadata": {}},
              "measurements": iv_measurements, "files": {},
              "set_files": [(volts_file.name, volts_file), (amps_file.name, amps_file)],
