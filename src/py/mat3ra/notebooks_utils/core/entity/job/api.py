@@ -35,11 +35,7 @@ def get_jobs_statuses_by_ids(endpoint: JobEndpoints, job_ids: List[str]) -> List
     Returns:
         list: list of job statuses
     """
-    # .list()'s query=<json blob> is silently dropped by the migrated JobsList use case, which
-    # only accepts flat, declared keys - unfiltered, it returns every job in the account, so the
-    # wait loop above never sees the tracked jobs reach a terminal status. `id` is such a flat key
-    # (accepts a single id or an array), so use .request() directly with it instead.
-    jobs = endpoint.request("GET", endpoint.name, params={"id": job_ids}, headers=endpoint.headers)
+    jobs = endpoint.list({"id": job_ids})
     return [job["status"] for job in jobs]
 
 
@@ -142,12 +138,13 @@ def find_job_for_material(
     """
     existing = api_client.jobs.list(
         {
-            "_material._id": material_id,
-            "owner._id": owner_id,
-            "workflow.name": workflow_name,
-            "status": {"$in": list(statuses)},
-        },
-        {"limit": 1},
+            "materialId": material_id,
+            "ownerId": owner_id,
+            "workflowName": workflow_name,
+            "status": list(statuses),
+            "globalSearch": True,
+            "limit": 1,
+        }
     )
     return existing[0] if existing else None
 

@@ -120,10 +120,10 @@ def get_slab_bulk_crystal(slab_material: Material) -> dict:
 
 def resolve_bulk_query_from_crystal(bulk_crystal: dict) -> dict:
     """Builds a materials.list query that resolves a bulk crystal to a platform material."""
-    for key in ("_id", "hash", "scaledHash"):
+    for key, parameter in (("_id", "id"), ("hash", "hashes"), ("scaledHash", "scaledHashes")):
         if bulk_crystal.get(key) is not None:
-            return {key: bulk_crystal[key]}
+            return {parameter: bulk_crystal[key]}
     try:
-        return {"hash": Material.create(bulk_crystal).hash}
+        return {"hashes": Material.create(bulk_crystal).hash}
     except Exception as exc:
         raise ValueError("Could not resolve a bulk query from crystal metadata.") from exc

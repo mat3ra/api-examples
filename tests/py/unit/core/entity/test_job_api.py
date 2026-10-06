@@ -87,12 +87,13 @@ def test_find_job_for_material_returns_the_job_when_found(statuses):
     assert job == EXISTING_JOB
     client.jobs.list.assert_called_once_with(
         {
-            "_material._id": MATERIAL_INITIAL["_id"],
-            "owner._id": OWNER_ID,
-            "workflow.name": RELAX_WORKFLOW_NAME,
-            "status": {"$in": list(statuses)},
-        },
-        {"limit": 1},
+            "materialId": MATERIAL_INITIAL["_id"],
+            "ownerId": OWNER_ID,
+            "workflowName": RELAX_WORKFLOW_NAME,
+            "status": list(statuses),
+            "globalSearch": True,
+            "limit": 1,
+        }
     )
 
 
@@ -111,4 +112,4 @@ def test_find_job_for_material_defaults_to_finished_only():
 
     find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID)
 
-    assert client.jobs.list.call_args.args[0]["status"] == {"$in": ["finished"]}
+    assert client.jobs.list.call_args.args[0]["status"] == ["finished"]

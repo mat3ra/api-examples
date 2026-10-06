@@ -57,22 +57,18 @@ EXPECTED_SINGLE_MEMBER_IDS = ["m-initial"]
 
 def _client_with_list_responses(responses: List[List[Dict[str, Any]]]) -> MagicMock:
     client = MagicMock()
-    client.materials.request.side_effect = responses
+    client.materials.list.side_effect = responses
     return client
 
 
-def test_find_material_set_returns_first_match():
-    client = _client_with_list_responses([[ENTITY_SET]])
+def test_find_material_set_matches_the_name_literally_and_case_insensitively():
+    decoy_set = {**ENTITY_SET, "_id": "set-decoy", "name": "H22H"}
+    client = _client_with_list_responses([[decoy_set, ENTITY_SET]])
 
-    material_set = find_material_set(client, OWNER_ID, MATERIAL_SET_NAME)
+    material_set = find_material_set(client, OWNER_ID, MATERIAL_SET_NAME.lower())
 
     assert material_set["_id"] == MATERIAL_SET_ID
-    client.materials.request.assert_called_once_with(
-        "GET",
-        client.materials.name,
-        params={"ownerId": OWNER_ID, "isEntitySet": "true"},
-        headers=client.materials.headers,
-    )
+    client.materials.list.assert_called_once_with({"ownerId": OWNER_ID, "isEntitySet": True})
     assert "+" in MATERIAL_SET_NAME
     assert re.escape(MATERIAL_SET_NAME) != MATERIAL_SET_NAME
 
@@ -96,7 +92,7 @@ def test_list_materials_by_set_rejects_unordered_when_order_required():
 
     with pytest.raises(ValueError, match="is 'unordered', not 'ordered'"):
         list_materials_by_set(client, OWNER_ID, MATERIAL_SET_NAME, require_ordered=True)
-    assert client.materials.request.call_count == 1
+    assert client.materials.list.call_count == 1
 
 
 def test_list_materials_in_set_does_not_re_resolve_the_set():
@@ -105,12 +101,7 @@ def test_list_materials_in_set_does_not_re_resolve_the_set():
     materials = list_materials_in_set(client, OWNER_ID, ENTITY_SET)
 
     assert [material["_id"] for material in materials] == EXPECTED_ORDERED_IDS
-    client.materials.request.assert_called_once_with(
-        "GET",
-        client.materials.name,
-        params={"ownerId": OWNER_ID, "setId": MATERIAL_SET_ID, "isEntitySet": "false"},
-        headers=client.materials.headers,
-    )
+    client.materials.list.assert_called_once_with({"ownerId": OWNER_ID, "setId": MATERIAL_SET_ID, "isEntitySet": False})
 
 
 @pytest.mark.parametrize(
@@ -126,10 +117,10 @@ def test_list_materials_by_set_orders_by_inset_index(members, expected_ids):
     materials = list_materials_by_set(client, OWNER_ID, MATERIAL_SET_NAME)
 
     assert [material["_id"] for material in materials] == expected_ids
-    assert client.materials.request.call_args_list[1].kwargs["params"] == {
+    assert client.materials.list.call_args_list[1].args[0] == {
         "ownerId": OWNER_ID,
         "setId": MATERIAL_SET_ID,
-        "isEntitySet": "false",
+        "isEntitySet": False,
     }
 
 
@@ -217,7 +208,7 @@ def test_get_or_create_materials_set_ordered_requires_two_materials():
             [MATERIAL_INITIAL],
             is_ordered=True,
         )
-    client.materials.request.assert_not_called()
+    client.materials.list.assert_not_called()
 
 
 def test_get_or_create_materials_set_requires_one_material():
@@ -231,7 +222,7 @@ def test_get_or_create_materials_set_requires_one_material():
             [],
             is_ordered=False,
         )
-    client.materials.request.assert_not_called()
+    client.materials.list.assert_not_called()
 
 
 DEFECTIVE_HASH = "hash-defective"
@@ -254,8 +245,8 @@ SCF_MATERIAL_DOC: Dict[str, Any] = {
 
 def test_find_relaxed_material_returns_final_structure_from_the_job():
     client = MagicMock()
-    client.materials.request.return_value = [SAVED_DEFECTIVE]
-    client.jobs.request.return_value = [FINISHED_JOB]
+    client.materials.list.return_value = [SAVED_DEFECTIVE]
+    client.jobs.list.return_value = [FINISHED_JOB]
     client.properties.get_for_job.return_value = [{"materialId": "m-relaxed"}]
     client.materials.get.return_value = RELAXED_MATERIAL_DOC
 
@@ -263,17 +254,9 @@ def test_find_relaxed_material_returns_final_structure_from_the_job():
 
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
-    client.materials.request.assert_called_once_with(
-        "GET",
-        client.materials.name,
-        params={"hashes": DEFECTIVE_HASH, "ownerId": OWNER_ID},
-        headers=client.materials.headers,
-    )
-    client.jobs.request.assert_called_once_with(
-        "GET",
-        client.jobs.name,
-        params={"materialId": [SAVED_DEFECTIVE["_id"]], "ownerId": OWNER_ID, "status": "finished"},
-        headers=client.jobs.headers,
+    client.materials.list.assert_called_once_with({"hashes": DEFECTIVE_HASH, "ownerId": OWNER_ID, "globalSearch": True})
+    client.jobs.list.assert_called_once_with(
+        {"materialId": [SAVED_DEFECTIVE["_id"]], "ownerId": OWNER_ID, "status": "finished", "globalSearch": True}
     )
     client.properties.get_for_job.assert_called_once_with(FINISHED_JOB["_id"], "final_structure")
     client.materials.get.assert_called_once_with("m-relaxed")
@@ -283,8 +266,8 @@ def test_find_relaxed_material_uses_the_last_final_structure_entry():
     # A relaxation job's final_structure property can carry more than one entry: the initial
     # structure (same hash as the input) first, the relaxed one last -- PLAN #27.
     client = MagicMock()
-    client.materials.request.return_value = [SAVED_DEFECTIVE]
-    client.jobs.request.return_value = [FINISHED_JOB]
+    client.materials.list.return_value = [SAVED_DEFECTIVE]
+    client.jobs.list.return_value = [FINISHED_JOB]
     client.properties.get_for_job.return_value = [{"materialId": "m-initial"}, {"materialId": "m-relaxed"}]
     client.materials.get.side_effect = lambda material_id: {
         "m-initial": SCF_MATERIAL_DOC,
@@ -300,18 +283,17 @@ def test_find_relaxed_material_uses_the_last_final_structure_entry():
 
 def test_find_relaxed_material_returns_none_when_material_is_not_on_the_platform():
     client = MagicMock()
-    client.materials.request.return_value = []
-    client.jobs.request.return_value = []
+    client.materials.list.return_value = []
 
     assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID) is None
-    # No matching materials -> nothing to filter jobs by, so the jobs endpoint is never queried.
-    client.jobs.request.assert_not_called()
+    # an empty $in drops the job filter and would match every finished job
+    client.jobs.list.assert_not_called()
 
 
 def test_find_relaxed_material_returns_none_when_no_job_exists():
     client = MagicMock()
-    client.materials.request.return_value = [SAVED_DEFECTIVE]
-    client.jobs.request.return_value = []
+    client.materials.list.return_value = [SAVED_DEFECTIVE]
+    client.jobs.list.return_value = []
 
     assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID) is None
     client.properties.get_for_job.assert_not_called()
@@ -319,8 +301,8 @@ def test_find_relaxed_material_returns_none_when_no_job_exists():
 
 def test_find_relaxed_material_returns_none_when_job_has_no_final_structure():
     client = MagicMock()
-    client.materials.request.return_value = [SAVED_DEFECTIVE]
-    client.jobs.request.return_value = [FINISHED_JOB]
+    client.materials.list.return_value = [SAVED_DEFECTIVE]
+    client.jobs.list.return_value = [FINISHED_JOB]
     client.properties.get_for_job.return_value = []
 
     assert find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID) is None
@@ -330,8 +312,8 @@ def test_find_relaxed_material_returns_none_when_job_has_no_final_structure():
 def test_find_relaxed_material_checks_every_same_hash_material():
     other_material: Dict[str, Any] = {"_id": "m-other", "name": "B-vacancy h-BN", "hash": DEFECTIVE_HASH}
     client = MagicMock()
-    client.materials.request.return_value = [other_material, SAVED_DEFECTIVE]
-    client.jobs.request.return_value = [FINISHED_JOB]
+    client.materials.list.return_value = [other_material, SAVED_DEFECTIVE]
+    client.jobs.list.return_value = [FINISHED_JOB]
     client.properties.get_for_job.return_value = [{"materialId": "m-relaxed"}]
     client.materials.get.return_value = RELAXED_MATERIAL_DOC
 
@@ -339,15 +321,8 @@ def test_find_relaxed_material_checks_every_same_hash_material():
 
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
-    client.jobs.request.assert_called_once_with(
-        "GET",
-        client.jobs.name,
-        params={
-            "materialId": [other_material["_id"], SAVED_DEFECTIVE["_id"]],
-            "ownerId": OWNER_ID,
-            "status": "finished",
-        },
-        headers=client.jobs.headers,
+    client.jobs.list.assert_called_once_with(
+        {"materialId": ["m-other", "m-defective"], "ownerId": OWNER_ID, "status": "finished", "globalSearch": True}
     )
 
 
@@ -355,8 +330,8 @@ def test_find_relaxed_material_skips_a_final_structure_with_the_same_hash():
     scf_job: Dict[str, Any] = {"_id": "job-scf", "name": "Total Energy", "status": "finished"}
     relax_job: Dict[str, Any] = {"_id": "job-relax", "name": "Fixed-cell Relaxation", "status": "finished"}
     client = MagicMock()
-    client.materials.request.return_value = [SAVED_DEFECTIVE]
-    client.jobs.request.return_value = [scf_job, relax_job]
+    client.materials.list.return_value = [SAVED_DEFECTIVE]
+    client.jobs.list.return_value = [scf_job, relax_job]
     client.properties.get_for_job.side_effect = [[{"materialId": "m-scf"}], [{"materialId": "m-relaxed"}]]
     client.materials.get.side_effect = [SCF_MATERIAL_DOC, RELAXED_MATERIAL_DOC]
 
@@ -377,28 +352,25 @@ def test_load_material_finds_an_exact_match_in_the_folder(tmp_path):
     material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
 
     assert material.name == "Silicon"
-    client.materials.request.assert_not_called()
+    client.materials.list.assert_not_called()
 
 
 def test_load_material_falls_back_to_the_account(tmp_path):
     (tmp_path / "silicon.json").write_text(json.dumps(Materials.get_by_name_first_match("Silicon")))
     client = MagicMock()
-    client.materials.request.return_value = [SILICON_NAMED]
+    client.materials.list.return_value = [SILICON_NAMED]
 
     material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
 
     assert material.name == "Silicon"
-    client.materials.request.assert_called_once_with(
-        "GET",
-        client.materials.name,
-        params={"name": "Silicon", "ownerId": OWNER_ID, "limit": 1},
-        headers=client.materials.headers,
+    client.materials.list.assert_called_once_with(
+        {"name": "Silicon", "ownerId": OWNER_ID, "globalSearch": True, "limit": 1}
     )
 
 
 def test_load_material_raises_when_neither_has_it(tmp_path):
     client = MagicMock()
-    client.materials.request.return_value = []
+    client.materials.list.return_value = []
 
     with pytest.raises(ValueError, match="Germanium"):
         load_material(client, str(tmp_path), "Germanium", OWNER_ID)
@@ -408,16 +380,13 @@ def test_load_material_falls_through_a_folder_near_miss(tmp_path):
     (tmp_path / "silicon.json").write_text(json.dumps(SILICON_NAMED))
     (tmp_path / "silicon relaxed.json").write_text(json.dumps({**SILICON_NAMED, "name": "Silicon relaxed"}))
     client = MagicMock()
-    client.materials.request.return_value = [SILICON_NAMED]
+    client.materials.list.return_value = [SILICON_NAMED]
 
     material = load_material(client, str(tmp_path), "Silicon", OWNER_ID)
 
     assert material.name == "Silicon"
-    client.materials.request.assert_called_once_with(
-        "GET",
-        client.materials.name,
-        params={"name": "Silicon", "ownerId": OWNER_ID, "limit": 1},
-        headers=client.materials.headers,
+    client.materials.list.assert_called_once_with(
+        {"name": "Silicon", "ownerId": OWNER_ID, "globalSearch": True, "limit": 1}
     )
 
 
@@ -426,15 +395,15 @@ FINAL_STRUCTURE_MATERIAL_ID = "m-final-structure"
 
 
 @pytest.mark.parametrize(
-    ("holders", "error"),
+    ("properties", "error"),
     [
-        ([{"data": {"materialId": FINAL_STRUCTURE_MATERIAL_ID}}], None),
+        ([{"materialId": FINAL_STRUCTURE_MATERIAL_ID}], None),
         ([], "reported no 'final_structure'"),
     ],
 )
-def test_get_final_structure_for_job(holders, error):
+def test_get_final_structure_for_job(properties, error):
     client = MagicMock()
-    client.properties.request.return_value = holders
+    client.properties.get_for_job.return_value = properties
     client.materials.get.return_value = Materials.get_by_name_first_match("Silicon")
     if error:
         with pytest.raises(RuntimeError, match=error):
@@ -442,10 +411,5 @@ def test_get_final_structure_for_job(holders, error):
         return
     material = get_final_structure_for_job(client, JOB_ID)
     assert material.basis.elements.values == ["Si", "Si"]
-    client.properties.request.assert_called_once_with(
-        "GET",
-        client.properties.name,
-        params={"jobId": JOB_ID, "slug": "final_structure"},
-        headers=client.properties.headers,
-    )
+    client.properties.get_for_job.assert_called_once_with(JOB_ID, "final_structure")
     client.materials.get.assert_called_once_with(FINAL_STRUCTURE_MATERIAL_ID)
