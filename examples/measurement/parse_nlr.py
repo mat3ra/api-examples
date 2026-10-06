@@ -49,9 +49,7 @@ def parse_nlr(folder, physical_id, xrf_instrument, iv_instrument, description=""
     grid_file = sorted(folder.rglob("*xrf_grid.txt"))[0]
     volts_file, amps_file = sorted(folder.rglob("IV_Volts.txt"))[0], sorted(folder.rglob("IV_Amps.txt"))[0]
     run_name = grid_file.stem
-    # searched recursively, so the name keeps the subdirectory: two photographs may share a basename
-    images = [(f.relative_to(folder).as_posix(), f) for f in sorted(folder.rglob("*"))
-              if f.suffix.lower() in (".jpg", ".jpeg", ".png")]
+    images = []  # the photograph is of the piece, not of the XRF grid: it goes on the Library page
     sample_set = {"name": run_name, "entitySetType": "ordered", "metadata": {}}
     xrf_run_name = f"{run_name} XRF"
     xrf_workflow = standata_workflow(XRF_APPLICATION, "XRF Grid Map")
