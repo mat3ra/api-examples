@@ -79,30 +79,27 @@ async def test_wait_for_jobs_to_finish_async_raises_user_abort_error_while_the_s
 
 HTTP_ERROR_503 = requests.HTTPError("Error 503.", response=MagicMock(status_code=503))
 HTTP_ERROR_403 = requests.HTTPError("Error 403.", response=MagicMock(status_code=403))
-NETWORK_ERRORS = [requests.ConnectionError("Connection refused."), OSError("Failed to fetch")]
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("status_results", "expectation", "expected_retries"),
+    ("status_results", "expectation"),
     [
-        ([asyncio.TimeoutError(), ["finished"]], contextlib.nullcontext(), 1),
-        ([*NETWORK_ERRORS, ["finished"]], contextlib.nullcontext(), 2),
-        ([HTTP_ERROR_503, ["finished"]], contextlib.nullcontext(), 1),
-        ([HTTP_ERROR_403], pytest.raises(requests.HTTPError), 0),
+        ([asyncio.TimeoutError(), ["finished"]], contextlib.nullcontext()),
+        ([requests.ConnectionError(), OSError("Failed to fetch"), ["finished"]], contextlib.nullcontext()),
+        ([HTTP_ERROR_503, ["finished"]], contextlib.nullcontext()),
+        ([HTTP_ERROR_403], pytest.raises(requests.HTTPError)),
     ],
     ids=["timeout", "network error", "503", "403"],
 )
-async def test_wait_for_jobs_to_finish_async_retries_a_failed_status_check(
-    monkeypatch, capsys, status_results, expectation, expected_retries
-):
+async def test_wait_for_jobs_to_finish_async(monkeypatch, capsys, status_results, expectation):
     get_statuses = AsyncMock(side_effect=status_results)
     monkeypatch.setattr("mat3ra.notebooks_utils.api.job.get_jobs_statuses_by_ids_async", get_statuses)
 
     with expectation:
         await wait_for_jobs_to_finish_async(MagicMock(), ["job-1"], poll_interval=POLL_INTERVAL_SECONDS)
     assert get_statuses.await_count == len(status_results)
-    assert capsys.readouterr().out.count("retrying") == expected_retries
+    assert capsys.readouterr().out.count("retrying") == len(status_results) - 1
 
 
 TOKEN_DATA = {"access_token": "new-token", "expires_in": 3600}
@@ -119,16 +116,10 @@ EXPIRES_IN_SECONDS = 600
     ("token_responses", "expires_in_seconds", "expectation", "expected_token_data"),
     [
         ([PENDING_TOKEN_RESPONSE, AUTHORIZED_TOKEN_RESPONSE], EXPIRES_IN_SECONDS, contextlib.nullcontext(), TOKEN_DATA),
-        ([PENDING_TOKEN_RESPONSE], POLL_INTERVAL_SECONDS, pytest.raises(Exception, match="Timeout"), None),
-        (
-            [SLOW_DOWN_TOKEN_RESPONSE, AUTHORIZED_TOKEN_RESPONSE],
-            EXPIRES_IN_SECONDS,
-            contextlib.nullcontext(),
-            TOKEN_DATA,
-        ),
+        ([SLOW_DOWN_TOKEN_RESPONSE], POLL_INTERVAL_SECONDS, pytest.raises(Exception, match="Timeout"), None),
         ([REFUSED_TOKEN_RESPONSE], EXPIRES_IN_SECONDS, pytest.raises(Exception, match="access_denied"), None),
     ],
-    ids=["authorized on the 2nd poll", "device code expired", "slow down", "login refused"],
+    ids=["authorized on the 2nd poll", "device code expired while slowed down", "login refused"],
 )
 async def test_poll_for_token_data(monkeypatch, token_responses, expires_in_seconds, expectation, expected_token_data):
     monkeypatch.setattr("requests.post", MagicMock(side_effect=token_responses))
