@@ -108,6 +108,8 @@ async def test_wait_for_jobs_to_finish_async_retries_a_failed_status_check(
 TOKEN_DATA = {"access_token": "new-token", "expires_in": 3600}
 PENDING_TOKEN_RESPONSE = MagicMock(status_code=400, json=MagicMock(return_value={"error": "authorization_pending"}))
 AUTHORIZED_TOKEN_RESPONSE = MagicMock(status_code=200, json=MagicMock(return_value=TOKEN_DATA))
+SLOW_DOWN_TOKEN_RESPONSE = MagicMock(status_code=400, json=MagicMock(return_value={"error": "slow_down"}))
+REFUSED_TOKEN_RESPONSE = MagicMock(status_code=400, json=MagicMock(return_value={"error": "access_denied"}))
 DEVICE_FLOW_ARGUMENTS = ("https://platform.mat3ra.com/oidc", "client-1", "device-code-1")
 EXPIRES_IN_SECONDS = 600
 
@@ -118,8 +120,15 @@ EXPIRES_IN_SECONDS = 600
     [
         ([PENDING_TOKEN_RESPONSE, AUTHORIZED_TOKEN_RESPONSE], EXPIRES_IN_SECONDS, contextlib.nullcontext(), TOKEN_DATA),
         ([PENDING_TOKEN_RESPONSE], POLL_INTERVAL_SECONDS, pytest.raises(Exception, match="Timeout"), None),
+        (
+            [SLOW_DOWN_TOKEN_RESPONSE, AUTHORIZED_TOKEN_RESPONSE],
+            EXPIRES_IN_SECONDS,
+            contextlib.nullcontext(),
+            TOKEN_DATA,
+        ),
+        ([REFUSED_TOKEN_RESPONSE], EXPIRES_IN_SECONDS, pytest.raises(Exception, match="access_denied"), None),
     ],
-    ids=["authorized on the 2nd poll", "device code expired"],
+    ids=["authorized on the 2nd poll", "device code expired", "slow down", "login refused"],
 )
 async def test_poll_for_token_data(monkeypatch, token_responses, expires_in_seconds, expectation, expected_token_data):
     monkeypatch.setattr("requests.post", MagicMock(side_effect=token_responses))

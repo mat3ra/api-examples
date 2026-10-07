@@ -61,9 +61,16 @@ def store_token_data_in_environment(token_data: dict) -> None:
         os.environ[REFRESH_TOKEN_ENV_VAR] = token_data["refresh_token"]
 
 
+def _get_token_data(status_code: int, response_data: dict) -> dict:
+    """Token data of a token response, empty while the login is pending; raises when the login was refused."""
+    if status_code != 200 and response_data.get("error") not in ("authorization_pending", "slow_down"):
+        raise Exception(f"Device login failed: {response_data.get('error')}.")
+    return response_data if status_code == 200 else {}
+
+
 def _request_token_data(token_url: str, form_data: dict) -> dict:
     response = requests.post(token_url, data=form_data, headers=FORM_HEADERS, timeout=TOKEN_REQUEST_TIMEOUT_SECONDS)
-    return response.json() if response.status_code == 200 else {}
+    return _get_token_data(response.status_code, response.json())
 
 
 async def _request_token_data_with_fetch(token_url: str, form_data: dict, abort_signal: Any) -> dict:
@@ -72,7 +79,7 @@ async def _request_token_data_with_fetch(token_url: str, form_data: dict, abort_
     """
     body = urllib.parse.urlencode(form_data, doseq=True)
     response = await pyfetch(token_url, method="POST", body=body, headers=FORM_HEADERS, signal=abort_signal)
-    return await response.json() if response.status == 200 else {}
+    return _get_token_data(response.status, await response.json())
 
 
 async def _poll_for_token_data(
