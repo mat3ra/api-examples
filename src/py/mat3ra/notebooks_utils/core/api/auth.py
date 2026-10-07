@@ -18,6 +18,7 @@ except ImportError:
 REFRESH_TOKEN_ENV_VAR = "OIDC_REFRESH_TOKEN"
 TOKEN_REQUEST_TIMEOUT_SECONDS = 10
 FORM_HEADERS = {"Content-Type": "application/x-www-form-urlencoded"}
+PENDING_LOGIN_ERRORS = ("authorization_pending", "slow_down")
 
 
 def get_oidc_base_url() -> str:
@@ -62,15 +63,20 @@ def store_token_data_in_environment(token_data: dict) -> None:
 
 
 def _get_token_data(status_code: int, response_data: dict) -> dict:
-    """Token data of a token response, empty while the login is pending; raises when the login was refused."""
-    if status_code != 200 and response_data.get("error") not in ("authorization_pending", "slow_down"):
-        raise Exception(f"Device login failed: {response_data.get('error')}.")
-    return response_data if status_code == 200 else {}
+    """
+    Token data of a token response, empty while the login is pending or after a server error (5xx), which is polled
+    again; raises with the status and the error code when the login was refused.
+    """
+    if status_code == 200:
+        return response_data
+    if status_code >= 500 or response_data.get("error") in PENDING_LOGIN_ERRORS:
+        return {}
+    raise Exception(f"Device login failed ({status_code}): {response_data.get('error')}.")
 
 
 def _request_token_data(token_url: str, form_data: dict) -> dict:
     response = requests.post(token_url, data=form_data, headers=FORM_HEADERS, timeout=TOKEN_REQUEST_TIMEOUT_SECONDS)
-    return _get_token_data(response.status_code, response.json())
+    return _get_token_data(response.status_code, response.json() if response.status_code < 500 else {})
 
 
 async def _request_token_data_with_fetch(token_url: str, form_data: dict, abort_signal: Any) -> dict:
@@ -79,7 +85,7 @@ async def _request_token_data_with_fetch(token_url: str, form_data: dict, abort_
     """
     body = urllib.parse.urlencode(form_data, doseq=True)
     response = await pyfetch(token_url, method="POST", body=body, headers=FORM_HEADERS, signal=abort_signal)
-    return _get_token_data(response.status, await response.json())
+    return _get_token_data(response.status, await response.json() if response.status < 500 else {})
 
 
 async def _poll_for_token_data(
