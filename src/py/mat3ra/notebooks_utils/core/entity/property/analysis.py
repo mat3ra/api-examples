@@ -84,7 +84,7 @@ def get_chemical_potentials_table(phase_diagram: PhaseDiagram) -> pd.DataFrame:
         at each corner of every stable compound's stability region.
     """
     results = []
-    for entry in phase_diagram.stable_entries:
+    for entry in sorted(phase_diagram.stable_entries, key=lambda entry: entry.composition.reduced_formula):
         if entry.is_element:
             continue
         for facet_name, chemical_potentials in phase_diagram.get_all_chempots(entry.composition).items():

@@ -9,7 +9,6 @@ from mat3ra.notebooks_utils.core.entity.property.analysis import (
     get_chemical_potentials_table,
     get_results_table,
 )
-from pymatgen.core import Composition
 
 # Realistic total energies (eV) for the Hf-Zr-O system (PBE-level)
 ENTRIES_DATA: List[PhaseStabilityEntry] = [
@@ -32,17 +31,16 @@ ENTRIES_DATA: List[PhaseStabilityEntry] = [
     },
 ]
 
-# eV per formula unit from ENTRIES_DATA against Hf -11.93, Zr -9.28, O -4.93 eV/atom.
-FORMATION_ENERGY_PER_FORMULA_UNIT = {"HfO2": -11.12, "ZrO2": -9.045}
-METAL_RICH = {"Hf": 0.0, "Zr": 0.0, "O": -5.56}
-ZIRCONIUM_RICH = {"Hf": -2.075, "Zr": 0.0, "O": -4.5225}
-OXYGEN_RICH = {"Hf": -11.12, "Zr": -9.045, "O": 0.0}
+# From ENTRIES_DATA: Hf -11.93, Zr -9.28, O -4.93 eV/atom; formation energy HfO2 -11.12, ZrO2 -9.045 eV/formula unit.
+DELTA_MU_METAL_RICH = {"Hf": 0.0, "Zr": 0.0, "O": -5.56}
+DELTA_MU_ZIRCONIUM_RICH = {"Hf": -2.075, "Zr": 0.0, "O": -4.5225}
+DELTA_MU_OXYGEN_RICH = {"Hf": -11.12, "Zr": -9.045, "O": 0.0}
 STABILITY_REGION_CORNERS = [
-    ("HfO2", "Hf-Zr-HfO2", METAL_RICH),
-    ("HfO2", "ZrO2-Zr-HfO2", ZIRCONIUM_RICH),
-    ("HfO2", "ZrO2-O2-HfO2", OXYGEN_RICH),
-    ("ZrO2", "ZrO2-Zr-HfO2", ZIRCONIUM_RICH),
-    ("ZrO2", "ZrO2-O2-HfO2", OXYGEN_RICH),
+    ("HfO2", "Hf-Zr-HfO2", DELTA_MU_METAL_RICH),
+    ("HfO2", "ZrO2-Zr-HfO2", DELTA_MU_ZIRCONIUM_RICH),
+    ("HfO2", "ZrO2-O2-HfO2", DELTA_MU_OXYGEN_RICH),
+    ("ZrO2", "ZrO2-Zr-HfO2", DELTA_MU_ZIRCONIUM_RICH),
+    ("ZrO2", "ZrO2-O2-HfO2", DELTA_MU_OXYGEN_RICH),
 ]
 
 
@@ -71,10 +69,6 @@ def test_get_chemical_potentials_table(formula, phases_in_equilibrium, expected_
     row = df[(df["Formula"] == formula) & (df["Phases in equilibrium"] == phases_in_equilibrium)].iloc[0]
     delta_mu = {element: row[f"Δμ_{element} (eV)"] for element in expected_delta_mu}
     assert delta_mu == pytest.approx(expected_delta_mu, abs=1e-4)
-    amounts = Composition(formula).get_el_amt_dict()
-    assert sum(amounts[element] * delta_mu[element] for element in amounts) == pytest.approx(
-        FORMATION_ENERGY_PER_FORMULA_UNIT[formula], abs=1e-3
-    )
 
 
 def test_elemental_entries_on_hull():
