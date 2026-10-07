@@ -248,7 +248,11 @@ RELAXED_HASH = "hash-relaxed"
 DEFECTIVE_MATERIAL = SimpleNamespace(hash=DEFECTIVE_HASH)
 SAVED_DEFECTIVE: Dict[str, Any] = {"_id": "m-defective", "name": "B-vacancy h-BN", "hash": DEFECTIVE_HASH}
 FINISHED_JOB: Dict[str, Any] = {"_id": "job-1", "name": "Fixed-cell Relaxation", "status": "finished"}
-RELAX_QUERY = {"owner._id": OWNER_ID, "status": "finished", "workflow.subworkflows.units.name": "pw_relax"}
+RELAX_QUERY: Dict[str, Any] = {
+    "owner._id": OWNER_ID,
+    "status": "finished",
+    "workflow.subworkflows.units.name": "pw_relax",
+}
 RELAXED_MATERIAL_DOC: Dict[str, Any] = {
     **Materials.get_by_name_first_match("Silicon"),
     "name": "B-vacancy h-BN relaxed",

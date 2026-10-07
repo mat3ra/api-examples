@@ -102,9 +102,8 @@ def find_relaxed_material(
     api_client: APIClient, material, owner_id: str, kgrid: Optional[List[int]] = None, unit_name: str = "pw_relax"
 ) -> Optional[Material]:
     """
-    Finds a relaxed version of a material: the final structure of a finished job on a material
-    with the same structural hash, where the geometry has changed, optionally among the jobs whose
-    `unit_name` unit ran on `kgrid`.
+    Finds a relaxed version of a material: the final structure of a finished job that ran a `unit_name` unit on a
+    material with the same structural hash, where the geometry has changed, optionally on `kgrid`.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
