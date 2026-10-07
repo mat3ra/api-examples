@@ -2,9 +2,10 @@ import asyncio
 import contextlib
 import threading
 import time
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+import requests
 from mat3ra.notebooks_utils.api.job import wait_for_jobs_to_finish_async
 from mat3ra.notebooks_utils.core.api.auth import _poll_for_token_data
 from mat3ra.notebooks_utils.pyodide.runtime import (
@@ -74,6 +75,34 @@ async def test_wait_for_jobs_to_finish_async_raises_user_abort_error_while_the_s
         await task
     release_request.set()
     assert time.monotonic() - started < ABORT_DEADLINE_SECONDS
+
+
+HTTP_ERROR_503 = requests.HTTPError("Error 503.", response=MagicMock(status_code=503))
+HTTP_ERROR_403 = requests.HTTPError("Error 403.", response=MagicMock(status_code=403))
+NETWORK_ERRORS = [requests.ConnectionError("Connection refused."), OSError("Failed to fetch")]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("status_results", "expectation", "expected_retries"),
+    [
+        ([asyncio.TimeoutError(), ["finished"]], contextlib.nullcontext(), 1),
+        ([*NETWORK_ERRORS, ["finished"]], contextlib.nullcontext(), 2),
+        ([HTTP_ERROR_503, ["finished"]], contextlib.nullcontext(), 1),
+        ([HTTP_ERROR_403], pytest.raises(requests.HTTPError), 0),
+    ],
+    ids=["timeout", "network error", "503", "403"],
+)
+async def test_wait_for_jobs_to_finish_async_retries_a_failed_status_check(
+    monkeypatch, capsys, status_results, expectation, expected_retries
+):
+    get_statuses = AsyncMock(side_effect=status_results)
+    monkeypatch.setattr("mat3ra.notebooks_utils.api.job.get_jobs_statuses_by_ids_async", get_statuses)
+
+    with expectation:
+        await wait_for_jobs_to_finish_async(MagicMock(), ["job-1"], poll_interval=POLL_INTERVAL_SECONDS)
+    assert get_statuses.await_count == len(status_results)
+    assert capsys.readouterr().out.count("retrying") == expected_retries
 
 
 TOKEN_DATA = {"access_token": "new-token", "expires_in": 3600}
