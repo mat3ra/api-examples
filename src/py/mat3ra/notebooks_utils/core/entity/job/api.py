@@ -12,8 +12,10 @@ from ....auth import reauthenticate
 from ....primitive.environment import is_pyodide_environment
 
 try:
+    from pyodide.ffi import JsException  # type: ignore
     from pyodide.http import pyfetch  # type: ignore
 except ImportError:
+    JsException = None
     pyfetch = None
 
 MATERIALS_SET_ENTITY_CLASS = "Material"
@@ -50,7 +52,10 @@ async def _list_jobs_with_fetch(endpoint: JobEndpoints, query: dict, projection:
         error_response = requests.Response()
         error_response.status_code = response.status
         raise requests.HTTPError(f"Error {response.status}.", response=error_response)
-    return (await response.json())["data"]
+    try:
+        return (await response.json())["data"]
+    except JsException as error:
+        raise OSError(error.message) from None
 
 
 async def get_jobs_statuses_by_ids_async(
