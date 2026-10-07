@@ -1,0 +1,5 @@
+numpy<2.0
+scipy>=1.5.4
+matplotlib>=3.0.0
+ase>=3.22.1
+mat3ra-made[tools]>=2024.11.12.post0
