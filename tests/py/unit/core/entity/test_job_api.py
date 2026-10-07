@@ -351,8 +351,10 @@ async def test_list_jobs_with_fetch(monkeypatch, access_token, response, expecta
     pyfetch = AsyncMock(return_value=response)
     monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.pyfetch", pyfetch)
     monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.JsException", FakeJsException)
-    auth_context = AuthContext(access_token=access_token, account_id=OWNER_ID, auth_token=AUTH_TOKEN)
+    stale_access_token = "stale-access-token" if access_token else None
+    auth_context = AuthContext(access_token=stale_access_token, account_id=OWNER_ID, auth_token=AUTH_TOKEN)
     endpoint = JobEndpoints(*JOB_ENDPOINT_ARGUMENTS, auth=auth_context)
+    auth_context.access_token = access_token
 
     with expectation:
         assert await _list_jobs_with_fetch(endpoint, JOBS_QUERY, STATUS_PROJECTION, ABORT_SIGNAL) == JOBS_WITH_STATUSES

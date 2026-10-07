@@ -9,6 +9,7 @@ import requests
 from mat3ra.notebooks_utils.api.job import wait_for_jobs_to_finish_async
 from mat3ra.notebooks_utils.core.api.auth import _poll_for_token_data
 from mat3ra.notebooks_utils.pyodide.runtime import (
+    BroadcastChannelAbortController,
     UserAbortError,
     interruptible_polling_loop,
     run_interruptible_loop_async,
@@ -100,6 +101,17 @@ async def test_wait_for_jobs_to_finish_async(monkeypatch, capsys, status_results
         await wait_for_jobs_to_finish_async(MagicMock(), ["job-1"], poll_interval=POLL_INTERVAL_SECONDS)
     assert get_statuses.await_count == len(status_results)
     assert capsys.readouterr().out.count("retrying") == len(status_results) - 1
+
+
+@pytest.mark.asyncio
+async def test_wait_for_jobs_to_finish_async_raises_user_abort_error_after_an_aborted_fetch(monkeypatch):
+    monkeypatch.setattr(BroadcastChannelAbortController, "start", lambda self, task: setattr(self, "is_aborted", True))
+    get_statuses = AsyncMock(side_effect=[OSError("The user aborted a request.")])
+    monkeypatch.setattr("mat3ra.notebooks_utils.api.job.get_jobs_statuses_by_ids_async", get_statuses)
+
+    with pytest.raises(UserAbortError):
+        await wait_for_jobs_to_finish_async(MagicMock(), ["job-1"], poll_interval=10.0)
+    assert get_statuses.await_count == 1
 
 
 TOKEN_DATA = {"access_token": "new-token", "expires_in": 3600}
