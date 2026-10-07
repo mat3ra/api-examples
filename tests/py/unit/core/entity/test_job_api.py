@@ -298,13 +298,13 @@ async def test_get_jobs_statuses_by_ids_async_reauthenticates_once_on_401(
 ):
     reauthenticate = AsyncMock()
     monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.reauthenticate", reauthenticate)
-    endpoint = MagicMock()
-    endpoint._auth.access_token = access_token
+    endpoint = MagicMock(spec=JobEndpoints)
+    endpoint.auth.access_token = access_token
     endpoint.list.side_effect = list_results
 
     with expectation:
         assert await get_jobs_statuses_by_ids_async(endpoint, [CREATED_JOB["_id"]]) == ["active", "finished"]
-    assert reauthenticate.await_args_list == [((endpoint._auth,),)] * expected_reauthentications
+    assert reauthenticate.await_args_list == [((endpoint.auth,),)] * expected_reauthentications
     assert endpoint.list.call_count == len(list_results)
 
 
@@ -317,7 +317,7 @@ JOBS_FETCH_URL = (
     "?query=%7B%22_id%22%3A+%7B%22%24in%22%3A+%5B%22job-1%22%5D%7D%7D"
     "&projection=%7B%22fields%22%3A+%7B%22status%22%3A+1%7D%7D"
 )
-BEARER_HEADERS = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+BEARER_HEADERS = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
 X_AUTH_HEADERS = {"X-Account-Id": OWNER_ID, "X-Auth-Token": AUTH_TOKEN, "Content-Type": "application/json"}
 ABORT_SIGNAL = "abort-signal"
 FETCH_RESPONSE_OK = SimpleNamespace(ok=True, status=200, json=AsyncMock(return_value={"data": JOBS_WITH_STATUSES}))
@@ -342,7 +342,8 @@ FETCH_RESPONSE_401 = SimpleNamespace(ok=False, status=401)
 async def test_list_jobs_with_fetch(monkeypatch, access_token, response, expectation, expected_headers):
     pyfetch = AsyncMock(return_value=response)
     monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.pyfetch", pyfetch)
-    endpoint = JobEndpoints(*JOB_ENDPOINT_ARGUMENTS, auth=AuthContext(access_token=access_token))
+    auth_context = AuthContext(access_token=access_token, account_id=OWNER_ID, auth_token=AUTH_TOKEN)
+    endpoint = JobEndpoints(*JOB_ENDPOINT_ARGUMENTS, auth=auth_context)
 
     with expectation:
         assert await _list_jobs_with_fetch(endpoint, JOBS_QUERY, STATUS_PROJECTION, ABORT_SIGNAL) == JOBS_WITH_STATUSES

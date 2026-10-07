@@ -45,7 +45,7 @@ async def _list_jobs_with_fetch(endpoint: JobEndpoints, query: dict, projection:
     """
     parameters = urllib.parse.urlencode({"query": json.dumps(query), "projection": json.dumps(projection)})
     url = urllib.parse.urljoin(endpoint.conn.preamble, f"{endpoint.name}?{parameters}")
-    response = await pyfetch(url, headers=endpoint._get_bearer_headers() or endpoint.headers, signal=abort_signal)
+    response = await pyfetch(url, headers=endpoint.get_request_headers(), signal=abort_signal)
     if not response.ok:
         error_response = requests.Response()
         error_response.status_code = response.status
@@ -85,9 +85,9 @@ async def get_jobs_statuses_by_ids_async(
     try:
         jobs = await asyncio.wait_for(request_jobs(), timeout)
     except requests.HTTPError as error:
-        if error.response.status_code != 401 or not endpoint._auth.access_token:
+        if error.response.status_code != 401 or not endpoint.auth.access_token:
             raise
-        await reauthenticate(endpoint._auth)
+        await reauthenticate(endpoint.auth)
         jobs = await asyncio.wait_for(request_jobs(), timeout)
     return [job["status"] for job in jobs]
 
