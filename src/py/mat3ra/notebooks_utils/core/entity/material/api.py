@@ -99,7 +99,7 @@ def get_final_structure_for_job(api_client: APIClient, job_id: str) -> Material:
 
 
 def find_relaxed_material(
-    api_client: APIClient, material, owner_id: str, kgrid: Optional[List[int]] = None, unit_name: str = "pw_scf"
+    api_client: APIClient, material, owner_id: str, kgrid: Optional[List[int]] = None, unit_name: str = "pw_relax"
 ) -> Optional[Material]:
     """
     Finds a relaxed version of a material: the final structure of a finished job on a material
@@ -118,6 +118,7 @@ def find_relaxed_material(
     """
     ids = [m["_id"] for m in api_client.materials.list({"hash": material.hash, "owner._id": owner_id})]
     query = {"_material._id": {"$in": ids}, "owner._id": owner_id, "status": "finished"}
+    query["workflow.subworkflows.units.name"] = unit_name
     for job in api_client.jobs.list({**query, **get_kgrid_query(kgrid, unit_name)}):
         properties = api_client.properties.get_for_job(job["_id"], PropertyName.non_scalar.final_structure.value)
         if not properties:
