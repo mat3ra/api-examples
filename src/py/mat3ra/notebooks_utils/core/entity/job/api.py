@@ -43,7 +43,7 @@ def save_files(job_id: str, job_endpoint: JobEndpoints, filename_on_cloud: str, 
 async def _list_jobs_with_fetch(endpoint: JobEndpoints, query: dict, projection: dict, abort_signal: Any) -> List[dict]:
     """
     `endpoint.list` through the browser's fetch, which leaves the event loop free while the request is in flight.
-    Raises `requests.HTTPError` on an error status.
+    Raises `requests.HTTPError` on an error status and `OSError` when the network fails, while the body is read too.
     """
     parameters = urllib.parse.urlencode({"query": json.dumps(query), "projection": json.dumps(projection)})
     url = urllib.parse.urljoin(endpoint.conn.preamble, f"{endpoint.name}?{parameters}")
