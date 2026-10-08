@@ -78,8 +78,7 @@ async def authenticate(force=False, globals_dict=None):
 
 async def reauthenticate(auth_context: AuthContext) -> None:
     """
-    Replaces an access token the platform rejected: drops it from the token cache, runs the device login and sets the
-    new token on `auth_context`, which every endpoint of the API client reads per request.
+    Replaces an access token the platform rejected with a new one from the device login, set on `auth_context`.
     """
     await _authenticate_oidc_with_cache(force=True)
     auth_context.access_token = os.environ[ACCESS_TOKEN_ENV_VAR]

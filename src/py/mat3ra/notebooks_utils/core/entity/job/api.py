@@ -61,9 +61,7 @@ async def get_jobs_statuses_by_ids_async(
 ) -> List[str]:
     """
     Gets jobs statuses by their IDs without blocking the event loop: through the browser's fetch in pyodide,
-    in a worker thread otherwise. Natively, a request that times out or is cancelled keeps its worker thread until the
-    API client's own timeout. A rejected access token (401) is replaced through the device login once and the request
-    repeated.
+    in a worker thread otherwise. A rejected access token (401) is replaced through the device login once.
 
     Args:
         endpoint (JobEndpoints): Job endpoint object from the Exabyte API Client

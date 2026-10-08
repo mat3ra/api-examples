@@ -102,8 +102,6 @@ def display_abort_controls_in_current_cell_output(
 class BroadcastChannelAbortController(BaseModel):
     """
     WebWorker-side receiver. Works only in pyodide (emscripten).
-    An abort message sets `is_aborted`, cancels the task running the loop and aborts the fetch given
-    `fetch_abort_signal`.
     In regular Python: start() does nothing, `is_aborted` stays False and `fetch_abort_signal` stays None.
     """
 
@@ -160,7 +158,6 @@ async def run_interruptible_loop_async(
     channel_name: str = ABORT_CHANNEL_NAME,
     show_controls: bool = True,
     show_button: bool = True,
-    abort_button_text: str = "Abort",
     abort_hint_text: str = "Press ESC to abort",
 ) -> None:
     """
@@ -179,7 +176,7 @@ async def run_interruptible_loop_async(
     if show_controls and ENVIRONMENT == EnvironmentsEnum.PYODIDE:
         display_abort_controls_in_current_cell_output(
             channel_name=channel_name,
-            abort_button_text=abort_button_text,
+            abort_button_text="Abort",
             abort_hint_text=abort_hint_text,
             show_button=show_button,
         )
