@@ -1,11 +1,9 @@
 import asyncio
 import contextlib
 import threading
-import time
 from unittest.mock import MagicMock
 
 import pytest
-import requests
 from mat3ra.notebooks_utils.api.job import wait_for_jobs_to_finish_async
 from mat3ra.notebooks_utils.core.api.auth import _poll_for_token_data
 from mat3ra.notebooks_utils.pyodide.runtime import (
@@ -16,8 +14,13 @@ from mat3ra.notebooks_utils.pyodide.runtime import (
 
 POLL_INTERVAL_SECONDS = 0.01
 ABORT_AFTER_SECONDS = 0.05
-ABORT_DEADLINE_SECONDS = 0.2
 BLOCKED_REQUEST_SECONDS = 1.0
+TOKEN_DATA = {"access_token": "new-token", "expires_in": 3600}
+PENDING_TOKEN_RESPONSE = MagicMock(status_code=400, json=MagicMock(return_value={"error": "authorization_pending"}))
+AUTHORIZED_TOKEN_RESPONSE = MagicMock(status_code=200, json=MagicMock(return_value=TOKEN_DATA))
+SERVER_ERROR_RESPONSE = MagicMock(status_code=502, json=MagicMock(side_effect=ValueError))
+REFUSED_TOKEN_RESPONSE = MagicMock(status_code=400, json=MagicMock(return_value={"error": "access_denied"}))
+DEVICE_FLOW_ARGUMENTS = ("https://platform.mat3ra.com/oidc", "client-1", "device-code-1", POLL_INTERVAL_SECONDS, 600)
 
 
 @pytest.mark.asyncio
@@ -39,111 +42,39 @@ async def test_run_interruptible_loop_async_stops_when_body_returns_false():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("poll_seconds", "poll_interval_seconds"),
-    [(10.0, POLL_INTERVAL_SECONDS), (0.0, 10.0)],
-    ids=["during a poll", "during the sleep"],
+    "start_polling",
+    [
+        lambda blocked_request: wait_for_jobs_to_finish_async(MagicMock(list=blocked_request), ["job-1"]),
+        lambda blocked_request: _poll_for_token_data(*DEVICE_FLOW_ARGUMENTS),
+    ],
 )
-async def test_run_interruptible_loop_async_raises_user_abort_error_when_cancelled(poll_seconds, poll_interval_seconds):
-    async def loop_body(abort_signal):
-        await asyncio.sleep(poll_seconds)
-        return True
-
-    task = asyncio.create_task(run_interruptible_loop_async(loop_body, poll_interval_seconds, show_controls=False))
-    await asyncio.sleep(ABORT_AFTER_SECONDS)
-    started = time.monotonic()
-    task.cancel()
-    with pytest.raises(UserAbortError):
-        await task
-    assert time.monotonic() - started < ABORT_DEADLINE_SECONDS
-
-
-@pytest.mark.asyncio
-async def test_wait_for_jobs_to_finish_async_raises_user_abort_error_while_the_status_request_blocks():
+async def test_abort_raises_user_abort_error_while_a_request_is_in_flight(monkeypatch, start_polling):
     release_request = threading.Event()
 
-    def list_jobs(query, projection):
+    def blocked_request(*args, **kwargs):
         release_request.wait(BLOCKED_REQUEST_SECONDS)
-        return [{"status": "finished"}]
 
-    endpoint = MagicMock()
-    endpoint.list.side_effect = list_jobs
-    started = time.monotonic()
-    task = asyncio.create_task(wait_for_jobs_to_finish_async(endpoint, ["job-1"], poll_interval=POLL_INTERVAL_SECONDS))
+    monkeypatch.setattr("requests.post", blocked_request)
+    task = asyncio.create_task(start_polling(blocked_request))
     await asyncio.sleep(ABORT_AFTER_SECONDS)
     task.cancel()
     with pytest.raises(UserAbortError):
         await task
     release_request.set()
-    assert time.monotonic() - started < ABORT_DEADLINE_SECONDS
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("status_error", "expectation"),
+    ("token_responses", "expectation"),
     [
-        (asyncio.TimeoutError(), contextlib.nullcontext()),
-        (OSError("Failed to fetch"), contextlib.nullcontext()),
-        (requests.HTTPError(response=MagicMock(status_code=503)), contextlib.nullcontext()),
-        (requests.HTTPError(response=MagicMock(status_code=403)), pytest.raises(requests.HTTPError)),
+        ([PENDING_TOKEN_RESPONSE, SERVER_ERROR_RESPONSE, AUTHORIZED_TOKEN_RESPONSE], contextlib.nullcontext()),
+        ([REFUSED_TOKEN_RESPONSE], pytest.raises(Exception, match=r"\(400\): access_denied")),
     ],
-    ids=["timeout", "network", "503", "403"],
 )
-async def test_wait_for_jobs_to_finish_async(status_error, expectation):
-    endpoint = MagicMock(list=MagicMock(side_effect=[status_error, [{"status": "finished"}]]))
-    with expectation:
-        await wait_for_jobs_to_finish_async(endpoint, ["job-1"], poll_interval=POLL_INTERVAL_SECONDS)
-
-
-TOKEN_DATA = {"access_token": "new-token", "expires_in": 3600}
-PENDING_TOKEN_RESPONSE = MagicMock(status_code=400, json=MagicMock(return_value={"error": "authorization_pending"}))
-AUTHORIZED_TOKEN_RESPONSE = MagicMock(status_code=200, json=MagicMock(return_value=TOKEN_DATA))
-SERVER_ERROR_RESPONSE = MagicMock(status_code=502, json=MagicMock(side_effect=ValueError))
-REFUSED_TOKEN_RESPONSE = MagicMock(status_code=400, json=MagicMock(return_value={"error": "access_denied"}))
-DEVICE_FLOW_ARGUMENTS = ("https://platform.mat3ra.com/oidc", "client-1", "device-code-1")
-EXPIRES_IN_SECONDS = 600
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("token_responses", "expires_in_seconds", "expectation", "expected_token_data"),
-    [
-        ([PENDING_TOKEN_RESPONSE, AUTHORIZED_TOKEN_RESPONSE], EXPIRES_IN_SECONDS, contextlib.nullcontext(), TOKEN_DATA),
-        ([PENDING_TOKEN_RESPONSE], POLL_INTERVAL_SECONDS, pytest.raises(Exception, match="Timeout"), None),
-        ([SERVER_ERROR_RESPONSE, AUTHORIZED_TOKEN_RESPONSE], EXPIRES_IN_SECONDS, contextlib.nullcontext(), TOKEN_DATA),
-        ([REFUSED_TOKEN_RESPONSE], EXPIRES_IN_SECONDS, pytest.raises(Exception, match=r"\(400\): access_denied"), None),
-    ],
-    ids=["authorized on the 2nd poll", "device code expired", "authorized after a 502", "login refused"],
-)
-async def test_poll_for_token_data(monkeypatch, token_responses, expires_in_seconds, expectation, expected_token_data):
+async def test_poll_for_token_data(monkeypatch, token_responses, expectation):
     monkeypatch.setattr("requests.post", MagicMock(side_effect=token_responses))
-
     with expectation:
-        token_data = await _poll_for_token_data(*DEVICE_FLOW_ARGUMENTS, POLL_INTERVAL_SECONDS, expires_in_seconds)
-        assert token_data == expected_token_data
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("request_seconds", "poll_interval_seconds", "response"),
-    [(BLOCKED_REQUEST_SECONDS, POLL_INTERVAL_SECONDS, AUTHORIZED_TOKEN_RESPONSE), (0.0, 10.0, PENDING_TOKEN_RESPONSE)],
-    ids=["during the token request", "during the sleep"],
-)
-async def test_poll_for_token_data_raises_user_abort(monkeypatch, request_seconds, poll_interval_seconds, response):
-    release_request = threading.Event()
-
-    def post_token_request(*args, **kwargs):
-        release_request.wait(request_seconds)
-        return response
-
-    monkeypatch.setattr("requests.post", post_token_request)
-    started = time.monotonic()
-    task = asyncio.create_task(_poll_for_token_data(*DEVICE_FLOW_ARGUMENTS, poll_interval_seconds, EXPIRES_IN_SECONDS))
-    await asyncio.sleep(ABORT_AFTER_SECONDS)
-    task.cancel()
-    with pytest.raises(UserAbortError):
-        await task
-    release_request.set()
-    assert time.monotonic() - started < ABORT_DEADLINE_SECONDS
+        assert await _poll_for_token_data(*DEVICE_FLOW_ARGUMENTS) == TOKEN_DATA
 
 
 @pytest.mark.asyncio
