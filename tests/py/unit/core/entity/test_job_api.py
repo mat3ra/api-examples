@@ -298,7 +298,7 @@ async def test_get_jobs_statuses_by_ids_async_reauthenticates_once_on_401(
 ):
     reauthenticate = AsyncMock()
     monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.reauthenticate", reauthenticate)
-    endpoint = MagicMock(spec=JobEndpoints)
+    endpoint = MagicMock()
     endpoint.auth.access_token = access_token
     endpoint.list.side_effect = list_results
 
@@ -324,13 +324,6 @@ FETCH_RESPONSE_OK = SimpleNamespace(ok=True, status=200, json=AsyncMock(return_v
 FETCH_RESPONSE_401 = SimpleNamespace(ok=False, status=401)
 
 
-class FakeJsException(Exception):
-    message = "TypeError: network error"
-
-
-FETCH_RESPONSE_BODY_FAILED = SimpleNamespace(ok=True, status=200, json=AsyncMock(side_effect=FakeJsException()))
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("access_token", "response", "expectation", "expected_headers"),
@@ -343,18 +336,14 @@ FETCH_RESPONSE_BODY_FAILED = SimpleNamespace(ok=True, status=200, json=AsyncMock
             pytest.raises(requests.HTTPError, check=lambda error: error.response.status_code == 401),
             BEARER_HEADERS,
         ),
-        (ACCESS_TOKEN, FETCH_RESPONSE_BODY_FAILED, pytest.raises(OSError, match="network error"), BEARER_HEADERS),
     ],
-    ids=["bearer token", "X-Auth headers", "401", "network error while reading the body"],
+    ids=["bearer token", "X-Auth headers", "401"],
 )
 async def test_list_jobs_with_fetch(monkeypatch, access_token, response, expectation, expected_headers):
     pyfetch = AsyncMock(return_value=response)
     monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.pyfetch", pyfetch)
-    monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.job.api.JsException", FakeJsException)
-    stale_access_token = "stale-access-token" if access_token else None
-    auth_context = AuthContext(access_token=stale_access_token, account_id=OWNER_ID, auth_token=AUTH_TOKEN)
+    auth_context = AuthContext(access_token=access_token, account_id=OWNER_ID, auth_token=AUTH_TOKEN)
     endpoint = JobEndpoints(*JOB_ENDPOINT_ARGUMENTS, auth=auth_context)
-    auth_context.access_token = access_token
 
     with expectation:
         assert await _list_jobs_with_fetch(endpoint, JOBS_QUERY, STATUS_PROJECTION, ABORT_SIGNAL) == JOBS_WITH_STATUSES

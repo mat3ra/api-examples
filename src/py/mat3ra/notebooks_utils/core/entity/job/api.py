@@ -12,10 +12,8 @@ from ....auth import reauthenticate
 from ....primitive.environment import is_pyodide_environment
 
 try:
-    from pyodide.ffi import JsException  # type: ignore
     from pyodide.http import pyfetch  # type: ignore
 except ImportError:
-    JsException = None
     pyfetch = None
 
 MATERIALS_SET_ENTITY_CLASS = "Material"
@@ -43,19 +41,16 @@ def save_files(job_id: str, job_endpoint: JobEndpoints, filename_on_cloud: str, 
 async def _list_jobs_with_fetch(endpoint: JobEndpoints, query: dict, projection: dict, abort_signal: Any) -> List[dict]:
     """
     `endpoint.list` through the browser's fetch, which leaves the event loop free while the request is in flight.
-    Raises `requests.HTTPError` on an error status and `OSError` when the network fails, while the body is read too.
+    Raises `requests.HTTPError` on an error status.
     """
     parameters = urllib.parse.urlencode({"query": json.dumps(query), "projection": json.dumps(projection)})
     url = urllib.parse.urljoin(endpoint.conn.preamble, f"{endpoint.name}?{parameters}")
-    response = await pyfetch(url, headers=endpoint.get_request_headers(), signal=abort_signal)
+    response = await pyfetch(url, headers={**endpoint.headers, **endpoint.auth.get_headers()}, signal=abort_signal)
     if not response.ok:
         error_response = requests.Response()
         error_response.status_code = response.status
         raise requests.HTTPError(f"Error {response.status}.", response=error_response)
-    try:
-        return (await response.json())["data"]
-    except JsException as error:
-        raise OSError(error.message) from None
+    return (await response.json())["data"]
 
 
 async def get_jobs_statuses_by_ids_async(

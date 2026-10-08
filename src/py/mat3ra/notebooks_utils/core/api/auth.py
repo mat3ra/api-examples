@@ -18,7 +18,6 @@ except ImportError:
 REFRESH_TOKEN_ENV_VAR = "OIDC_REFRESH_TOKEN"
 TOKEN_REQUEST_TIMEOUT_SECONDS = 10
 FORM_HEADERS = {"Content-Type": "application/x-www-form-urlencoded"}
-PENDING_LOGIN_ERRORS = ("authorization_pending", "slow_down")
 
 
 def get_oidc_base_url() -> str:
@@ -62,30 +61,18 @@ def store_token_data_in_environment(token_data: dict) -> None:
         os.environ[REFRESH_TOKEN_ENV_VAR] = token_data["refresh_token"]
 
 
-def _get_token_data(status_code: int, response_data: dict) -> dict:
-    """
-    Token data of a token response, empty while the login is pending or after a server error (5xx), which is polled
-    again; raises with the status and the error code when the login was refused.
-    """
-    if status_code == 200:
-        return response_data
-    if status_code >= 500 or response_data.get("error") in PENDING_LOGIN_ERRORS:
-        return {}
-    raise Exception(f"Device login failed ({status_code}): {response_data.get('error')}.")
-
-
-def _request_token_data(token_url: str, form_data: dict) -> dict:
+def _request_token_data(token_url: str, form_data: dict) -> tuple:
     response = requests.post(token_url, data=form_data, headers=FORM_HEADERS, timeout=TOKEN_REQUEST_TIMEOUT_SECONDS)
-    return _get_token_data(response.status_code, response.json() if response.status_code < 500 else {})
+    return response.status_code, response.json() if response.status_code < 500 else {}
 
 
-async def _request_token_data_with_fetch(token_url: str, form_data: dict, abort_signal: Any) -> dict:
+async def _request_token_data_with_fetch(token_url: str, form_data: dict, abort_signal: Any) -> tuple:
     """
     `_request_token_data` through the browser's fetch, which leaves the event loop free while the request is in flight.
     """
     body = urllib.parse.urlencode(form_data, doseq=True)
     response = await pyfetch(token_url, method="POST", body=body, headers=FORM_HEADERS, signal=abort_signal)
-    return _get_token_data(response.status, await response.json() if response.status < 500 else {})
+    return response.status, await response.json() if response.status < 500 else {}
 
 
 async def _poll_for_token_data(
@@ -108,7 +95,7 @@ async def _poll_for_token_data(
     deadline_seconds = time.time() + expires_in_seconds
     token_data: dict = {}
 
-    def request_token_data(abort_signal: Any) -> Awaitable[dict]:
+    def request_token_data(abort_signal: Any) -> Awaitable[tuple]:
         if is_pyodide_environment():
             return _request_token_data_with_fetch(token_url, form_data, abort_signal)
         return asyncio.get_running_loop().run_in_executor(None, _request_token_data, token_url, form_data)
@@ -116,7 +103,10 @@ async def _poll_for_token_data(
     async def poll_step(abort_signal: Any) -> bool:
         if time.time() >= deadline_seconds:
             raise Exception("Timeout waiting for authorization.")
-        token_data.update(await asyncio.wait_for(request_token_data(abort_signal), TOKEN_REQUEST_TIMEOUT_SECONDS))
+        status, response_data = await asyncio.wait_for(request_token_data(abort_signal), TOKEN_REQUEST_TIMEOUT_SECONDS)
+        if status != 200 and status < 500 and response_data.get("error") not in ("authorization_pending", "slow_down"):
+            raise Exception(f"Device login failed ({status}): {response_data.get('error')}.")
+        token_data.update(response_data if status == 200 else {})
         return not token_data
 
     await run_interruptible_loop_async(
