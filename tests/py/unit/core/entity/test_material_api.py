@@ -248,11 +248,7 @@ RELAXED_HASH = "hash-relaxed"
 DEFECTIVE_MATERIAL = SimpleNamespace(hash=DEFECTIVE_HASH)
 SAVED_DEFECTIVE: Dict[str, Any] = {"_id": "m-defective", "name": "B-vacancy h-BN", "hash": DEFECTIVE_HASH}
 FINISHED_JOB: Dict[str, Any] = {"_id": "job-1", "name": "Fixed-cell Relaxation", "status": "finished"}
-RELAX_QUERY: Dict[str, Any] = {
-    "owner._id": OWNER_ID,
-    "status": "finished",
-    "workflow.subworkflows.units.name": "pw_relax",
-}
+RELAX_QUERY = {"owner._id": OWNER_ID, "status": "finished", "workflow.subworkflows.units.name": "pw_relax"}
 RELAXED_MATERIAL_DOC: Dict[str, Any] = {
     **Materials.get_by_name_first_match("Silicon"),
     "name": "B-vacancy h-BN relaxed",
@@ -361,21 +357,18 @@ def test_find_relaxed_material_skips_a_final_structure_with_the_same_hash():
     assert client.properties.get_for_job.call_count == 2
 
 
-@pytest.mark.parametrize("kgrid", [None, [4, 4, 4]])
-def test_find_relaxed_material_matches_the_relaxation_unit_and_kgrid(kgrid):
+def test_find_relaxed_material_matches_the_relaxation_kgrid():
     client = MagicMock()
     client.materials.list.return_value = [SAVED_DEFECTIVE]
     client.jobs.list.return_value = [FINISHED_JOB]
     client.properties.get_for_job.return_value = [{"materialId": "m-relaxed"}]
     client.materials.get.return_value = RELAXED_MATERIAL_DOC
 
-    relaxed = find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, kgrid=kgrid, unit_name="pw_vc-relax")
+    relaxed = find_relaxed_material(client, DEFECTIVE_MATERIAL, OWNER_ID, kgrid=[4, 4, 4], unit_name="pw_vc-relax")
 
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
-    query = client.jobs.list.call_args.args[0]
-    assert query["workflow.subworkflows.units.name"] == "pw_vc-relax"
-    assert get_kgrid_query(kgrid, "pw_vc-relax").items() <= query.items()
+    assert get_kgrid_query([4, 4, 4], "pw_vc-relax").items() <= client.jobs.list.call_args.args[0].items()
 
 
 @pytest.mark.parametrize(

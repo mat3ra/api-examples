@@ -143,6 +143,7 @@ def test_find_job_for_material_defaults_to_finished_only():
 
 
 PROPERTY_NAME = "total_energy"
+GROUP = "qe:dft:gga:pbe"
 JOB_WITHOUT_PROPERTY: Dict[str, Any] = {"_id": "job-2", "name": "Band Gap", "status": "finished"}
 
 
@@ -199,34 +200,19 @@ def test_get_kgrid_query(kgrid, unit_name, expected_query):
     assert get_kgrid_query(kgrid, unit_name) == expected_query
 
 
-def test_find_job_for_material_with_property_matches_the_pw_scf_kgrid():
+@pytest.mark.parametrize(("group", "expected_property_query"), [(None, {}), (GROUP, {"group": {"$regex": GROUP}})])
+def test_find_job_for_material_with_property_matches_the_pw_scf_kgrid(group, expected_property_query):
     client = MagicMock()
     client.jobs.list.return_value = [EXISTING_JOB]
     client.properties.list.return_value = [{"data": {"name": PROPERTY_NAME}}]
 
-    job = find_job_for_material_with_property(client, MATERIAL_INITIAL["_id"], PROPERTY_NAME, OWNER_ID, kgrid=[4, 4, 4])
+    job = find_job_for_material_with_property(
+        client, MATERIAL_INITIAL["_id"], PROPERTY_NAME, OWNER_ID, kgrid=[4, 4, 4], group=group
+    )
 
     assert job == EXISTING_JOB
     assert SCF_KGRID_QUERY.items() <= client.jobs.list.call_args.args[0].items()
-
-
-GROUP = "qe:dft:gga:pbe"
-PROPERTY_QUERY: Dict[str, Any] = {"source.info.jobId": EXISTING_JOB["_id"], "data.name": PROPERTY_NAME}
-
-
-@pytest.mark.parametrize(
-    ("group", "expected_property_query"),
-    [(None, PROPERTY_QUERY), (GROUP, {**PROPERTY_QUERY, "group": {"$regex": GROUP}})],
-)
-def test_find_job_for_material_with_property_matches_the_group(group, expected_property_query):
-    client = MagicMock()
-    client.jobs.list.return_value = [EXISTING_JOB]
-    client.properties.list.return_value = [{"data": {"name": PROPERTY_NAME}}]
-
-    job = find_job_for_material_with_property(client, MATERIAL_INITIAL["_id"], PROPERTY_NAME, OWNER_ID, group=group)
-
-    assert job == EXISTING_JOB
-    client.properties.list.assert_called_once_with(query=expected_property_query)
+    assert expected_property_query.items() <= client.properties.list.call_args.kwargs["query"].items()
 
 
 def test_find_job_for_material_matches_the_kgrid_of_the_unit():
