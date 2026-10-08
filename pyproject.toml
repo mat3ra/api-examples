@@ -24,7 +24,7 @@ utils_standata = [
   "mat3ra-standata",
 ]
 api = [
-  "mat3ra-api-client",
+  "mat3ra-api-client>=2026.10.8.post0",
 ]
 materials = [
   # ase >=3.25.0 is required for supercell to be generated,
