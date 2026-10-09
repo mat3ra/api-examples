@@ -243,6 +243,7 @@ def find_job_for_material_with_property(
     owner_id: str,
     tags: Optional[List[str]] = None,
     kgrid: Optional[List[int]] = None,
+    group: Optional[str] = None,
 ) -> Optional[dict]:
     """
     Finds a finished job on a material that reported the given property, optionally among the jobs
@@ -256,6 +257,7 @@ def find_job_for_material_with_property(
         owner_id (str): Account ID the job must belong to.
         tags (List[str], optional): Tags the job must all carry.
         kgrid (List[int], optional): Exact k-grid dimensions the job's `pw_scf` unit ran on; None for no condition.
+        group (str, optional): Regex the property's group must match, e.g. "qe:dft:gga:pbe"; None for no condition.
 
     Returns:
         dict, optional: The first matching job, or None if none exists.
@@ -263,9 +265,13 @@ def find_job_for_material_with_property(
     query: Dict[str, Any] = {"_material._id": material_id, "owner._id": owner_id, "status": "finished"}
     if tags:
         query["tags"] = {"$all": list(tags)}
+    property_query: Dict[str, Any] = {"data.name": property_name}
+    if group:
+        property_query["group"] = {"$regex": group}
     jobs = api_client.jobs.list({**query, **get_kgrid_query(kgrid)})
     return next(
-        (job for job in jobs if api_client.properties.get_for_job(job["_id"], property_name=property_name)), None
+        (job for job in jobs if api_client.properties.list(query={"source.info.jobId": job["_id"], **property_query})),
+        None,
     )
 
 

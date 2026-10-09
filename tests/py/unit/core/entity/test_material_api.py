@@ -248,6 +248,7 @@ RELAXED_HASH = "hash-relaxed"
 DEFECTIVE_MATERIAL = SimpleNamespace(hash=DEFECTIVE_HASH)
 SAVED_DEFECTIVE: Dict[str, Any] = {"_id": "m-defective", "name": "B-vacancy h-BN", "hash": DEFECTIVE_HASH}
 FINISHED_JOB: Dict[str, Any] = {"_id": "job-1", "name": "Fixed-cell Relaxation", "status": "finished"}
+RELAX_QUERY = {"owner._id": OWNER_ID, "status": "finished", "workflow.subworkflows.units.name": "pw_relax"}
 RELAXED_MATERIAL_DOC: Dict[str, Any] = {
     **Materials.get_by_name_first_match("Silicon"),
     "name": "B-vacancy h-BN relaxed",
@@ -273,9 +274,7 @@ def test_find_relaxed_material_returns_final_structure_from_the_job():
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
     client.materials.list.assert_called_once_with({"hash": DEFECTIVE_HASH, "owner._id": OWNER_ID})
-    client.jobs.list.assert_called_once_with(
-        {"_material._id": {"$in": [SAVED_DEFECTIVE["_id"]]}, "owner._id": OWNER_ID, "status": "finished"}
-    )
+    client.jobs.list.assert_called_once_with({"_material._id": {"$in": [SAVED_DEFECTIVE["_id"]]}, **RELAX_QUERY})
     client.properties.get_for_job.assert_called_once_with(FINISHED_JOB["_id"], "final_structure")
     client.materials.get.assert_called_once_with("m-relaxed")
 
@@ -339,9 +338,7 @@ def test_find_relaxed_material_checks_every_same_hash_material():
 
     assert relaxed is not None
     assert relaxed.name == "B-vacancy h-BN relaxed"
-    client.jobs.list.assert_called_once_with(
-        {"_material._id": {"$in": ["m-other", "m-defective"]}, "owner._id": OWNER_ID, "status": "finished"}
-    )
+    client.jobs.list.assert_called_once_with({"_material._id": {"$in": ["m-other", "m-defective"]}, **RELAX_QUERY})
 
 
 def test_find_relaxed_material_skips_a_final_structure_with_the_same_hash():

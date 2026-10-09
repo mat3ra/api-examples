@@ -107,15 +107,11 @@ def test_get_defect_job_result(job, expected):
         (ZR_HF_RESULT, ZR_HF_DELTA_MU, 0.0134),
         (V_O_RESULT, V_O_DELTA_MU, 1.010),
         (V_O_RESULT, ZR_HF_DELTA_MU, 6.356),  # Zr is not an element of the job, so its delta_mu is ignored
+        (ZR_HF_RESULT, V_O_DELTA_MU, 0.3664),  # Zr has no delta_mu, so it is 0
     ],
 )
 def test_get_formation_energy_at_chemical_potentials(result, delta_mu, expected):
     assert get_formation_energy_at_chemical_potentials(result, delta_mu) == pytest.approx(expected, abs=1e-4)
-
-
-def test_get_formation_energy_at_chemical_potentials_raises_on_a_missing_element():
-    with pytest.raises(KeyError):
-        get_formation_energy_at_chemical_potentials(ZR_HF_RESULT, V_O_DELTA_MU)
 
 
 @pytest.mark.parametrize(

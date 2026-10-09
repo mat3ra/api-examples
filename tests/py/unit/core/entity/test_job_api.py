@@ -146,14 +146,15 @@ def test_find_job_for_material_defaults_to_finished_only():
 
 
 PROPERTY_NAME = "total_energy"
+GROUP = "qe:dft:gga:pbe"
 JOB_WITHOUT_PROPERTY: Dict[str, Any] = {"_id": "job-2", "name": "Band Gap", "status": "finished"}
 
 
 def test_find_job_for_material_with_property_returns_the_first_job_that_reported_it():
     client = MagicMock()
     client.jobs.list.return_value = [JOB_WITHOUT_PROPERTY, EXISTING_JOB]
-    client.properties.get_for_job.side_effect = lambda job_id, property_name: (
-        [{"name": property_name}] if job_id == EXISTING_JOB["_id"] else []
+    client.properties.list.side_effect = lambda query: (
+        [{"data": {"name": PROPERTY_NAME}}] if query["source.info.jobId"] == EXISTING_JOB["_id"] else []
     )
 
     job = find_job_for_material_with_property(
@@ -174,7 +175,7 @@ def test_find_job_for_material_with_property_returns_the_first_job_that_reported
 def test_find_job_for_material_with_property_returns_none_when_no_job_reported_it():
     client = MagicMock()
     client.jobs.list.return_value = [JOB_WITHOUT_PROPERTY]
-    client.properties.get_for_job.return_value = []
+    client.properties.list.return_value = []
 
     job = find_job_for_material_with_property(client, MATERIAL_INITIAL["_id"], PROPERTY_NAME, OWNER_ID)
 
@@ -202,15 +203,19 @@ def test_get_kgrid_query(kgrid, unit_name, expected_query):
     assert get_kgrid_query(kgrid, unit_name) == expected_query
 
 
-def test_find_job_for_material_with_property_matches_the_pw_scf_kgrid():
+@pytest.mark.parametrize(("group", "expected_property_query"), [(None, {}), (GROUP, {"group": {"$regex": GROUP}})])
+def test_find_job_for_material_with_property_matches_the_pw_scf_kgrid(group, expected_property_query):
     client = MagicMock()
     client.jobs.list.return_value = [EXISTING_JOB]
-    client.properties.get_for_job.return_value = [{"name": PROPERTY_NAME}]
+    client.properties.list.return_value = [{"data": {"name": PROPERTY_NAME}}]
 
-    job = find_job_for_material_with_property(client, MATERIAL_INITIAL["_id"], PROPERTY_NAME, OWNER_ID, kgrid=[4, 4, 4])
+    job = find_job_for_material_with_property(
+        client, MATERIAL_INITIAL["_id"], PROPERTY_NAME, OWNER_ID, kgrid=[4, 4, 4], group=group
+    )
 
     assert job == EXISTING_JOB
     assert SCF_KGRID_QUERY.items() <= client.jobs.list.call_args.args[0].items()
+    assert expected_property_query.items() <= client.properties.list.call_args.kwargs["query"].items()
 
 
 def test_find_job_for_material_matches_the_kgrid_of_the_unit():

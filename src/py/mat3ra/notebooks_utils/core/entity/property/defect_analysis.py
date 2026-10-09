@@ -141,12 +141,9 @@ def get_formation_energy_at_chemical_potentials(result: DefectJobResult, delta_m
 
     E_i is the elemental energy per atom the job used, so the stored value is the one at delta_mu = 0:
     E_f(delta_mu) = E_f - sum_i dN_i * delta_mu[i].
-
-    Raises:
-        KeyError: If `delta_mu` has no value for an element of the job, including one with dN_i = 0.
     """
     return result.formation_energy - sum(
-        count * delta_mu[element] for element, count in result.delta_n_by_symbol.items()
+        count * delta_mu.get(element, 0.0) for element, count in result.delta_n_by_symbol.items()
     )
 
 
