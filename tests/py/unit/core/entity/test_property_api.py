@@ -9,6 +9,8 @@ MATERIAL_ID = "material-a"
 EXABYTE_ID = "exabyte-a"
 MATERIAL = {"_id": MATERIAL_ID, "exabyteId": EXABYTE_ID}
 OWNER_ACCOUNT_ID = "account-a"
+GROUP = "qe:dft:lda:pz"
+PRECISION_VALUE = 1116
 TOTAL_ENERGY_PROPERTY = {"data": {"value": -12.34}, "precision": {"value": 0.001}}
 
 
@@ -79,6 +81,23 @@ def test_find_total_energy_for_material_public_scope_has_no_owner_filter():
         query={
             "exabyteId": EXABYTE_ID,
             "slug": "total_energy",
+        },
+        projection={"sort": {"precision.value": -1}, "limit": 1},
+    )
+
+
+def test_find_total_energy_for_material_constrains_group_and_precision():
+    client = _client()
+
+    find_total_energy_for_material(client, MATERIAL_ID, group=GROUP, precision_value=PRECISION_VALUE)
+
+    client.properties.list.assert_called_once_with(
+        query={
+            "exabyteId": EXABYTE_ID,
+            "slug": "total_energy",
+            "group": GROUP,
+            "precision.value": PRECISION_VALUE,
+            "owner._id": OWNER_ACCOUNT_ID,
         },
         projection={"sort": {"precision.value": -1}, "limit": 1},
     )
