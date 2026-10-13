@@ -16,7 +16,7 @@ def parameter_statistics(parameters_per_loop, key):
 
 
 def hysteresis_loop(run_folder, entries):
-    """The pad's hysteresis_loop property, or None unless its loops cover both conditions on one bias axis."""
+    """The pad's hysteresis_loop property, None unless both conditions share a bias axis, and loops per condition."""
     biases, responses, parameters = [], {"on": [], "off": []}, {}
     for condition in responses:
         parameters_per_loop = [entry["loop_params"][f"{condition}_field"] for entry in entries]
@@ -43,8 +43,9 @@ def hysteresis_loop(run_folder, entries):
                 "falling": parameter_statistics(parameters_per_loop, "remnant_falling_m"),
             },
         }
+    loop_counts = {condition: len(responses[condition]) for condition in responses}
     if not responses["on"] or not responses["off"] or any(not numpy.array_equal(bias, biases[0]) for bias in biases):
-        return None
+        return None, loop_counts
     return {
         "name": "hysteresis_loop",
         "legend": ["on", "off"],
@@ -53,7 +54,7 @@ def hysteresis_loop(run_folder, entries):
         "xDataArray": biases[0].tolist(),
         "yDataSeries": [numpy.mean(responses[condition], axis=0).tolist() for condition in ("on", "off")],
         "parameters": parameters,
-    }
+    }, loop_counts
 
 
 def main():
@@ -65,6 +66,8 @@ def main():
     arguments = parser.parse_args()
     summary = json.loads((arguments.run_folder / "summary.json").read_text())
     run_name = summary["run"]["name"]
+    workflow_name = json.loads(arguments.workflow.read_text())["name"]
+    technique = " ".join(word if word.isupper() else word.lower() for word in workflow_name.split())
 
     (arguments.out_folder / "measurements").mkdir(parents=True, exist_ok=True)
     (arguments.out_folder / "properties").mkdir(exist_ok=True)
@@ -78,8 +81,14 @@ def main():
         entries_by_pad[entry["labels"]["site_label"]].append(entry)
     properties_count = 0
     for label, entries in entries_by_pad.items():
+        property_document, loop_counts = hysteresis_loop(arguments.run_folder, entries)
+        kind = summary["recipe"]["per_site"][entries[0]["labels"]["step_index"]]["kind"]
+        loop_count = sum(loop_counts.values())
+        loops_per_condition = ", ".join(f"{count} {condition}-field" for condition, count in loop_counts.items())
+        loops = f"{loop_count} {kind}s ({loops_per_condition})" if loop_count else f"no {kind}s"
         measurement = {
             "name": f"{run_name} {label}",
+            "description": f"{technique} at site {label}, {loops}",
             "status": "finished",
             "setup": {"instrument": {"name": "Asylum Research"}, "settings": summary["recipe"]["per_site"]},
             "sample": {"name": label, "metadata": {"position": entries[0]["achieved"]["stage_position"]}},
@@ -94,7 +103,6 @@ def main():
             },
         }
         (arguments.out_folder / "measurements" / f"{label}.json").write_text(json.dumps(measurement, indent=4))
-        property_document = hysteresis_loop(arguments.run_folder, entries)
         if property_document:
             (arguments.out_folder / "properties" / f"{label}.json").write_text(json.dumps(property_document, indent=4))
             properties_count += 1

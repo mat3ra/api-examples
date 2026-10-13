@@ -10,6 +10,10 @@ PARSER_PATH = REPOSITORY_PATH / "examples" / "measurement" / "parse_utk.py"
 RUN_FOLDER = REPOSITORY_PATH / "tests" / "fixtures" / "asylum_run"
 WORKFLOW_PATH = REPOSITORY_PATH / "tests" / "fixtures" / "measurement_set" / "workflow.json"
 EXPECTED_COUNTS = {"measurements": 2, "properties": 1}
+EXPECTED_DESCRIPTIONS = [
+    "SS-PFM hysteresis loop at site r0c00, 16 loops (8 on-field, 8 off-field)",
+    "SS-PFM hysteresis loop at site r5c05, no loops",
+]
 HYSTERESIS_LOOP_SCHEMA_ID = "properties-directory/non-scalar/hysteresis-loop"
 HYSTERESIS_LOOP_EXAMPLE_PATH = "properties_directory/non-scalar/hysteresis_loop"
 
@@ -37,6 +41,7 @@ def test_parse_utk(tmp_path):
     example = next(item["data"] for item in esse.wrapped_examples if item["path"] == HYSTERESIS_LOOP_EXAMPLE_PATH)
 
     assert {"measurements": len(measurements), "properties": len(properties)} == EXPECTED_COUNTS
+    assert [measurement["description"] for measurement in measurements] == EXPECTED_DESCRIPTIONS
     for measurement in measurements:
         esse.validate(measurement.pop("sample"), esse.get_schema_by_id("sample"))
         measurement_document = {**measurement, "_sample": {"_id": "sample"}, "workflow": workflow}
