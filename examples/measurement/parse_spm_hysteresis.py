@@ -1,4 +1,4 @@
-"""Writes the folder upload.py reads from an Asylum Research run folder: summary.json and loops/<point>/*.npy."""
+"""Writes the folder mat3ra-upload reads from an Asylum Research run folder: summary.json and loops/<point>/*.npy."""
 
 import argparse
 import json
