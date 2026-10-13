@@ -35,7 +35,7 @@ SECOND_RUN_COUNTS = {
 }
 OWNER_SLUG = "owner"
 STORED_FILE_KEYS = [
-    f"{OWNER_SLUG}/measurements/measurements-1/site00_step0_pt00/{name}"
+    f"{OWNER_SLUG}/measurements/measurements-1/loops/site00_step0_pt00/{name}"
     for name in ("X_off.npy", "X_on.npy", "Y_off.npy", "Y_on.npy", "bias_off.npy", "bias_on.npy")
 ]
 RUN_SAMPLE_SET = {

@@ -31,7 +31,7 @@ Measurements are found by name inside the measurement set. Running it again crea
         workflow.json       the workflow of every measurement
         measurements/*.json name, description, metadata, setup, status, and sample
         properties/*.json   optional: a property of the measurement with the same file name
-        files/<label>/      optional: the files of measurements/<label>.json, stored under the same relative names
+        files/<label>/      optional: the files of measurements/<label>.json under their run paths, e.g. loops/<point>/
 
 `sample` is `{name, description, metadata}` (description and metadata optional) or just the name.
 

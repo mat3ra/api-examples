@@ -85,7 +85,7 @@ def main():
         for entry in entries:
             point = PureWindowsPath(entry["segmentation"]["bias_on_path"]).parent.name
             if (arguments.run_folder / "loops" / point).is_dir():
-                files_folder = arguments.out_folder / "files" / label / point
+                files_folder = arguments.out_folder / "files" / label / "loops" / point
                 shutil.copytree(arguments.run_folder / "loops" / point, files_folder, dirs_exist_ok=True)
         kind = summary["recipe"]["per_site"][entries[0]["labels"]["step_index"]]["kind"]
         loop_count = sum(loop_counts.values())
