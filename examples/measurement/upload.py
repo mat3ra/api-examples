@@ -52,7 +52,8 @@ def upload(client, sample_set_name, folder):
 
     for path in sorted((folder / "measurements").glob("*.json")):
         measurement = json.loads(path.read_text())
-        sample_config = {"name": measurement.pop("sample")}
+        sample_entry = measurement.pop("sample")
+        sample_config = {"name": sample_entry} if isinstance(sample_entry, str) else sample_entry
         sample = find_or_create_in_set(client.samples, sample_config, sample_sets[0]["_id"], counts)
         config = {**measurement, "_sample": {"_id": sample["_id"]}, "workflow": workflow}
         find_or_create_in_set(client.measurements, config, measurement_set["_id"], counts)

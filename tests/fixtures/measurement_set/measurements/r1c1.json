@@ -15,5 +15,8 @@
         }
     },
     "status": "finished",
-    "sample": "PDAC_COM5_01448 r1c1"
+    "sample": {
+        "name": "PDAC_COM5_01448 r1c1",
+        "metadata": { "position": { "coordinates": [5.4000001, 6.6500001], "units": "mm" } }
+    }
 }

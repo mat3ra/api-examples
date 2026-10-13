@@ -29,6 +29,8 @@ Measurements are found by name inside the measurement set. Running it again crea
     <FOLDER>/
         set.json            name, description, metadata of the measurement set
         workflow.json       the workflow of every measurement
-        measurements/*.json name, description, metadata, setup, status, and sample: the sample's name
+        measurements/*.json name, description, metadata, setup, status, and sample
+
+`sample` is `{name, description, metadata}` (description and metadata optional) or just the name.
 
 Example: `tests/fixtures/measurement_set/`.

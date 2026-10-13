@@ -17,6 +17,12 @@ SECOND_RUN_COUNTS = {
     "measurements": {"already present": 2},
 }
 MEASUREMENTS_IN_SET = [("samples-2", "workflow"), ("samples-3", "workflow")]
+CREATED_SAMPLE_WITH_DETAILS = {
+    "_id": "samples-3",
+    "name": "PDAC_COM5_01448 r1c1",
+    "metadata": {"position": {"coordinates": [5.4000001, 6.6500001], "units": "mm"}},
+    "inSet._id": "library",
+}
 
 
 class FakeEndpoint:
@@ -46,6 +52,7 @@ def test_upload():
     assert upload.upload(client, LIBRARY["name"], FIXTURE_FOLDER) == FIRST_RUN_COUNTS
     assert upload.upload(client, LIBRARY["name"], FIXTURE_FOLDER) == SECOND_RUN_COUNTS
     assert len(client.samples.records) == 4
+    assert client.samples.records[3] == CREATED_SAMPLE_WITH_DETAILS
     assert len(client.measurements.records) == 3
     measurements = client.measurements.list({"inSet._id": "measurements-0"})
     assert [(measurement["_sample"]["_id"], measurement["workflow"]["name"]) for measurement in measurements] == (
