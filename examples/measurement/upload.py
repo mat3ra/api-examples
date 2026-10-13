@@ -69,7 +69,7 @@ def upload(client, sample_set_name, folder):
             subject = {"_id": sample["_id"], "cls": "Sample"}
             unit_id = workflow["subworkflows"][0]["units"][0]["flowchartId"]
             source = {"type": "external", "info": {"origin": origin, "subject": subject, "unitId": unit_id}}
-            client.properties.create({"data": property_document, "source": source, "exabyteId": []})
+            client.properties.create({"data": property_document, "source": source, "exabyteId": [], "repetition": 0})
     return counts
 
 

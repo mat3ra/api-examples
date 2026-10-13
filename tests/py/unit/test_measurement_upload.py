@@ -84,5 +84,5 @@ def test_upload():
     )
     property_document = json.loads((FIXTURE_FOLDER / "properties" / "r0c00.json").read_text())
     assert client.properties.records == [
-        {"_id": "properties-0", "data": property_document, "source": PROPERTY_SOURCE, "exabyteId": []}
+        {"_id": "properties-0", "data": property_document, "source": PROPERTY_SOURCE, "exabyteId": [], "repetition": 0}
     ]
