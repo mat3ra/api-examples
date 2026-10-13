@@ -60,11 +60,17 @@ def upload(new_client, sample_set_name, folder):
         )
     set_config = json.loads((folder / "set.json").read_text())
     workflow = json.loads((folder / "workflow.json").read_text())
+    set_query = {"isEntitySet": True, "name": set_config["name"]}
     unit_id = workflow["subworkflows"][0]["units"][0]["flowchartId"]
     counts = defaultdict(Counter)
     files_to_put = {}
 
-    measurement_sets = client.measurements.list({"isEntitySet": True, "name": set_config["name"]})
+    run_sample_sets = client.samples.list({**set_query, "inSet._id": sample_sets[0]["_id"]})
+    counts["sample sets"]["already present" if run_sample_sets else "created"] += 1
+    run_sample_set_config = {"name": set_config["name"], "parentSetId": sample_sets[0]["_id"]}
+    run_sample_set = run_sample_sets[0] if run_sample_sets else client.samples.create_set(run_sample_set_config)
+
+    measurement_sets = client.measurements.list(set_query)
     counts["measurement sets"]["already present" if measurement_sets else "created"] += 1
     measurement_set = measurement_sets[0] if measurement_sets else client.measurements.create_set(set_config)
 
@@ -72,7 +78,7 @@ def upload(new_client, sample_set_name, folder):
         measurement = json.loads(path.read_text())
         sample_entry = measurement.pop("sample")
         sample_config = {"name": sample_entry} if isinstance(sample_entry, str) else sample_entry
-        sample = find_or_create_in_set(client.samples, sample_config, sample_sets[0]["_id"], counts)
+        sample = find_or_create_in_set(client.samples, sample_config, run_sample_set["_id"], counts)
         config = {**measurement, "_sample": {"_id": sample["_id"]}, "workflow": workflow}
         measurement_entity = find_or_create_in_set(client.measurements, config, measurement_set["_id"], counts)
         files_folder = folder / "files" / path.stem

@@ -18,6 +18,7 @@ FIXTURE_FOLDER = REPOSITORY_PATH / "tests" / "fixtures" / "measurement_set"
 LIBRARY = {"_id": "library", "name": "PDAC_COM5_01448", "isEntitySet": True}
 SAMPLE_OUTSIDE_LIBRARY = {"_id": "outside", "name": "PDAC_COM5_01448 r0c00"}
 FIRST_RUN_COUNTS = {
+    "sample sets": {"created": 1},
     "measurement sets": {"created": 1},
     "samples": {"created": 2},
     "measurements": {"created": 2},
@@ -25,6 +26,7 @@ FIRST_RUN_COUNTS = {
     "files": {"put": 6},
 }
 SECOND_RUN_COUNTS = {
+    "sample sets": {"already present": 1},
     "measurement sets": {"already present": 1},
     "samples": {"already present": 2},
     "measurements": {"already present": 2},
@@ -36,20 +38,27 @@ STORED_FILE_KEYS = [
     f"{OWNER_SLUG}/measurements/measurements-1/site00_step0_pt00/{name}"
     for name in ("X_off.npy", "X_on.npy", "Y_off.npy", "Y_on.npy", "bias_off.npy", "bias_on.npy")
 ]
-MEASUREMENTS_IN_SET = [("samples-2", "SS-PFM Hysteresis Loop"), ("samples-3", "SS-PFM Hysteresis Loop")]
+RUN_SAMPLE_SET = {
+    "_id": "samples-2",
+    "name": "20260901_171601_alscn_01448",
+    "parentSetId": "library",
+    "isEntitySet": True,
+    "inSet._id": "library",
+}
+MEASUREMENTS_IN_SET = [("samples-3", "SS-PFM Hysteresis Loop"), ("samples-4", "SS-PFM Hysteresis Loop")]
 PROPERTY_SOURCE = {
     "type": "external",
     "info": {
         "origin": {"_id": "measurements-1", "cls": "Measurement"},
-        "subject": {"_id": "samples-2", "cls": "Sample"},
+        "subject": {"_id": "samples-3", "cls": "Sample"},
         "unitId": "cb3a0482-92fe-5d9d-a6dd-2dacc26ecaf1",
     },
 }
 CREATED_SAMPLE_WITH_DETAILS = {
-    "_id": "samples-3",
+    "_id": "samples-4",
     "name": "PDAC_COM5_01448 r1c1",
     "metadata": {"position": {"coordinates": [5.4000001, 6.6500001], "units": "mm"}},
-    "inSet._id": "library",
+    "inSet._id": "samples-2",
 }
 
 
@@ -96,7 +105,7 @@ class FakeEndpoint:
         return record
 
     def create_set(self, config):
-        return self.create({**config, "isEntitySet": True})
+        return self.create({**config, "isEntitySet": True, "inSet._id": config.get("parentSetId")})
 
     def move_to_set(self, entity_id, old_set_id, new_set_id):
         next(record for record in self.records if record["_id"] == entity_id)["inSet._id"] = new_set_id
@@ -115,8 +124,9 @@ def test_upload():
     assert upload.upload(lambda: client, LIBRARY["name"], FIXTURE_FOLDER) == FIRST_RUN_COUNTS
     assert upload.upload(lambda: client, LIBRARY["name"], FIXTURE_FOLDER) == SECOND_RUN_COUNTS
     assert sorted(files.keys) == STORED_FILE_KEYS
-    assert len(client.samples.records) == 4
-    assert client.samples.records[3] == CREATED_SAMPLE_WITH_DETAILS
+    assert len(client.samples.records) == 5
+    assert client.samples.records[2] == RUN_SAMPLE_SET
+    assert client.samples.records[4] == CREATED_SAMPLE_WITH_DETAILS
     assert len(client.measurements.records) == 3
     measurements = client.measurements.list({"inSet._id": "measurements-0"})
     assert [(measurement["_sample"]["_id"], measurement["workflow"]["name"]) for measurement in measurements] == (

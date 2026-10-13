@@ -21,7 +21,7 @@ in `~/.mat3ra/api_token_cache.json`. Setting `ACCOUNT_ID` and `AUTH_TOKEN` in th
 
     python upload.py <SAMPLE_SET_NAME> <FOLDER>
 
-Samples are matched and created directly in the named set, so name the set the samples live in.
+Samples go into a sample set named as the measurement set, inside the named set; they are matched by name there.
 Measurements are found by name inside the measurement set. Running it again creates nothing new.
 
 ## Folder
