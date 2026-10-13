@@ -1,4 +1,4 @@
-"""Uploads a folder of measurements as one measurement set, with their samples inside a sample set."""
+"""Uploads a folder of measurements as one measurement set, their samples into a sample set, and their properties."""
 
 import argparse
 import json
@@ -56,7 +56,20 @@ def upload(client, sample_set_name, folder):
         sample_config = {"name": sample_entry} if isinstance(sample_entry, str) else sample_entry
         sample = find_or_create_in_set(client.samples, sample_config, sample_sets[0]["_id"], counts)
         config = {**measurement, "_sample": {"_id": sample["_id"]}, "workflow": workflow}
-        find_or_create_in_set(client.measurements, config, measurement_set["_id"], counts)
+        measurement_entity = find_or_create_in_set(client.measurements, config, measurement_set["_id"], counts)
+        property_path = folder / "properties" / path.name
+        if not property_path.exists():
+            continue
+        property_document = json.loads(property_path.read_text())
+        query = {"source.info.origin._id": measurement_entity["_id"], "data.name": property_document["name"]}
+        found = client.properties.list(query)
+        counts["properties"]["already present" if found else "created"] += 1
+        if not found:
+            origin = {"_id": measurement_entity["_id"], "cls": "Measurement"}
+            subject = {"_id": sample["_id"], "cls": "Sample"}
+            unit_id = workflow["subworkflows"][0]["units"][0]["flowchartId"]
+            source = {"type": "external", "info": {"origin": origin, "subject": subject, "unitId": unit_id}}
+            client.properties.create({"data": property_document, "source": source, "exabyteId": []})
     return counts
 
 

@@ -30,7 +30,18 @@ Measurements are found by name inside the measurement set. Running it again crea
         set.json            name, description, metadata of the measurement set
         workflow.json       the workflow of every measurement
         measurements/*.json name, description, metadata, setup, status, and sample
+        properties/*.json   optional: a property of the measurement with the same file name
 
 `sample` is `{name, description, metadata}` (description and metadata optional) or just the name.
 
 Example: `tests/fixtures/measurement_set/`.
+
+## From an Asylum Research run
+
+    pip install numpy
+    python parse_utk.py <RUN_FOLDER> <WORKFLOW_JSON> <FOLDER>
+
+`parse_utk.py` reads the run as delivered, `summary.json` and `loops/<point>/{bias,X,Y}_{on,off}.npy`, and writes the
+folder above: one measurement per pad with the recipe's per-site settings as its setup, the pad as its sample with the
+stage position in metadata, and a `hysteresis_loop` property for every pad whose loops share one bias axis. It is the
+example of what a run must become; another instrument needs its own parser writing the same folder.
