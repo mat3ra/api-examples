@@ -14,6 +14,11 @@ EXPECTED_DESCRIPTIONS = [
     "SS-PFM hysteresis loop at site r0c00, 16 loops (8 on-field, 8 off-field)",
     "SS-PFM hysteresis loop at site r5c05, no loops",
 ]
+EXPECTED_SETUP_KEYS = {
+    "instrument": ["name"],
+    "session": ["context", "instrument_directory", "n_measurements", "name", "recipe_name", "run_dir", "started_ts"],
+    "settings": ["contact_feedback", "loop_settings", "pfm_excitation", "scan_settings"],
+}
 HYSTERESIS_LOOP_SCHEMA_ID = "properties-directory/non-scalar/hysteresis-loop"
 HYSTERESIS_LOOP_EXAMPLE_PATH = "properties_directory/non-scalar/hysteresis_loop"
 
@@ -44,6 +49,7 @@ def test_parse_spm_hysteresis(tmp_path):
     assert {"measurements": len(measurements), "properties": len(properties), "files": len(files)} == EXPECTED_COUNTS
     assert [measurement["description"] for measurement in measurements] == EXPECTED_DESCRIPTIONS
     for measurement in measurements:
+        assert {block: sorted(measurement["setup"][block]) for block in measurement["setup"]} == EXPECTED_SETUP_KEYS
         esse.validate(measurement.pop("sample"), esse.get_schema_by_id("sample"))
         measurement_document = {**measurement, "_sample": {"_id": "sample"}, "workflow": workflow}
         esse.validate(measurement_document, esse.get_schema_by_id("measurement"))

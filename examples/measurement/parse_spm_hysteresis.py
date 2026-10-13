@@ -95,7 +95,15 @@ def main():
             "name": f"{run_name} {label}",
             "description": f"{technique} at site {label}, {loops}",
             "status": "finished",
-            "setup": {"instrument": {"name": "Asylum Research"}, "settings": summary["recipe"]["per_site"]},
+            "setup": {
+                "instrument": {"name": "Asylum Research"},
+                "session": summary["run"],
+                "settings": {
+                    group: settings
+                    for group, settings in entries[0]["achieved"].items()
+                    if group not in ("stage_position", "probe_position")
+                },
+            },
             "sample": {"name": label, "metadata": {"position": entries[0]["achieved"]["stage_position"]}},
             "metadata": {
                 "measurements": [
