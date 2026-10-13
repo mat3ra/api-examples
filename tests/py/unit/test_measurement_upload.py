@@ -17,13 +17,19 @@ FIRST_RUN_COUNTS = {
     "samples": {"created": 2},
     "measurements": {"created": 2},
     "properties": {"created": 1},
+    "files": {"put": 6},
 }
 SECOND_RUN_COUNTS = {
     "measurement sets": {"already present": 1},
     "samples": {"already present": 2},
     "measurements": {"already present": 2},
     "properties": {"already present": 1},
+    "files": {"already present": 6},
 }
+STORED_FILE_KEYS = [
+    f"measurements/measurements-1/site00_step0_pt00/{name}"
+    for name in ("X_off.npy", "X_on.npy", "Y_off.npy", "Y_on.npy", "bias_off.npy", "bias_on.npy")
+]
 MEASUREMENTS_IN_SET = [("samples-2", "SS-PFM Hysteresis Loop"), ("samples-3", "SS-PFM Hysteresis Loop")]
 PROPERTY_SOURCE = {
     "type": "external",
@@ -46,10 +52,19 @@ def value_at(record, key):
     return record[key] if key in record else reduce(lambda value, part: value.get(part, {}), key.split("."), record)
 
 
+class FakeFiles:
+    def __init__(self):
+        self.keys = []
+
+    def put(self, path, key):
+        self.keys.append(key)
+
+
 class FakeEndpoint:
-    def __init__(self, name, records):
+    def __init__(self, name, records, stored_keys=()):
         self.name = name
         self.records = records
+        self.stored_keys = stored_keys
 
     def list(self, query):
         return [
@@ -67,14 +82,20 @@ class FakeEndpoint:
     def move_to_set(self, entity_id, old_set_id, new_set_id):
         next(record for record in self.records if record["_id"] == entity_id)["inSet._id"] = new_set_id
 
+    def files(self, entity_id):
+        return [{"key": key} for key in self.stored_keys if key.startswith(f"{self.name}/{entity_id}/")]
+
 
 def test_upload():
     samples = FakeEndpoint("samples", [LIBRARY, SAMPLE_OUTSIDE_LIBRARY])
     properties = FakeEndpoint("properties", [])
-    client = SimpleNamespace(samples=samples, measurements=FakeEndpoint("measurements", []), properties=properties)
+    files = FakeFiles()
+    measurements = FakeEndpoint("measurements", [], files.keys)
+    client = SimpleNamespace(samples=samples, measurements=measurements, properties=properties, files=files)
 
-    assert upload.upload(client, LIBRARY["name"], FIXTURE_FOLDER) == FIRST_RUN_COUNTS
-    assert upload.upload(client, LIBRARY["name"], FIXTURE_FOLDER) == SECOND_RUN_COUNTS
+    assert upload.upload(lambda: client, LIBRARY["name"], FIXTURE_FOLDER) == FIRST_RUN_COUNTS
+    assert upload.upload(lambda: client, LIBRARY["name"], FIXTURE_FOLDER) == SECOND_RUN_COUNTS
+    assert sorted(files.keys) == STORED_FILE_KEYS
     assert len(client.samples.records) == 4
     assert client.samples.records[3] == CREATED_SAMPLE_WITH_DETAILS
     assert len(client.measurements.records) == 3

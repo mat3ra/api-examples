@@ -1,10 +1,13 @@
-"""Uploads a folder of measurements as one measurement set, their samples into a sample set, and their properties."""
+"""Uploads a folder of measurements as one measurement set, with their samples, properties and files."""
 
 import argparse
 import json
 import os
 import sys
+import threading
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from pathlib import Path
 
 from mat3ra.api_client import APIClient
@@ -35,8 +38,9 @@ def find_or_create_in_set(endpoint, config, set_id, counts):
     return entity
 
 
-def upload(client, sample_set_name, folder):
-    """Uploads the folder and returns, per kind, how many records were created and how many were already present."""
+def upload(new_client, sample_set_name, folder):
+    """Uploads the folder, files eight at a time with a client each, and returns per kind what was new and present."""
+    client = new_client()
     sample_sets = client.samples.list({"isEntitySet": True, "name": sample_set_name})
     if len(sample_sets) != 1:
         sys.exit(
@@ -46,6 +50,7 @@ def upload(client, sample_set_name, folder):
     workflow = json.loads((folder / "workflow.json").read_text())
     unit_id = workflow["subworkflows"][0]["units"][0]["flowchartId"]
     counts = defaultdict(Counter)
+    files_to_put = {}
 
     measurement_sets = client.measurements.list({"isEntitySet": True, "name": set_config["name"]})
     counts["measurement sets"]["already present" if measurement_sets else "created"] += 1
@@ -58,6 +63,13 @@ def upload(client, sample_set_name, folder):
         sample = find_or_create_in_set(client.samples, sample_config, sample_sets[0]["_id"], counts)
         config = {**measurement, "_sample": {"_id": sample["_id"]}, "workflow": workflow}
         measurement_entity = find_or_create_in_set(client.measurements, config, measurement_set["_id"], counts)
+        files_folder = folder / "files" / path.stem
+        stored_keys = {stored_file["key"] for stored_file in client.measurements.files(measurement_entity["_id"])}
+        for file_path in [file_path for file_path in files_folder.rglob("*") if file_path.is_file()]:
+            key = f"measurements/{measurement_entity['_id']}/{file_path.relative_to(files_folder).as_posix()}"
+            counts["files"]["already present" if key in stored_keys else "put"] += 1
+            if key not in stored_keys:
+                files_to_put[key] = file_path
         property_path = folder / "properties" / path.name
         if not property_path.exists():
             continue
@@ -70,6 +82,9 @@ def upload(client, sample_set_name, folder):
             subject = {"_id": sample["_id"], "cls": "Sample"}
             source = {"type": "external", "info": {"origin": origin, "subject": subject, "unitId": unit_id}}
             client.properties.create({"data": property_document, "source": source, "exabyteId": [], "repetition": 0})
+    worker = threading.local()
+    with ThreadPoolExecutor(8, initializer=lambda: setattr(worker, "client", new_client())) as executor:
+        list(executor.map(lambda key, path: worker.client.files.put(path, key), files_to_put, files_to_put.values()))
     return counts
 
 
@@ -80,9 +95,10 @@ def main():
     parser.add_argument("folder", type=Path)
     arguments = parser.parse_args()
     account_id, auth_token = load_credentials()
-    client = APIClient.authenticate(account_id=account_id, auth_token=auth_token)
-    for kind, kind_counts in upload(client, arguments.sample_set_name, arguments.folder).items():
-        print(f"{kind}: {kind_counts['created']} created, {kind_counts['already present']} already present")
+    new_client = partial(APIClient.authenticate, account_id=account_id, auth_token=auth_token)
+    for kind, kind_counts in upload(new_client, arguments.sample_set_name, arguments.folder).items():
+        new_state = "put" if kind == "files" else "created"
+        print(f"{kind}: {kind_counts[new_state]} {new_state}, {kind_counts['already present']} already present")
 
 
 if __name__ == "__main__":

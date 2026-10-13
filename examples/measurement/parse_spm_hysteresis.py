@@ -58,7 +58,7 @@ def hysteresis_loop(run_folder, entries):
 
 
 def main():
-    """Writes set.json, workflow.json, measurements/<pad>.json and properties/<pad>.json into the out folder."""
+    """Writes set.json, workflow.json and, per pad, measurements/, properties/ and files/ into the out folder."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run_folder", type=Path)
     parser.add_argument("workflow", type=Path)
@@ -82,6 +82,11 @@ def main():
     properties_count = 0
     for label, entries in entries_by_pad.items():
         property_document, loop_counts = hysteresis_loop(arguments.run_folder, entries)
+        for entry in entries:
+            point = PureWindowsPath(entry["segmentation"]["bias_on_path"]).parent.name
+            if (arguments.run_folder / "loops" / point).is_dir():
+                files_folder = arguments.out_folder / "files" / label / point
+                shutil.copytree(arguments.run_folder / "loops" / point, files_folder, dirs_exist_ok=True)
         kind = summary["recipe"]["per_site"][entries[0]["labels"]["step_index"]]["kind"]
         loop_count = sum(loop_counts.values())
         loops_per_condition = ", ".join(f"{count} {condition}-field" for condition, count in loop_counts.items())

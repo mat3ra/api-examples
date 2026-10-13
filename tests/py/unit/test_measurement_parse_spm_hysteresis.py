@@ -9,7 +9,7 @@ REPOSITORY_PATH = Path(__file__).parents[3]
 PARSER_PATH = REPOSITORY_PATH / "examples" / "measurement" / "parse_spm_hysteresis.py"
 RUN_FOLDER = REPOSITORY_PATH / "tests" / "fixtures" / "asylum_run"
 WORKFLOW_PATH = REPOSITORY_PATH / "tests" / "fixtures" / "measurement_set" / "workflow.json"
-EXPECTED_COUNTS = {"measurements": 2, "properties": 1}
+EXPECTED_COUNTS = {"measurements": 2, "properties": 1, "files": 48}
 EXPECTED_DESCRIPTIONS = [
     "SS-PFM hysteresis loop at site r0c00, 16 loops (8 on-field, 8 off-field)",
     "SS-PFM hysteresis loop at site r5c05, no loops",
@@ -40,7 +40,8 @@ def test_parse_spm_hysteresis(tmp_path):
     properties = [json.loads(path.read_text()) for path in sorted((tmp_path / "properties").glob("*.json"))]
     example = next(item["data"] for item in esse.wrapped_examples if item["path"] == HYSTERESIS_LOOP_EXAMPLE_PATH)
 
-    assert {"measurements": len(measurements), "properties": len(properties)} == EXPECTED_COUNTS
+    files = [path for path in (tmp_path / "files").rglob("*") if path.is_file()]
+    assert {"measurements": len(measurements), "properties": len(properties), "files": len(files)} == EXPECTED_COUNTS
     assert [measurement["description"] for measurement in measurements] == EXPECTED_DESCRIPTIONS
     for measurement in measurements:
         esse.validate(measurement.pop("sample"), esse.get_schema_by_id("sample"))
