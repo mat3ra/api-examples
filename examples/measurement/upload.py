@@ -44,6 +44,7 @@ def upload(client, sample_set_name, folder):
         )
     set_config = json.loads((folder / "set.json").read_text())
     workflow = json.loads((folder / "workflow.json").read_text())
+    unit_id = workflow["subworkflows"][0]["units"][0]["flowchartId"]
     counts = defaultdict(Counter)
 
     measurement_sets = client.measurements.list({"isEntitySet": True, "name": set_config["name"]})
@@ -67,7 +68,6 @@ def upload(client, sample_set_name, folder):
         if not found:
             origin = {"_id": measurement_entity["_id"], "cls": "Measurement"}
             subject = {"_id": sample["_id"], "cls": "Sample"}
-            unit_id = workflow["subworkflows"][0]["units"][0]["flowchartId"]
             source = {"type": "external", "info": {"origin": origin, "subject": subject, "unitId": unit_id}}
             client.properties.create({"data": property_document, "source": source, "exabyteId": [], "repetition": 0})
     return counts

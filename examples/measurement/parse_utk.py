@@ -9,9 +9,9 @@ from pathlib import Path, PureWindowsPath
 import numpy
 
 
-def combined(loop_parameters, key):
+def parameter_statistics(parameters_per_loop, key):
     """Mean, population standard deviation and count of one parameter over the loops that carry it."""
-    values = [parameters[key] for parameters in loop_parameters if parameters[key] is not None]
+    values = [loop_parameters[key] for loop_parameters in parameters_per_loop if loop_parameters[key] is not None]
     return {"value": float(numpy.mean(values)), "standardDeviation": float(numpy.std(values)), "count": len(values)}
 
 
@@ -19,27 +19,28 @@ def hysteresis_loop(run_folder, entries):
     """The pad's hysteresis_loop property, or None unless its loops cover both conditions on one bias axis."""
     biases, responses, parameters = [], {"on": [], "off": []}, {}
     for condition in responses:
-        loop_parameters = [entry["loop_params"][f"{condition}_field"] for entry in entries]
-        for entry, loop in zip(entries, loop_parameters):
+        parameters_per_loop = [entry["loop_params"][f"{condition}_field"] for entry in entries]
+        for entry, loop_parameters in zip(entries, parameters_per_loop):
             loop_folder = run_folder / "loops" / PureWindowsPath(entry["segmentation"]["bias_on_path"]).parent.name
             paths = [loop_folder / f"{channel}_{condition}.npy" for channel in ("bias", "X", "Y")]
             if not all(path.exists() for path in paths):
                 continue
             bias, x, y = (numpy.load(path).astype(float) for path in paths)
-            angle = numpy.radians(loop["phase_offset_deg"])
+            angle = numpy.radians(loop_parameters["phase_offset_deg"])
             biases.append(bias)
+            # X and Y are the lock-in quadratures; turned by the loop's phase offset, the switching lies along one axis
             responses[condition].append(x * numpy.cos(angle) + y * numpy.sin(angle))
         parameters[condition] = {
-            "imprint": combined(loop_parameters, "imprint_v"),
+            "imprint": parameter_statistics(parameters_per_loop, "imprint_v"),
             "coerciveVoltage": {
-                "rising": combined(loop_parameters, "v_c_rising"),
-                "falling": combined(loop_parameters, "v_c_falling"),
+                "rising": parameter_statistics(parameters_per_loop, "v_c_rising"),
+                "falling": parameter_statistics(parameters_per_loop, "v_c_falling"),
             },
-            "loopWidth": combined(loop_parameters, "loop_width_v"),
-            "loopHeight": combined(loop_parameters, "loop_height_m"),
+            "loopWidth": parameter_statistics(parameters_per_loop, "loop_width_v"),
+            "loopHeight": parameter_statistics(parameters_per_loop, "loop_height_m"),
             "remanentResponse": {
-                "rising": combined(loop_parameters, "remnant_rising_m"),
-                "falling": combined(loop_parameters, "remnant_falling_m"),
+                "rising": parameter_statistics(parameters_per_loop, "remnant_rising_m"),
+                "falling": parameter_statistics(parameters_per_loop, "remnant_falling_m"),
             },
         }
     if not responses["on"] or not responses["off"] or any(not numpy.array_equal(bias, biases[0]) for bias in biases):
