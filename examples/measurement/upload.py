@@ -64,11 +64,12 @@ def upload(new_client, sample_set_name, folder):
         config = {**measurement, "_sample": {"_id": sample["_id"]}, "workflow": workflow}
         measurement_entity = find_or_create_in_set(client.measurements, config, measurement_set["_id"], counts)
         files_folder = folder / "files" / path.stem
-        stored_keys = {stored_file["key"] for stored_file in client.measurements.files(measurement_entity["_id"])}
+        stored_files = client.measurements.list_files(measurement_entity["_id"])
         for file_path in [file_path for file_path in files_folder.rglob("*") if file_path.is_file()]:
             key = f"measurements/{measurement_entity['_id']}/{file_path.relative_to(files_folder).as_posix()}"
-            counts["files"]["already present" if key in stored_keys else "put"] += 1
-            if key not in stored_keys:
+            already_stored = any(stored_file["key"].endswith(f"/{key}") for stored_file in stored_files)
+            counts["files"]["already present" if already_stored else "put"] += 1
+            if not already_stored:
                 files_to_put[key] = file_path
         property_path = folder / "properties" / path.name
         if not property_path.exists():

@@ -26,8 +26,9 @@ SECOND_RUN_COUNTS = {
     "properties": {"already present": 1},
     "files": {"already present": 6},
 }
+OWNER_SLUG = "owner"
 STORED_FILE_KEYS = [
-    f"measurements/measurements-1/site00_step0_pt00/{name}"
+    f"{OWNER_SLUG}/measurements/measurements-1/site00_step0_pt00/{name}"
     for name in ("X_off.npy", "X_on.npy", "Y_off.npy", "Y_on.npy", "bias_off.npy", "bias_on.npy")
 ]
 MEASUREMENTS_IN_SET = [("samples-2", "SS-PFM Hysteresis Loop"), ("samples-3", "SS-PFM Hysteresis Loop")]
@@ -57,7 +58,7 @@ class FakeFiles:
         self.keys = []
 
     def put(self, path, key):
-        self.keys.append(key)
+        self.keys.append(f"{OWNER_SLUG}/{key}")
 
 
 class FakeEndpoint:
@@ -82,8 +83,8 @@ class FakeEndpoint:
     def move_to_set(self, entity_id, old_set_id, new_set_id):
         next(record for record in self.records if record["_id"] == entity_id)["inSet._id"] = new_set_id
 
-    def files(self, entity_id):
-        return [{"key": key} for key in self.stored_keys if key.startswith(f"{self.name}/{entity_id}/")]
+    def list_files(self, entity_id):
+        return [{"key": key} for key in self.stored_keys if key.startswith(f"{OWNER_SLUG}/{self.name}/{entity_id}/")]
 
 
 def test_upload():
