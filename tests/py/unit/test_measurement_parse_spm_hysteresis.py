@@ -6,7 +6,7 @@ from pathlib import Path
 from mat3ra.esse import ESSE
 
 REPOSITORY_PATH = Path(__file__).parents[3]
-PARSER_PATH = REPOSITORY_PATH / "examples" / "measurement" / "parse_utk.py"
+PARSER_PATH = REPOSITORY_PATH / "examples" / "measurement" / "parse_spm_hysteresis.py"
 RUN_FOLDER = REPOSITORY_PATH / "tests" / "fixtures" / "asylum_run"
 WORKFLOW_PATH = REPOSITORY_PATH / "tests" / "fixtures" / "measurement_set" / "workflow.json"
 EXPECTED_COUNTS = {"measurements": 2, "properties": 1}
@@ -32,7 +32,7 @@ def points(property_document):
     return set(zip(*rounded([property_document["xDataArray"], *property_document["yDataSeries"]])))
 
 
-def test_parse_utk(tmp_path):
+def test_parse_spm_hysteresis(tmp_path):
     esse = ESSE()
     subprocess.run([sys.executable, PARSER_PATH, RUN_FOLDER, WORKFLOW_PATH, tmp_path], check=True)
     workflow = json.loads((tmp_path / "workflow.json").read_text())
