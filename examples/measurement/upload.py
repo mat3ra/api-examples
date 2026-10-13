@@ -5,11 +5,13 @@ import json
 import os
 import sys
 import threading
+import time
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from pathlib import Path
 
+import requests
 from mat3ra.api_client import APIClient
 from mat3ra.api_client.constants import ACCOUNT_ID_ENV_VAR, AUTH_TOKEN_ENV_VAR
 
@@ -25,6 +27,16 @@ def load_credentials():
     else:
         sys.exit("No API credentials: run `python auth.py`, or set ACCOUNT_ID and AUTH_TOKEN.")
     return credentials[ACCOUNT_ID_ENV_VAR], credentials[AUTH_TOKEN_ENV_VAR]
+
+
+def put_file(files_endpoint, path, key):
+    """Puts the file, again after 2 s and 4 s when the network fails; any other error stops the run."""
+    for pause_seconds in (2, 4):
+        try:
+            return files_endpoint.put(path, key)
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+            time.sleep(pause_seconds)
+    return files_endpoint.put(path, key)
 
 
 def find_or_create_in_set(endpoint, config, set_id, counts):
@@ -84,8 +96,8 @@ def upload(new_client, sample_set_name, folder):
             source = {"type": "external", "info": {"origin": origin, "subject": subject, "unitId": unit_id}}
             client.properties.create({"data": property_document, "source": source, "exabyteId": [], "repetition": 0})
     worker = threading.local()
-    with ThreadPoolExecutor(8, initializer=lambda: setattr(worker, "client", new_client())) as executor:
-        list(executor.map(lambda key, path: worker.client.files.put(path, key), files_to_put, files_to_put.values()))
+    with ThreadPoolExecutor(8, initializer=lambda: setattr(worker, "files", new_client().files)) as executor:
+        list(executor.map(lambda key, path: put_file(worker.files, path, key), files_to_put, files_to_put.values()))
     return counts
 
 

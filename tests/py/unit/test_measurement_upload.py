@@ -1,8 +1,13 @@
+import contextlib
 import json
 import sys
+from collections import Counter
 from functools import reduce
 from pathlib import Path
 from types import SimpleNamespace
+
+import pytest
+import requests
 
 REPOSITORY_PATH = Path(__file__).parents[3]
 sys.path.insert(0, str(REPOSITORY_PATH / "examples" / "measurement"))
@@ -61,6 +66,19 @@ class FakeFiles:
         self.keys.append(f"{OWNER_SLUG}/{key}")
 
 
+class FlakyFiles(FakeFiles):
+    def __init__(self, failures):
+        super().__init__()
+        self.failures = failures
+        self.attempts = Counter()
+
+    def put(self, path, key):
+        self.attempts[key] += 1
+        if self.attempts[key] <= self.failures:
+            raise requests.exceptions.ConnectionError()
+        super().put(path, key)
+
+
 class FakeEndpoint:
     def __init__(self, name, records, stored_keys=()):
         self.name = name
@@ -108,3 +126,25 @@ def test_upload():
     assert client.properties.records == [
         {"_id": "properties-0", "data": property_document, "source": PROPERTY_SOURCE, "exabyteId": [], "repetition": 0}
     ]
+
+
+@pytest.mark.parametrize(
+    ("failures", "expectation", "expected_stored_count"),
+    [(2, contextlib.nullcontext(), 6), (3, pytest.raises(requests.exceptions.ConnectionError), 0)],
+)
+def test_upload_retries_file_put(monkeypatch, failures, expectation, expected_stored_count):
+    pauses = []
+    monkeypatch.setattr(upload.time, "sleep", pauses.append)
+    files = FlakyFiles(failures)
+    measurements = FakeEndpoint("measurements", [], files.keys)
+    client = SimpleNamespace(
+        samples=FakeEndpoint("samples", [LIBRARY]),
+        measurements=measurements,
+        properties=FakeEndpoint("properties", []),
+        files=files,
+    )
+
+    with expectation:
+        upload.upload(lambda: client, LIBRARY["name"], FIXTURE_FOLDER)
+    assert len(files.keys) == expected_stored_count
+    assert sorted(pauses) == [2] * 6 + [4] * 6
