@@ -14,6 +14,7 @@ def main():
     parser.add_argument("out_folder", type=Path)
     arguments = parser.parse_args()
     set_name = arguments.data_folder.name
+    workflow_name = json.loads(arguments.workflow.read_text())["name"]
 
     (arguments.out_folder / "measurements").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(arguments.workflow, arguments.out_folder / "workflow.json")
@@ -26,6 +27,7 @@ def main():
         label = f"row{row_number}"
         measurement = {
             "name": f"{set_name} {label}",
+            "description": f"{workflow_name} at {label}",
             "status": "finished",
             "setup": {"instrument": {}},
             "sample": {"name": label},
