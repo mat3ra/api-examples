@@ -27,3 +27,5 @@ writes the folder above: one measurement per pad with the instrument, the run's 
 its setup, the pad as its sample with the stage position in metadata, and a `hysteresis_loop` property for every pad
 whose loops share one bias axis. It is the example of what a run must become; another instrument needs its own parser
 writing the same folder.
+
+- `python parse_xrf_grid.py <XRF_GRID_TXT> <WORKFLOW_JSON> <FOLDER>`: one measurement per site of NLR's XRF grid.

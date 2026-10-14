@@ -1,0 +1,140 @@
+{
+    "_id": "acf3f122-20b7-5dc4-b047-ce75f9cd0d09",
+    "name": "XRF Grid Map",
+    "subworkflows": [
+        {
+            "_id": "9d1b5de7-3ae8-5dd3-9b1a-ea4e6aa5a261",
+            "name": "xrf_grid",
+            "application": {
+                "build": "Default",
+                "hasAdvancedComputeOptions": false,
+                "isDefault": true,
+                "isDefaultVersion": true,
+                "isUsingMaterial": false,
+                "name": "xrf-mapper",
+                "shortName": "xrf",
+                "summary": "X-ray fluorescence mapper (film thickness and composition over a grid of positions)",
+                "version": "1.0",
+                "schemaVersion": "2022.8.16"
+            },
+            "properties": [
+                "elemental_ratio",
+                "film_thickness"
+            ],
+            "model": {
+                "type": "unknown",
+                "subtype": "unknown",
+                "method": {
+                    "type": "unknown",
+                    "subtype": "unknown",
+                    "data": {}
+                }
+            },
+            "units": [
+                {
+                    "type": "execution",
+                    "name": "map",
+                    "head": true,
+                    "results": [
+                        {
+                            "name": "film_thickness"
+                        },
+                        {
+                            "name": "elemental_ratio"
+                        }
+                    ],
+                    "monitors": [
+                        {
+                            "name": "standard_output"
+                        }
+                    ],
+                    "flowchartId": "a7d769a3-a512-5017-b9dd-2b014798716e",
+                    "preProcessors": [],
+                    "postProcessors": [],
+                    "status": "idle",
+                    "statusTrack": [],
+                    "tags": [],
+                    "application": {
+                        "build": "Default",
+                        "hasAdvancedComputeOptions": false,
+                        "isDefault": true,
+                        "isDefaultVersion": true,
+                        "isUsingMaterial": false,
+                        "name": "xrf-mapper",
+                        "shortName": "xrf",
+                        "summary": "X-ray fluorescence mapper (film thickness and composition over a grid of positions)",
+                        "version": "1.0",
+                        "schemaVersion": "2022.8.16"
+                    },
+                    "executable": {
+                        "applicationName": "xrf-mapper",
+                        "applicationVersion": "*",
+                        "hasAdvancedComputeOptions": false,
+                        "isDefault": true,
+                        "name": "map",
+                        "schemaVersion": "2022.8.16"
+                    },
+                    "flavor": {
+                        "applicationName": "xrf-mapper",
+                        "applicationVersion": "*",
+                        "executableName": "map",
+                        "input": [],
+                        "isDefault": true,
+                        "monitors": [
+                            {
+                                "name": "standard_output"
+                            }
+                        ],
+                        "name": "xrf_grid",
+                        "postProcessors": [],
+                        "preProcessors": [],
+                        "results": [
+                            {
+                                "name": "film_thickness"
+                            },
+                            {
+                                "name": "elemental_ratio"
+                            }
+                        ],
+                        "schemaVersion": "2022.8.16"
+                    },
+                    "input": [],
+                    "context": [],
+                    "schemaVersion": "2022.8.16",
+                    "isDefault": false
+                }
+            ],
+            "schemaVersion": "2022.8.16",
+            "isDraft": false
+        }
+    ],
+    "units": [
+        {
+            "type": "subworkflow",
+            "name": "xrf_grid",
+            "results": [],
+            "monitors": [],
+            "preProcessors": [],
+            "postProcessors": [],
+            "status": "idle",
+            "statusTrack": [],
+            "tags": [],
+            "_id": "9d1b5de7-3ae8-5dd3-9b1a-ea4e6aa5a261",
+            "flowchartId": "79192aa7-537b-5e9f-885e-a8f3119471cf",
+            "schemaVersion": "2022.8.16",
+            "isDefault": false
+        }
+    ],
+    "properties": [
+        "elemental_ratio",
+        "film_thickness"
+    ],
+    "workflows": [],
+    "schemaVersion": "2022.8.16",
+    "tags": [
+        "experimental"
+    ],
+    "application": {
+        "name": "xrf-mapper"
+    }
+}
