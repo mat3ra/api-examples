@@ -29,3 +29,4 @@ whose loops share one bias axis. It is the example of what a run must become; an
 writing the same folder.
 
 - `python parse_xrf_grid.py <XRF_GRID_TXT> <WORKFLOW_JSON> <FOLDER>`: one measurement per site of NLR's XRF grid.
+- `python parse_dc_iv.py <IV_FOLDER> <WORKFLOW_JSON> <FOLDER>`: one measurement per row of NLR's I-V sweeps.
