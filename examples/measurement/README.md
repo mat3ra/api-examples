@@ -2,7 +2,7 @@
 
 Sign in once and upload with api-client's commands; `mat3ra-upload` puts a folder below in as one measurement set:
 
-    pip install "git+https://github.com/mat3ra/api-client.git@e488bb8"
+    pip install "git+https://github.com/mat3ra/api-client.git@381d291"
     mat3ra-auth alphafilm.mat3ra.com
     mat3ra-upload NAME FOLDER
 
@@ -12,7 +12,7 @@ Sign in once and upload with api-client's commands; `mat3ra-upload` puts a folde
         set.json                 name, description, metadata of the measurement set
         <label>/
             measurement.json     name, description, status, setup, workflow, sample, metadata
-            properties/*.json    optional, one property document per file
+            properties/<property name>.json   optional, one property document per name
             files/...            optional, the measurement's files as delivered
 
 `sample` is `{name, description, metadata}` (description and metadata optional) or just the name.

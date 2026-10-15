@@ -26,6 +26,7 @@ EXPECTED_FILES = {
 
 
 def test_parse_dc_iv(tmp_path):
+    tmp_path = tmp_path / "folder"
     esse = ESSE()
     subprocess.run([sys.executable, PARSER_PATH, DATA_FOLDER, WORKFLOW_PATH, tmp_path], check=True)
     workflow = json.loads(WORKFLOW_PATH.read_text())

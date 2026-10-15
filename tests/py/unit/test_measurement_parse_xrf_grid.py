@@ -21,6 +21,7 @@ EXPECTED_FILES = {"r1c1/files/com5_1448_xrf_grid.txt": GRID_PATH, "r1c2/files/co
 
 
 def test_parse_xrf_grid(tmp_path):
+    tmp_path = tmp_path / "folder"
     esse = ESSE()
     subprocess.run([sys.executable, PARSER_PATH, GRID_PATH, WORKFLOW_PATH, tmp_path], check=True)
     workflow = json.loads(WORKFLOW_PATH.read_text())
