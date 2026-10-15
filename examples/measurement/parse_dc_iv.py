@@ -1,4 +1,4 @@
-"""Writes the folder mat3ra-upload reads from NLR's DC I-V data: one measurement per row, both tables in its files."""
+"""Writes the folder mat3ra-upload reads from NLR's DC I-V data: IV_Volts.txt and IV_Amps.txt, one sweep per row."""
 
 import argparse
 import json

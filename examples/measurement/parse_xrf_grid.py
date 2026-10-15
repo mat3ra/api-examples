@@ -1,4 +1,4 @@
-"""Writes the folder mat3ra-upload reads from NLR's XRF grid: one measurement per site, the table in its files."""
+"""Writes the folder mat3ra-upload reads from NLR's XRF grid: a tab-separated table, one row per site."""
 
 import argparse
 import csv
