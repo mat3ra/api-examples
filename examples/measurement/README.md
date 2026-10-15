@@ -2,7 +2,7 @@
 
 Sign in once and upload with api-client's commands; `mat3ra-upload` puts a folder below in as one measurement set:
 
-    pip install "git+https://github.com/mat3ra/api-client.git@381d291"
+    pip install "git+https://github.com/mat3ra/api-client.git@5b600e7"
     mat3ra-auth alphafilm.mat3ra.com
     mat3ra-upload NAME FOLDER
 
@@ -28,6 +28,6 @@ whose loops share one bias axis. It is the example of what a run must become; an
 writing the same folder.
 
 - `python parse_xrf_grid.py <XRF_GRID_TXT> <WORKFLOW_JSON> <FOLDER>`: one measurement per site of NLR's XRF grid, the
-  delivered table under `<label>/files/`.
+  delivered table under `<measurement>/files/`.
 - `python parse_dc_iv.py <IV_FOLDER> <WORKFLOW_JSON> <FOLDER>`: one measurement per row of NLR's I-V sweeps, the
-  delivered `IV_Volts.txt` and `IV_Amps.txt` under `<label>/files/`.
+  delivered `IV_Volts.txt` and `IV_Amps.txt` under `<measurement>/files/`.
