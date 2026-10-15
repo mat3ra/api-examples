@@ -9,11 +9,11 @@ Sign in once and upload with api-client's commands; `mat3ra-upload` puts a folde
 ## Folder
 
     <FOLDER>/
-        set.json            name, description, metadata of the measurement set
-        workflow.json       the workflow of every measurement
-        measurements/*.json name, description, metadata, setup, status, and sample
-        properties/*.json   optional: a property of the measurement with the same file name
-        files/<label>/      optional: the files of measurements/<label>.json under their run paths, e.g. loops/<point>/
+        set.json                 name, description, metadata of the measurement set
+        <label>/
+            measurement.json     name, description, status, setup, workflow, sample, metadata
+            properties/*.json    optional, one property document per file
+            files/...            optional, the measurement's files as delivered
 
 `sample` is `{name, description, metadata}` (description and metadata optional) or just the name.
 
@@ -29,6 +29,6 @@ whose loops share one bias axis. It is the example of what a run must become; an
 writing the same folder.
 
 - `python parse_xrf_grid.py <XRF_GRID_TXT> <WORKFLOW_JSON> <FOLDER>`: one measurement per site of NLR's XRF grid, the
-  delivered table under `files/<label>/`.
+  delivered table under `<label>/files/`.
 - `python parse_dc_iv.py <IV_FOLDER> <WORKFLOW_JSON> <FOLDER>`: one measurement per row of NLR's I-V sweeps, the
-  delivered `IV_Volts.txt` and `IV_Amps.txt` under `files/<label>/`.
+  delivered `IV_Volts.txt` and `IV_Amps.txt` under `<label>/files/`.

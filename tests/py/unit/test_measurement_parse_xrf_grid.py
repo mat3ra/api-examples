@@ -17,20 +17,20 @@ EXPECTED_FIRST_SITE = {
     "setup": {"instrument": {}},
     "sample": {"name": "r1c1", "metadata": {"position": {"coordinates": [5.4000001, 6.6500001], "units": "mm"}}},
 }
-EXPECTED_FILES = {"files/r1c1/com5_1448_xrf_grid.txt": GRID_PATH, "files/r1c2/com5_1448_xrf_grid.txt": GRID_PATH}
+EXPECTED_FILES = {"r1c1/files/com5_1448_xrf_grid.txt": GRID_PATH, "r1c2/files/com5_1448_xrf_grid.txt": GRID_PATH}
 
 
 def test_parse_xrf_grid(tmp_path):
     esse = ESSE()
     subprocess.run([sys.executable, PARSER_PATH, GRID_PATH, WORKFLOW_PATH, tmp_path], check=True)
-    workflow = json.loads((tmp_path / "workflow.json").read_text())
-    measurements = [json.loads(path.read_text()) for path in sorted((tmp_path / "measurements").glob("*.json"))]
+    workflow = json.loads(WORKFLOW_PATH.read_text())
+    measurements = [json.loads(path.read_text()) for path in sorted(tmp_path.glob("*/measurement.json"))]
 
     assert [measurement["name"] for measurement in measurements] == EXPECTED_MEASUREMENT_NAMES
-    assert measurements[0] == EXPECTED_FIRST_SITE
-    files = {path.relative_to(tmp_path).as_posix(): path.read_bytes() for path in tmp_path.glob("files/*/*")}
+    assert measurements[0] == {**EXPECTED_FIRST_SITE, "workflow": workflow}
+    files = {path.relative_to(tmp_path).as_posix(): path.read_bytes() for path in tmp_path.glob("*/files/*")}
     assert files == {name: path.read_bytes() for name, path in EXPECTED_FILES.items()}
     for measurement in measurements:
         measurement.pop("sample")
-        measurement_document = {**measurement, "_sample": {"_id": "sample"}, "workflow": workflow}
+        measurement_document = {**measurement, "_sample": {"_id": "sample"}}
         esse.validate(measurement_document, esse.get_schema_by_id("measurement"))

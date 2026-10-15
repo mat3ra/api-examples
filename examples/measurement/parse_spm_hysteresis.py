@@ -58,7 +58,7 @@ def hysteresis_loop(run_folder, entries):
 
 
 def main():
-    """Writes set.json, workflow.json and, per pad, measurements/, properties/ and files/ into the out folder."""
+    """Writes set.json and, per pad, <pad>/measurement.json, <pad>/properties/ and <pad>/files/ into the out folder."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run_folder", type=Path)
     parser.add_argument("workflow", type=Path)
@@ -66,12 +66,10 @@ def main():
     arguments = parser.parse_args()
     summary = json.loads((arguments.run_folder / "summary.json").read_text())
     run_name = summary["run"]["name"]
-    workflow_name = json.loads(arguments.workflow.read_text())["name"]
-    technique = " ".join(word if word.isupper() else word.lower() for word in workflow_name.split())
+    workflow = json.loads(arguments.workflow.read_text())
+    technique = " ".join(word if word.isupper() else word.lower() for word in workflow["name"].split())
 
-    (arguments.out_folder / "measurements").mkdir(parents=True, exist_ok=True)
-    (arguments.out_folder / "properties").mkdir(exist_ok=True)
-    shutil.copyfile(arguments.workflow, arguments.out_folder / "workflow.json")
+    arguments.out_folder.mkdir(parents=True, exist_ok=True)
     set_metadata = {key: value for key, value in summary.items() if key != "measurements"}
     set_document = {"name": run_name, "description": "", "metadata": set_metadata}
     (arguments.out_folder / "set.json").write_text(json.dumps(set_document, indent=4))
@@ -85,7 +83,7 @@ def main():
         for entry in entries:
             point = PureWindowsPath(entry["segmentation"]["bias_on_path"]).parent.name
             if (arguments.run_folder / "loops" / point).is_dir():
-                files_folder = arguments.out_folder / "files" / label / "loops" / point
+                files_folder = arguments.out_folder / label / "files" / "loops" / point
                 shutil.copytree(arguments.run_folder / "loops" / point, files_folder, dirs_exist_ok=True)
         kind = summary["recipe"]["per_site"][entries[0]["labels"]["step_index"]]["kind"]
         loop_count = sum(loop_counts.values())
@@ -104,6 +102,7 @@ def main():
                     if group not in ("stage_position", "probe_position")
                 },
             },
+            "workflow": workflow,
             "sample": {"name": label, "metadata": {"position": entries[0]["achieved"]["stage_position"]}},
             "metadata": {
                 "measurements": [
@@ -115,9 +114,12 @@ def main():
                 ]
             },
         }
-        (arguments.out_folder / "measurements" / f"{label}.json").write_text(json.dumps(measurement, indent=4))
+        (arguments.out_folder / label).mkdir(exist_ok=True)
+        (arguments.out_folder / label / "measurement.json").write_text(json.dumps(measurement, indent=4))
         if property_document:
-            (arguments.out_folder / "properties" / f"{label}.json").write_text(json.dumps(property_document, indent=4))
+            properties_folder = arguments.out_folder / label / "properties"
+            properties_folder.mkdir(exist_ok=True)
+            (properties_folder / "hysteresis_loop.json").write_text(json.dumps(property_document, indent=4))
             properties_count += 1
     print(f"{len(entries_by_pad)} measurements, {properties_count} with a hysteresis loop, in {arguments.out_folder}")
 
