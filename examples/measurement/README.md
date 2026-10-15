@@ -2,8 +2,8 @@
 
 Sign in once and upload with api-client's commands; `mat3ra-upload` puts a folder below in as one measurement set:
 
-    pip install "git+https://github.com/mat3ra/api-client.git@839f55b"
-    mat3ra-auth
+    pip install "git+https://github.com/mat3ra/api-client.git@e488bb8"
+    mat3ra-auth alphafilm.mat3ra.com
     mat3ra-upload NAME FOLDER
 
 ## Folder
