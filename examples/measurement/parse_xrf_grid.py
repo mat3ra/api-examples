@@ -1,4 +1,4 @@
-"""Writes the folder mat3ra-upload reads from NLR's XRF grid: a tab-separated table, one row per site."""
+"""Writes the folder mat3ra-upload reads from NLR's XRF grid: one measurement per site, the table in its files."""
 
 import argparse
 import csv
@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 def main():
-    """Writes set.json, workflow.json and measurements/<site>.json into the out folder."""
+    """Writes set.json, workflow.json and, per site, measurements/<site>.json and files/<site>/ into the out folder."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("grid", type=Path)
     parser.add_argument("workflow", type=Path)
@@ -31,11 +31,10 @@ def main():
             "status": "finished",
             "setup": {"instrument": {}},
             "sample": {"name": label, "metadata": {"position": position}},
-            "metadata": {
-                key: float(value) for key, value in row.items() if key not in ("Row", "Column", "x_mm", "y_mm")
-            },
         }
         (arguments.out_folder / "measurements" / f"{label}.json").write_text(json.dumps(measurement, indent=4))
+        (arguments.out_folder / "files" / label).mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(arguments.grid, arguments.out_folder / "files" / label / arguments.grid.name)
     print(f"{len(rows)} measurements in {arguments.out_folder}")
 
 

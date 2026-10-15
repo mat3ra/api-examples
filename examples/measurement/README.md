@@ -28,5 +28,7 @@ its setup, the pad as its sample with the stage position in metadata, and a `hys
 whose loops share one bias axis. It is the example of what a run must become; another instrument needs its own parser
 writing the same folder.
 
-- `python parse_xrf_grid.py <XRF_GRID_TXT> <WORKFLOW_JSON> <FOLDER>`: one measurement per site of NLR's XRF grid.
-- `python parse_dc_iv.py <IV_FOLDER> <WORKFLOW_JSON> <FOLDER>`: one measurement per row of NLR's I-V sweeps.
+- `python parse_xrf_grid.py <XRF_GRID_TXT> <WORKFLOW_JSON> <FOLDER>`: one measurement per site of NLR's XRF grid, the
+  delivered table under `files/<label>/`.
+- `python parse_dc_iv.py <IV_FOLDER> <WORKFLOW_JSON> <FOLDER>`: one measurement per row of NLR's I-V sweeps, the
+  delivered `IV_Volts.txt` and `IV_Amps.txt` under `files/<label>/`.

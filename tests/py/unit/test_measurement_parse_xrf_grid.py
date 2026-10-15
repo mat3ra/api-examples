@@ -11,10 +11,13 @@ GRID_PATH = REPOSITORY_PATH / "tests" / "fixtures" / "xrf_grid" / "com5_1448_xrf
 WORKFLOW_PATH = REPOSITORY_PATH / "tests" / "fixtures" / "xrf_grid" / "workflow.json"
 EXPECTED_MEASUREMENT_NAMES = ["com5_1448_xrf_grid r1c1", "com5_1448_xrf_grid r1c2"]
 EXPECTED_FIRST_SITE = {
+    "name": "com5_1448_xrf_grid r1c1",
     "description": "XRF Grid Map at site r1c1",
+    "status": "finished",
+    "setup": {"instrument": {}},
     "sample": {"name": "r1c1", "metadata": {"position": {"coordinates": [5.4000001, 6.6500001], "units": "mm"}}},
-    "metadata": {"Thickness_XRF": 0.22491001, "Al": 50.349998, "Sc": 49.650002},
 }
+EXPECTED_FILES = {"files/r1c1/com5_1448_xrf_grid.txt": GRID_PATH, "files/r1c2/com5_1448_xrf_grid.txt": GRID_PATH}
 
 
 def test_parse_xrf_grid(tmp_path):
@@ -24,7 +27,9 @@ def test_parse_xrf_grid(tmp_path):
     measurements = [json.loads(path.read_text()) for path in sorted((tmp_path / "measurements").glob("*.json"))]
 
     assert [measurement["name"] for measurement in measurements] == EXPECTED_MEASUREMENT_NAMES
-    assert {key: measurements[0][key] for key in EXPECTED_FIRST_SITE} == EXPECTED_FIRST_SITE
+    assert measurements[0] == EXPECTED_FIRST_SITE
+    files = {path.relative_to(tmp_path).as_posix(): path.read_bytes() for path in tmp_path.glob("files/*/*")}
+    assert files == {name: path.read_bytes() for name, path in EXPECTED_FILES.items()}
     for measurement in measurements:
         measurement.pop("sample")
         measurement_document = {**measurement, "_sample": {"_id": "sample"}, "workflow": workflow}
