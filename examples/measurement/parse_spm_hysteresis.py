@@ -58,7 +58,7 @@ def hysteresis_loop(run_folder, entries):
 
 
 def main():
-    """Writes set.json and, per pad, <pad>/measurement.json, <pad>/properties/ and <pad>/files/ into the out folder."""
+    """Writes set.json and, per pad, <pad>/measurement.json with its properties and <pad>/files/ into the out folder."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run_folder", type=Path)
     parser.add_argument("workflow", type=Path)
@@ -104,6 +104,7 @@ def main():
             },
             "workflow": workflow,
             "sample": {"name": label, "metadata": {"position": entries[0]["achieved"]["stage_position"]}},
+            **({"properties": [property_document]} if property_document else {}),
             "metadata": {
                 "measurements": [
                     {
@@ -117,9 +118,6 @@ def main():
         (arguments.out_folder / label).mkdir(exist_ok=True)
         (arguments.out_folder / label / "measurement.json").write_text(json.dumps(measurement, indent=4))
         if property_document:
-            properties_folder = arguments.out_folder / label / "properties"
-            properties_folder.mkdir(exist_ok=True)
-            (properties_folder / "hysteresis_loop.json").write_text(json.dumps(property_document, indent=4))
             properties_count += 1
     print(f"{len(entries_by_pad)} measurements, {properties_count} with a hysteresis loop, in {arguments.out_folder}")
 

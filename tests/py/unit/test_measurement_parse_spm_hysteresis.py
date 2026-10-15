@@ -44,7 +44,7 @@ def test_parse_spm_hysteresis(tmp_path):
     subprocess.run([sys.executable, PARSER_PATH, RUN_FOLDER, WORKFLOW_PATH, tmp_path], check=True)
     workflow = json.loads(WORKFLOW_PATH.read_text())
     measurements = [json.loads(path.read_text()) for path in sorted(tmp_path.glob("*/measurement.json"))]
-    properties = [json.loads(path.read_text()) for path in sorted(tmp_path.glob("*/properties/*.json"))]
+    properties = [document for measurement in measurements for document in measurement.get("properties", [])]
     example = next(item["data"] for item in esse.wrapped_examples if item["path"] == HYSTERESIS_LOOP_EXAMPLE_PATH)
 
     files = [path for path in tmp_path.glob("*/files/**/*") if path.is_file()]

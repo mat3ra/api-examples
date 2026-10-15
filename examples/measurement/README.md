@@ -9,11 +9,10 @@ Sign in once and upload with api-client's commands; `mat3ra-upload` puts a folde
 ## Folder
 
     <FOLDER>/
-        set.json                 name, description, metadata of the measurement set
-        <label>/
-            measurement.json     name, description, status, setup, workflow, sample, metadata
-            properties/<property name>.json   optional, one property document per name
-            files/...            optional, the measurement's files as delivered
+        set.json               name, description, metadata of the measurement set
+        <measurement>/         one folder per measurement, any name (the sample's name in these parsers)
+            measurement.json   name, description, status, setup, workflow, sample, properties, metadata
+            files/...          optional, the measurement's files as delivered
 
 `sample` is `{name, description, metadata}` (description and metadata optional) or just the name.
 
