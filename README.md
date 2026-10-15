@@ -20,6 +20,7 @@ Notebooks demonstrating the Mat3ra REST API, in roughly the order a new user sho
 | [job](examples/job/) | [ML — Train Model and Predict Properties](examples/job/ml-train-model-predict-properties.ipynb) | Generate a training dataset, train an [ML model](https://docs.mat3ra.com/software-directory/overview/#machine-learning), and predict band gaps. |
 | [reproducing_publications](examples/reproducing_publications/) | [Band Gaps — Twisted MoS₂](examples/reproducing_publications/band_gaps_for_interface_bilayer_twisted_molybdenum_disulfide.ipynb) | Reproduce band gap results for bilayer twisted MoS₂ interfaces. |
 | [reproducing_publications](examples/reproducing_publications/) | [Band Structure — Twisted MoS₂](examples/reproducing_publications/band_structure_for_interface_bilayer_twisted_molybdenum_disulfide.ipynb) | Reproduce band structure results for bilayer twisted MoS₂ interfaces. |
+| [measurement](examples/measurement/) | [Measurement Folder](examples/measurement/README.md) | Turn an Asylum Research run into the folder `mat3ra-upload` puts into the platform. |
 
 ### Materials Designer Notebooks (`other/materials_designer/`)
 

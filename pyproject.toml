@@ -72,6 +72,7 @@ tests = [
   "pytest-asyncio",
   "pytest-cov",
   "mat3ra-notebooks-utils[all]",
+  "mat3ra-esse @ git+https://github.com/mat3ra/esse.git@aa51d3bed",
 ]
 docs = [
   "mkdocs>=1.4.3",
