@@ -2,21 +2,21 @@
 
 Requires Python 3.10+, git and git-lfs with `git lfs install` run once.
 
-    pip install "mat3ra-notebooks-utils[alphafilm] @ git+https://github.com/mat3ra/api-examples.git@alphafilm"
+    pip install "mat3ra-parsers[alphafilm] @ git+https://github.com/mat3ra/parsers.git@alphafilm"
     mat3ra-auth alphafilm.mat3ra.com
     mat3ra-parse asylum-spm RUN upload
     mat3ra-upload WAFER_SET_NAME upload
 
-| Application | RUN |
+| Instrument | RUN |
 |---|---|
 | `asylum-spm` | an Asylum Research run folder (`summary.json`, `loops/<point>/*.npy`) |
 | `xrf-instrument` | an XRF grid table, one row per site |
 | `dc-iv-instrument` | a folder with `IV_Volts.txt` and `IV_Amps.txt` |
 
-## Adding an application
+## Adding an instrument
 
 - [mat3ra/fixtures](https://github.com/mat3ra/fixtures/tree/alphafilm): an example run and its workflow in
-  `data/applications/<application>/<version>/case-NNN/`, listed in the manifests.
+  `data/instruments/<instrument>/<version>/case-NNN/`, listed in the manifests.
 - [mat3ra/parsers](https://github.com/mat3ra/parsers/tree/alphafilm): the parser in
-  `applications/<application>/<executable>/parser.py` and its line in `factory.py`.
-- [mat3ra/esse](https://github.com/mat3ra/esse): a schema for a new property or workflow.
+  `src/py/mat3ra/parsers/instruments/<instrument>/parser.py` and its line in `factory.py`, keyed `instruments.<instrument>`.
+- [mat3ra/esse](https://github.com/mat3ra/esse): a schema for a new property, or the experimental workflow schema.
