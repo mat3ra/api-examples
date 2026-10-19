@@ -19,4 +19,4 @@ Requires Python 3.10+, git and git-lfs with `git lfs install` run once.
   `data/instruments/<instrument>/<version>/case-NNN/`, listed in the manifests.
 - [mat3ra/parsers](https://github.com/mat3ra/parsers/tree/alphafilm): the parser in
   `src/py/mat3ra/parsers/instruments/<instrument>/parser.py` and its line in `factory.py`, keyed `instruments.<instrument>`.
-- [mat3ra/esse](https://github.com/mat3ra/esse): a schema for a new property, or the experimental workflow schema.
+- [mat3ra/esse](https://github.com/mat3ra/esse/tree/alphafilm): a schema for a new property, or the experimental workflow schema.
