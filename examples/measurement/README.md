@@ -5,15 +5,17 @@ Requires Python 3.10+, git and git-lfs.
     git clone -b alphafilm https://github.com/mat3ra/api-examples.git
     cd api-examples
     pip install -e ".[measurement]"
-
-Run the notebook, which signs in, parses a run and uploads it:
-
-    jupyter lab examples/measurement/upload_measurements.ipynb
-
-or, with a folder already in the upload format:
-
     mat3ra-auth alphafilm.mat3ra.com
-    mat3ra-upload <wafer set name> <folder>
+    mat3ra-parse asylum-spm RUN upload
+    mat3ra-upload WAFER_SET_NAME upload
+
+| Application | RUN |
+|---|---|
+| `asylum-spm` | an Asylum Research run folder (`summary.json`, `loops/<point>/*.npy`) |
+| `xrf-instrument` | an XRF grid table, one row per site |
+| `dc-iv-instrument` | a folder with `IV_Volts.txt` and `IV_Amps.txt` |
+
+[upload_measurements.ipynb](upload_measurements.ipynb) runs the same commands.
 
 The folder is described in
 [api-client's README](https://github.com/mat3ra/api-client/tree/alphafilm#uploading-measurements).
