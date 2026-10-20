@@ -2,7 +2,7 @@
 
 Requires Python 3.10+, git and git-lfs with `git lfs install` run once.
 
-    pip install "mat3ra-parsers[alphafilm] @ git+https://github.com/mat3ra/parsers.git@alphafilm"
+    pip install "mat3ra-notebooks-utils[alphafilm] @ git+https://github.com/mat3ra/api-examples.git@alphafilm"
     mat3ra-auth alphafilm.mat3ra.com
     mat3ra-parse asylum-spm RUN upload
     mat3ra-upload WAFER_SET_NAME upload
