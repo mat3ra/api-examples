@@ -26,6 +26,11 @@ utils_standata = [
 api = [
   "mat3ra-api-client>=2026.10.8.post0",
 ]
+alphafilm = [
+  "mat3ra-api-client @ git+https://github.com/mat3ra/api-client.git@alphafilm",
+  "mat3ra-parsers @ git+https://github.com/mat3ra/parsers.git@alphafilm",
+  "mat3ra-fixtures @ git+https://github.com/mat3ra/fixtures.git@alphafilm",
+]
 materials = [
   # ase >=3.25.0 is required for supercell to be generated,
   # otherwise on 3.21.1 we encountered negative number of atoms during supercell generation
