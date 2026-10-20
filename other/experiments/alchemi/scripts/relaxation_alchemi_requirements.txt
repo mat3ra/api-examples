@@ -1,0 +1,15 @@
+--find-links https://download.pytorch.org/whl/cu128/torch/
+--find-links https://download.pytorch.org/whl/cu128/torchvision/
+--find-links https://download.pytorch.org/whl/cu128/torchaudio/
+--find-links https://github.com/NVIDIA/warp/releases/expanded_assets/v1.18.0
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+torchaudio==2.11.0+cu128
+warp-lang==1.18.0+cu12
+nvalchemi-toolkit[mace,ase]==0.2.0
+matplotlib
+numpy
+ase
+mace-torch
+loguru
+mat3ra-made[tools]
