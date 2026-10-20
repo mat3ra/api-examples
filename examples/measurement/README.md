@@ -10,7 +10,7 @@ Requires Python 3.10+, git and git-lfs with `git lfs install` run once.
 | Instrument | RUN |
 |---|---|
 | `asylum-spm` | an Asylum Research run folder (`summary.json`, `loops/<point>/*.npy`) |
-| `xrf-instrument` | a folder with the XRF table |
+| `xrf-instrument` | a folder with the XRF table, one row per site |
 | `dc-iv-instrument` | a folder with `IV_Volts.txt`, `IV_Amps.txt` and `IV_Positions.txt` |
 
 ## Adding an instrument
