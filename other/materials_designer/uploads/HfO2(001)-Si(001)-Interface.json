@@ -1,0 +1,2746 @@
+{
+    "metadata": {
+        "build": [
+            {
+                "configuration": {
+                    "stack_components": [
+                        {
+                            "xy_supercell_matrix": [
+                                [
+                                    1,
+                                    0
+                                ],
+                                [
+                                    0,
+                                    -1
+                                ]
+                            ],
+                            "strain_matrix": [
+                                [
+                                    1.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                [
+                                    0.0,
+                                    1.0,
+                                    0.0
+                                ],
+                                [
+                                    0.0,
+                                    0.0,
+                                    1.0
+                                ]
+                            ],
+                            "stack_components": [
+                                {
+                                    "termination_top": {
+                                        "chemical_elements": "Si",
+                                        "space_group_symmetry_label": "P4/mmm_2"
+                                    },
+                                    "number_of_repetitions": 2,
+                                    "miller_indices": [
+                                        0,
+                                        0,
+                                        1
+                                    ],
+                                    "crystal": {
+                                        "metadata": {
+                                            "element": "Si"
+                                        },
+                                        "name": "Si, Silicon, FCC (Fd-3m) 3D (Bulk), mp-149",
+                                        "isDefault": false,
+                                        "schemaVersion": "2022.8.16",
+                                        "basis": {
+                                            "elements": [
+                                                {
+                                                    "id": 0,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 1,
+                                                    "value": "Si"
+                                                }
+                                            ],
+                                            "coordinates": [
+                                                {
+                                                    "id": 0,
+                                                    "value": [
+                                                        0.875,
+                                                        0.875,
+                                                        0.875
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 1,
+                                                    "value": [
+                                                        0.125,
+                                                        0.125,
+                                                        0.125
+                                                    ]
+                                                }
+                                            ],
+                                            "units": "crystal",
+                                            "labels": [],
+                                            "constraints": []
+                                        },
+                                        "lattice": {
+                                            "a": 3.866976,
+                                            "b": 3.866975,
+                                            "c": 3.866975,
+                                            "alpha": 60.0,
+                                            "beta": 60.0,
+                                            "gamma": 60.0,
+                                            "units": {
+                                                "length": "angstrom",
+                                                "angle": "degree"
+                                            },
+                                            "type": "FCC"
+                                        },
+                                        "external": {
+                                            "id": "mp-149",
+                                            "source": "MaterialsProject",
+                                            "origin": true,
+                                            "doi": "10.17188/1190959",
+                                            "url": "https://next-gen.materialsproject.org/materials/mp-149"
+                                        },
+                                        "isNonPeriodic": false,
+                                        "hash": "b780cd307f39a16b85746cf74454cba1",
+                                        "scaledHash": "6f2927105fa56034e5e798cf217b1c1f"
+                                    },
+                                    "use_conventional_cell": true,
+                                    "termination_bottom": {
+                                        "chemical_elements": "Si",
+                                        "space_group_symmetry_label": "P4/mmm_2"
+                                    }
+                                },
+                                {
+                                    "direction": "z",
+                                    "size": 0.0,
+                                    "crystal": {
+                                        "metadata": {
+                                            "build": [
+                                                {
+                                                    "configuration": {
+                                                        "termination_top": {
+                                                            "chemical_elements": "Si",
+                                                            "space_group_symmetry_label": "P4/mmm_2"
+                                                        },
+                                                        "number_of_repetitions": 2,
+                                                        "miller_indices": [
+                                                            0,
+                                                            0,
+                                                            1
+                                                        ],
+                                                        "crystal": {
+                                                            "metadata": {
+                                                                "element": "Si"
+                                                            },
+                                                            "name": "Si, Silicon, FCC (Fd-3m) 3D (Bulk), mp-149",
+                                                            "isDefault": false,
+                                                            "schemaVersion": "2022.8.16",
+                                                            "basis": {
+                                                                "elements": [
+                                                                    {
+                                                                        "id": 0,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 1,
+                                                                        "value": "Si"
+                                                                    }
+                                                                ],
+                                                                "coordinates": [
+                                                                    {
+                                                                        "id": 0,
+                                                                        "value": [
+                                                                            0.875,
+                                                                            0.875,
+                                                                            0.875
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 1,
+                                                                        "value": [
+                                                                            0.125,
+                                                                            0.125,
+                                                                            0.125
+                                                                        ]
+                                                                    }
+                                                                ],
+                                                                "units": "crystal",
+                                                                "labels": [],
+                                                                "constraints": []
+                                                            },
+                                                            "lattice": {
+                                                                "a": 3.866976,
+                                                                "b": 3.866975,
+                                                                "c": 3.866975,
+                                                                "alpha": 60.0,
+                                                                "beta": 60.0,
+                                                                "gamma": 60.0,
+                                                                "units": {
+                                                                    "length": "angstrom",
+                                                                    "angle": "degree"
+                                                                },
+                                                                "type": "FCC"
+                                                            },
+                                                            "external": {
+                                                                "id": "mp-149",
+                                                                "source": "MaterialsProject",
+                                                                "origin": true,
+                                                                "doi": "10.17188/1190959",
+                                                                "url": "https://next-gen.materialsproject.org/materials/mp-149"
+                                                            },
+                                                            "isNonPeriodic": false,
+                                                            "hash": "b780cd307f39a16b85746cf74454cba1",
+                                                            "scaledHash": "6f2927105fa56034e5e798cf217b1c1f"
+                                                        },
+                                                        "use_conventional_cell": true,
+                                                        "termination_bottom": {
+                                                            "chemical_elements": "Si",
+                                                            "space_group_symmetry_label": "P4/mmm_2"
+                                                        }
+                                                    },
+                                                    "build_parameters": {}
+                                                }
+                                            ],
+                                            "boundaryConditions": {
+                                                "type": "pbc",
+                                                "offset": 0
+                                            }
+                                        },
+                                        "name": "Si(001), termination Si_P4/mmm_2",
+                                        "isDefault": false,
+                                        "_id": "",
+                                        "schemaVersion": "2022.8.16",
+                                        "formula": "Si",
+                                        "basis": {
+                                            "elements": [
+                                                {
+                                                    "id": 0,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 1,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 2,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 3,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 4,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 5,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 6,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 7,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 8,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 9,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 10,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 11,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 12,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 13,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 14,
+                                                    "value": "Si"
+                                                },
+                                                {
+                                                    "id": 15,
+                                                    "value": "Si"
+                                                }
+                                            ],
+                                            "coordinates": [
+                                                {
+                                                    "id": 0,
+                                                    "value": [
+                                                        0.0,
+                                                        0.0,
+                                                        0.125001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 1,
+                                                    "value": [
+                                                        0.75,
+                                                        0.75,
+                                                        0.250001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 2,
+                                                    "value": [
+                                                        0.0,
+                                                        0.5,
+                                                        0.375001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 3,
+                                                    "value": [
+                                                        0.75,
+                                                        0.25,
+                                                        1e-06
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 4,
+                                                    "value": [
+                                                        0.5,
+                                                        0.0,
+                                                        0.375001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 5,
+                                                    "value": [
+                                                        0.25,
+                                                        0.75,
+                                                        1e-06
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 6,
+                                                    "value": [
+                                                        0.5,
+                                                        0.5,
+                                                        0.125001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 7,
+                                                    "value": [
+                                                        0.25,
+                                                        0.25,
+                                                        0.250001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 8,
+                                                    "value": [
+                                                        0.0,
+                                                        0.0,
+                                                        0.625001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 9,
+                                                    "value": [
+                                                        0.75,
+                                                        0.75,
+                                                        0.750001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 10,
+                                                    "value": [
+                                                        0.0,
+                                                        0.5,
+                                                        0.875001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 11,
+                                                    "value": [
+                                                        0.75,
+                                                        0.25,
+                                                        0.500001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 12,
+                                                    "value": [
+                                                        0.5,
+                                                        0.0,
+                                                        0.875001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 13,
+                                                    "value": [
+                                                        0.25,
+                                                        0.75,
+                                                        0.500001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 14,
+                                                    "value": [
+                                                        0.5,
+                                                        0.5,
+                                                        0.625001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 15,
+                                                    "value": [
+                                                        0.25,
+                                                        0.25,
+                                                        0.750001
+                                                    ]
+                                                }
+                                            ],
+                                            "units": "crystal",
+                                            "labels": [],
+                                            "constraints": []
+                                        },
+                                        "lattice": {
+                                            "a": 5.468728962,
+                                            "b": 5.468728962,
+                                            "c": 10.937457924,
+                                            "alpha": 90.0,
+                                            "beta": 90.0,
+                                            "gamma": 90.0,
+                                            "units": {
+                                                "length": "angstrom",
+                                                "angle": "degree"
+                                            },
+                                            "type": "TRI"
+                                        },
+                                        "isNonPeriodic": false,
+                                        "hash": "93a5ddd4c47817b91a7cf0b6de4d3a93",
+                                        "scaledHash": "b590ceba4b1528113ebdeca8b98c27dd"
+                                    },
+                                    "type": "VacuumConfiguration"
+                                }
+                            ],
+                            "direction": "z",
+                            "gaps": [],
+                            "type": "SlabConfiguration"
+                        },
+                        {
+                            "xy_supercell_matrix": [
+                                [
+                                    1,
+                                    0
+                                ],
+                                [
+                                    0,
+                                    -1
+                                ]
+                            ],
+                            "strain_matrix": [
+                                [
+                                    1.0634752457014045,
+                                    0.0,
+                                    0.0
+                                ],
+                                [
+                                    6.621901358910729e-19,
+                                    1.0526608600948424,
+                                    0.0
+                                ],
+                                [
+                                    0.0,
+                                    0.0,
+                                    1.0
+                                ]
+                            ],
+                            "stack_components": [
+                                {
+                                    "termination_top": {
+                                        "chemical_elements": "O2",
+                                        "space_group_symmetry_label": "P2/m_1"
+                                    },
+                                    "number_of_repetitions": 2,
+                                    "miller_indices": [
+                                        0,
+                                        0,
+                                        1
+                                    ],
+                                    "crystal": {
+                                        "metadata": {},
+                                        "name": "HfO2, Hafnium IV Oxide, MCL (P2_1/c) 3D (Bulk), mp-352",
+                                        "isDefault": false,
+                                        "schemaVersion": "2022.8.16",
+                                        "basis": {
+                                            "elements": [
+                                                {
+                                                    "id": 0,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 1,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 2,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 3,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 4,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 5,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 6,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 7,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 8,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 9,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 10,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 11,
+                                                    "value": "O"
+                                                }
+                                            ],
+                                            "coordinates": [
+                                                {
+                                                    "id": 0,
+                                                    "value": [
+                                                        0.275959,
+                                                        0.457319,
+                                                        0.707891
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 1,
+                                                    "value": [
+                                                        0.724041,
+                                                        0.957319,
+                                                        0.792109
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 2,
+                                                    "value": [
+                                                        0.724041,
+                                                        0.542681,
+                                                        0.292109
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 3,
+                                                    "value": [
+                                                        0.275959,
+                                                        0.042681,
+                                                        0.207891
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 4,
+                                                    "value": [
+                                                        0.448887,
+                                                        0.742603,
+                                                        0.977708
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 5,
+                                                    "value": [
+                                                        0.551113,
+                                                        0.242603,
+                                                        0.522292
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 6,
+                                                    "value": [
+                                                        0.551113,
+                                                        0.257397,
+                                                        0.022292
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 7,
+                                                    "value": [
+                                                        0.448887,
+                                                        0.757397,
+                                                        0.477708
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 8,
+                                                    "value": [
+                                                        0.067849,
+                                                        0.330122,
+                                                        0.347094
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 9,
+                                                    "value": [
+                                                        0.932151,
+                                                        0.830122,
+                                                        0.152906
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 10,
+                                                    "value": [
+                                                        0.932151,
+                                                        0.669878,
+                                                        0.652906
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 11,
+                                                    "value": [
+                                                        0.067849,
+                                                        0.169878,
+                                                        0.847094
+                                                    ]
+                                                }
+                                            ],
+                                            "units": "crystal",
+                                            "labels": [],
+                                            "constraints": []
+                                        },
+                                        "lattice": {
+                                            "a": 5.142319,
+                                            "b": 5.195148,
+                                            "c": 5.326038,
+                                            "alpha": 90.0,
+                                            "beta": 99.6745,
+                                            "gamma": 90.0,
+                                            "units": {
+                                                "length": "angstrom",
+                                                "angle": "degree"
+                                            },
+                                            "type": "MCL"
+                                        },
+                                        "external": {
+                                            "id": "mp-352",
+                                            "source": "MaterialsProject",
+                                            "origin": true,
+                                            "doi": "10.17188/1206948",
+                                            "url": "https://next-gen.materialsproject.org/materials/mp-352"
+                                        },
+                                        "isNonPeriodic": false,
+                                        "hash": "56d3665a251f5e14a5c4e34bb8e33754",
+                                        "scaledHash": "ac708e5221aa8be2756fd8caff7a8828"
+                                    },
+                                    "use_conventional_cell": true,
+                                    "termination_bottom": {
+                                        "chemical_elements": "O2",
+                                        "space_group_symmetry_label": "P2/m_1"
+                                    }
+                                },
+                                {
+                                    "direction": "z",
+                                    "size": 0.0,
+                                    "crystal": {
+                                        "metadata": {
+                                            "build": [
+                                                {
+                                                    "configuration": {
+                                                        "termination_top": {
+                                                            "chemical_elements": "O2",
+                                                            "space_group_symmetry_label": "P2/m_1"
+                                                        },
+                                                        "number_of_repetitions": 2,
+                                                        "miller_indices": [
+                                                            0,
+                                                            0,
+                                                            1
+                                                        ],
+                                                        "crystal": {
+                                                            "metadata": {},
+                                                            "name": "HfO2, Hafnium IV Oxide, MCL (P2_1/c) 3D (Bulk), mp-352",
+                                                            "isDefault": false,
+                                                            "schemaVersion": "2022.8.16",
+                                                            "basis": {
+                                                                "elements": [
+                                                                    {
+                                                                        "id": 0,
+                                                                        "value": "Hf"
+                                                                    },
+                                                                    {
+                                                                        "id": 1,
+                                                                        "value": "Hf"
+                                                                    },
+                                                                    {
+                                                                        "id": 2,
+                                                                        "value": "Hf"
+                                                                    },
+                                                                    {
+                                                                        "id": 3,
+                                                                        "value": "Hf"
+                                                                    },
+                                                                    {
+                                                                        "id": 4,
+                                                                        "value": "O"
+                                                                    },
+                                                                    {
+                                                                        "id": 5,
+                                                                        "value": "O"
+                                                                    },
+                                                                    {
+                                                                        "id": 6,
+                                                                        "value": "O"
+                                                                    },
+                                                                    {
+                                                                        "id": 7,
+                                                                        "value": "O"
+                                                                    },
+                                                                    {
+                                                                        "id": 8,
+                                                                        "value": "O"
+                                                                    },
+                                                                    {
+                                                                        "id": 9,
+                                                                        "value": "O"
+                                                                    },
+                                                                    {
+                                                                        "id": 10,
+                                                                        "value": "O"
+                                                                    },
+                                                                    {
+                                                                        "id": 11,
+                                                                        "value": "O"
+                                                                    }
+                                                                ],
+                                                                "coordinates": [
+                                                                    {
+                                                                        "id": 0,
+                                                                        "value": [
+                                                                            0.275959,
+                                                                            0.457319,
+                                                                            0.707891
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 1,
+                                                                        "value": [
+                                                                            0.724041,
+                                                                            0.957319,
+                                                                            0.792109
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 2,
+                                                                        "value": [
+                                                                            0.724041,
+                                                                            0.542681,
+                                                                            0.292109
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 3,
+                                                                        "value": [
+                                                                            0.275959,
+                                                                            0.042681,
+                                                                            0.207891
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 4,
+                                                                        "value": [
+                                                                            0.448887,
+                                                                            0.742603,
+                                                                            0.977708
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 5,
+                                                                        "value": [
+                                                                            0.551113,
+                                                                            0.242603,
+                                                                            0.522292
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 6,
+                                                                        "value": [
+                                                                            0.551113,
+                                                                            0.257397,
+                                                                            0.022292
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 7,
+                                                                        "value": [
+                                                                            0.448887,
+                                                                            0.757397,
+                                                                            0.477708
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 8,
+                                                                        "value": [
+                                                                            0.067849,
+                                                                            0.330122,
+                                                                            0.347094
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 9,
+                                                                        "value": [
+                                                                            0.932151,
+                                                                            0.830122,
+                                                                            0.152906
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 10,
+                                                                        "value": [
+                                                                            0.932151,
+                                                                            0.669878,
+                                                                            0.652906
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 11,
+                                                                        "value": [
+                                                                            0.067849,
+                                                                            0.169878,
+                                                                            0.847094
+                                                                        ]
+                                                                    }
+                                                                ],
+                                                                "units": "crystal",
+                                                                "labels": [],
+                                                                "constraints": []
+                                                            },
+                                                            "lattice": {
+                                                                "a": 5.142319,
+                                                                "b": 5.195148,
+                                                                "c": 5.326038,
+                                                                "alpha": 90.0,
+                                                                "beta": 99.6745,
+                                                                "gamma": 90.0,
+                                                                "units": {
+                                                                    "length": "angstrom",
+                                                                    "angle": "degree"
+                                                                },
+                                                                "type": "MCL"
+                                                            },
+                                                            "external": {
+                                                                "id": "mp-352",
+                                                                "source": "MaterialsProject",
+                                                                "origin": true,
+                                                                "doi": "10.17188/1206948",
+                                                                "url": "https://next-gen.materialsproject.org/materials/mp-352"
+                                                            },
+                                                            "isNonPeriodic": false,
+                                                            "hash": "56d3665a251f5e14a5c4e34bb8e33754",
+                                                            "scaledHash": "ac708e5221aa8be2756fd8caff7a8828"
+                                                        },
+                                                        "use_conventional_cell": true,
+                                                        "termination_bottom": {
+                                                            "chemical_elements": "O2",
+                                                            "space_group_symmetry_label": "P2/m_1"
+                                                        }
+                                                    },
+                                                    "build_parameters": {}
+                                                }
+                                            ],
+                                            "boundaryConditions": {
+                                                "type": "pbc",
+                                                "offset": 0
+                                            }
+                                        },
+                                        "name": "HfO2(001), termination O2_P2/m_1",
+                                        "isDefault": false,
+                                        "_id": "",
+                                        "schemaVersion": "2022.8.16",
+                                        "formula": "HfO2",
+                                        "basis": {
+                                            "elements": [
+                                                {
+                                                    "id": 0,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 1,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 2,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 3,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 4,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 5,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 6,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 7,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 8,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 9,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 10,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 11,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 12,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 13,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 14,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 15,
+                                                    "value": "Hf"
+                                                },
+                                                {
+                                                    "id": 16,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 17,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 18,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 19,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 20,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 21,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 22,
+                                                    "value": "O"
+                                                },
+                                                {
+                                                    "id": 23,
+                                                    "value": "O"
+                                                }
+                                            ],
+                                            "coordinates": [
+                                                {
+                                                    "id": 0,
+                                                    "value": [
+                                                        0.724041,
+                                                        0.542681,
+                                                        0.1349095
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 1,
+                                                    "value": [
+                                                        0.275959,
+                                                        0.042681,
+                                                        0.0928005
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 2,
+                                                    "value": [
+                                                        0.275959,
+                                                        0.457319,
+                                                        0.3428005
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 3,
+                                                    "value": [
+                                                        0.724041,
+                                                        0.957319,
+                                                        0.3849095
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 4,
+                                                    "value": [
+                                                        0.551113,
+                                                        0.257397,
+                                                        1e-06
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 5,
+                                                    "value": [
+                                                        0.448887,
+                                                        0.757397,
+                                                        0.227709
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 6,
+                                                    "value": [
+                                                        0.448887,
+                                                        0.742603,
+                                                        0.477709
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 7,
+                                                    "value": [
+                                                        0.551113,
+                                                        0.242603,
+                                                        0.250001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 8,
+                                                    "value": [
+                                                        0.932151,
+                                                        0.669878,
+                                                        0.315308
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 9,
+                                                    "value": [
+                                                        0.067849,
+                                                        0.169878,
+                                                        0.412402
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 10,
+                                                    "value": [
+                                                        0.067849,
+                                                        0.330122,
+                                                        0.162402
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 11,
+                                                    "value": [
+                                                        0.932151,
+                                                        0.830122,
+                                                        0.065308
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 12,
+                                                    "value": [
+                                                        0.724041,
+                                                        0.542681,
+                                                        0.6349095
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 13,
+                                                    "value": [
+                                                        0.275959,
+                                                        0.042681,
+                                                        0.5928005
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 14,
+                                                    "value": [
+                                                        0.275959,
+                                                        0.457319,
+                                                        0.8428005
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 15,
+                                                    "value": [
+                                                        0.724041,
+                                                        0.957319,
+                                                        0.8849095
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 16,
+                                                    "value": [
+                                                        0.551113,
+                                                        0.257397,
+                                                        0.500001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 17,
+                                                    "value": [
+                                                        0.448887,
+                                                        0.757397,
+                                                        0.727709
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 18,
+                                                    "value": [
+                                                        0.448887,
+                                                        0.742603,
+                                                        0.977709
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 19,
+                                                    "value": [
+                                                        0.551113,
+                                                        0.242603,
+                                                        0.750001
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 20,
+                                                    "value": [
+                                                        0.932151,
+                                                        0.669878,
+                                                        0.815308
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 21,
+                                                    "value": [
+                                                        0.067849,
+                                                        0.169878,
+                                                        0.912402
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 22,
+                                                    "value": [
+                                                        0.067849,
+                                                        0.330122,
+                                                        0.662402
+                                                    ]
+                                                },
+                                                {
+                                                    "id": 23,
+                                                    "value": [
+                                                        0.932151,
+                                                        0.830122,
+                                                        0.565308
+                                                    ]
+                                                }
+                                            ],
+                                            "units": "crystal",
+                                            "labels": [],
+                                            "constraints": []
+                                        },
+                                        "lattice": {
+                                            "a": 5.142319,
+                                            "b": 5.195148,
+                                            "c": 10.652076,
+                                            "alpha": 90.0,
+                                            "beta": 99.6745,
+                                            "gamma": 90.0,
+                                            "units": {
+                                                "length": "angstrom",
+                                                "angle": "degree"
+                                            },
+                                            "type": "TRI"
+                                        },
+                                        "isNonPeriodic": false,
+                                        "hash": "6b7bf3bad0efbf16b7935d677286e683",
+                                        "scaledHash": "6aee6d47388b3a6f7e476462a872c322"
+                                    },
+                                    "type": "VacuumConfiguration"
+                                }
+                            ],
+                            "direction": "z",
+                            "gaps": [],
+                            "type": "SlabConfiguration"
+                        },
+                        {
+                            "direction": "z",
+                            "size": 15.0,
+                            "crystal": {
+                                "metadata": {
+                                    "build": [
+                                        {
+                                            "configuration": {
+                                                "termination_top": {
+                                                    "chemical_elements": "Si",
+                                                    "space_group_symmetry_label": "P4/mmm_2"
+                                                },
+                                                "number_of_repetitions": 2,
+                                                "miller_indices": [
+                                                    0,
+                                                    0,
+                                                    1
+                                                ],
+                                                "crystal": {
+                                                    "metadata": {
+                                                        "element": "Si"
+                                                    },
+                                                    "name": "Si, Silicon, FCC (Fd-3m) 3D (Bulk), mp-149",
+                                                    "isDefault": false,
+                                                    "schemaVersion": "2022.8.16",
+                                                    "basis": {
+                                                        "elements": [
+                                                            {
+                                                                "id": 0,
+                                                                "value": "Si"
+                                                            },
+                                                            {
+                                                                "id": 1,
+                                                                "value": "Si"
+                                                            }
+                                                        ],
+                                                        "coordinates": [
+                                                            {
+                                                                "id": 0,
+                                                                "value": [
+                                                                    0.875,
+                                                                    0.875,
+                                                                    0.875
+                                                                ]
+                                                            },
+                                                            {
+                                                                "id": 1,
+                                                                "value": [
+                                                                    0.125,
+                                                                    0.125,
+                                                                    0.125
+                                                                ]
+                                                            }
+                                                        ],
+                                                        "units": "crystal",
+                                                        "labels": [],
+                                                        "constraints": []
+                                                    },
+                                                    "lattice": {
+                                                        "a": 3.866976,
+                                                        "b": 3.866975,
+                                                        "c": 3.866975,
+                                                        "alpha": 60.0,
+                                                        "beta": 60.0,
+                                                        "gamma": 60.0,
+                                                        "units": {
+                                                            "length": "angstrom",
+                                                            "angle": "degree"
+                                                        },
+                                                        "type": "FCC"
+                                                    },
+                                                    "external": {
+                                                        "id": "mp-149",
+                                                        "source": "MaterialsProject",
+                                                        "origin": true,
+                                                        "doi": "10.17188/1190959",
+                                                        "url": "https://next-gen.materialsproject.org/materials/mp-149"
+                                                    },
+                                                    "isNonPeriodic": false,
+                                                    "hash": "b780cd307f39a16b85746cf74454cba1",
+                                                    "scaledHash": "6f2927105fa56034e5e798cf217b1c1f"
+                                                },
+                                                "use_conventional_cell": true,
+                                                "termination_bottom": {
+                                                    "chemical_elements": "Si",
+                                                    "space_group_symmetry_label": "P4/mmm_2"
+                                                }
+                                            },
+                                            "build_parameters": {}
+                                        },
+                                        {
+                                            "configuration": {
+                                                "xy_supercell_matrix": [
+                                                    [
+                                                        1,
+                                                        0
+                                                    ],
+                                                    [
+                                                        0,
+                                                        -1
+                                                    ]
+                                                ],
+                                                "strain_matrix": [
+                                                    [
+                                                        1.0,
+                                                        0.0,
+                                                        0.0
+                                                    ],
+                                                    [
+                                                        0.0,
+                                                        1.0,
+                                                        0.0
+                                                    ],
+                                                    [
+                                                        0.0,
+                                                        0.0,
+                                                        1.0
+                                                    ]
+                                                ],
+                                                "stack_components": [
+                                                    {
+                                                        "termination_top": {
+                                                            "chemical_elements": "Si",
+                                                            "space_group_symmetry_label": "P4/mmm_2"
+                                                        },
+                                                        "number_of_repetitions": 2,
+                                                        "miller_indices": [
+                                                            0,
+                                                            0,
+                                                            1
+                                                        ],
+                                                        "crystal": {
+                                                            "metadata": {
+                                                                "element": "Si"
+                                                            },
+                                                            "name": "Si, Silicon, FCC (Fd-3m) 3D (Bulk), mp-149",
+                                                            "isDefault": false,
+                                                            "schemaVersion": "2022.8.16",
+                                                            "basis": {
+                                                                "elements": [
+                                                                    {
+                                                                        "id": 0,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 1,
+                                                                        "value": "Si"
+                                                                    }
+                                                                ],
+                                                                "coordinates": [
+                                                                    {
+                                                                        "id": 0,
+                                                                        "value": [
+                                                                            0.875,
+                                                                            0.875,
+                                                                            0.875
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 1,
+                                                                        "value": [
+                                                                            0.125,
+                                                                            0.125,
+                                                                            0.125
+                                                                        ]
+                                                                    }
+                                                                ],
+                                                                "units": "crystal",
+                                                                "labels": [],
+                                                                "constraints": []
+                                                            },
+                                                            "lattice": {
+                                                                "a": 3.866976,
+                                                                "b": 3.866975,
+                                                                "c": 3.866975,
+                                                                "alpha": 60.0,
+                                                                "beta": 60.0,
+                                                                "gamma": 60.0,
+                                                                "units": {
+                                                                    "length": "angstrom",
+                                                                    "angle": "degree"
+                                                                },
+                                                                "type": "FCC"
+                                                            },
+                                                            "external": {
+                                                                "id": "mp-149",
+                                                                "source": "MaterialsProject",
+                                                                "origin": true,
+                                                                "doi": "10.17188/1190959",
+                                                                "url": "https://next-gen.materialsproject.org/materials/mp-149"
+                                                            },
+                                                            "isNonPeriodic": false,
+                                                            "hash": "b780cd307f39a16b85746cf74454cba1",
+                                                            "scaledHash": "6f2927105fa56034e5e798cf217b1c1f"
+                                                        },
+                                                        "use_conventional_cell": true,
+                                                        "termination_bottom": {
+                                                            "chemical_elements": "Si",
+                                                            "space_group_symmetry_label": "P4/mmm_2"
+                                                        }
+                                                    },
+                                                    {
+                                                        "direction": "z",
+                                                        "size": 0.0,
+                                                        "crystal": {
+                                                            "metadata": {
+                                                                "build": [
+                                                                    {
+                                                                        "configuration": {
+                                                                            "termination_top": {
+                                                                                "chemical_elements": "Si",
+                                                                                "space_group_symmetry_label": "P4/mmm_2"
+                                                                            },
+                                                                            "number_of_repetitions": 2,
+                                                                            "miller_indices": [
+                                                                                0,
+                                                                                0,
+                                                                                1
+                                                                            ],
+                                                                            "crystal": {
+                                                                                "metadata": {
+                                                                                    "element": "Si"
+                                                                                },
+                                                                                "name": "Si, Silicon, FCC (Fd-3m) 3D (Bulk), mp-149",
+                                                                                "isDefault": false,
+                                                                                "schemaVersion": "2022.8.16",
+                                                                                "basis": {
+                                                                                    "elements": [
+                                                                                        {
+                                                                                            "id": 0,
+                                                                                            "value": "Si"
+                                                                                        },
+                                                                                        {
+                                                                                            "id": 1,
+                                                                                            "value": "Si"
+                                                                                        }
+                                                                                    ],
+                                                                                    "coordinates": [
+                                                                                        {
+                                                                                            "id": 0,
+                                                                                            "value": [
+                                                                                                0.875,
+                                                                                                0.875,
+                                                                                                0.875
+                                                                                            ]
+                                                                                        },
+                                                                                        {
+                                                                                            "id": 1,
+                                                                                            "value": [
+                                                                                                0.125,
+                                                                                                0.125,
+                                                                                                0.125
+                                                                                            ]
+                                                                                        }
+                                                                                    ],
+                                                                                    "units": "crystal",
+                                                                                    "labels": [],
+                                                                                    "constraints": []
+                                                                                },
+                                                                                "lattice": {
+                                                                                    "a": 3.866976,
+                                                                                    "b": 3.866975,
+                                                                                    "c": 3.866975,
+                                                                                    "alpha": 60.0,
+                                                                                    "beta": 60.0,
+                                                                                    "gamma": 60.0,
+                                                                                    "units": {
+                                                                                        "length": "angstrom",
+                                                                                        "angle": "degree"
+                                                                                    },
+                                                                                    "type": "FCC"
+                                                                                },
+                                                                                "external": {
+                                                                                    "id": "mp-149",
+                                                                                    "source": "MaterialsProject",
+                                                                                    "origin": true,
+                                                                                    "doi": "10.17188/1190959",
+                                                                                    "url": "https://next-gen.materialsproject.org/materials/mp-149"
+                                                                                },
+                                                                                "isNonPeriodic": false,
+                                                                                "hash": "b780cd307f39a16b85746cf74454cba1",
+                                                                                "scaledHash": "6f2927105fa56034e5e798cf217b1c1f"
+                                                                            },
+                                                                            "use_conventional_cell": true,
+                                                                            "termination_bottom": {
+                                                                                "chemical_elements": "Si",
+                                                                                "space_group_symmetry_label": "P4/mmm_2"
+                                                                            }
+                                                                        },
+                                                                        "build_parameters": {}
+                                                                    }
+                                                                ],
+                                                                "boundaryConditions": {
+                                                                    "type": "pbc",
+                                                                    "offset": 0
+                                                                }
+                                                            },
+                                                            "name": "Si(001), termination Si_P4/mmm_2",
+                                                            "isDefault": false,
+                                                            "_id": "",
+                                                            "schemaVersion": "2022.8.16",
+                                                            "formula": "Si",
+                                                            "basis": {
+                                                                "elements": [
+                                                                    {
+                                                                        "id": 0,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 1,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 2,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 3,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 4,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 5,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 6,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 7,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 8,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 9,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 10,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 11,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 12,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 13,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 14,
+                                                                        "value": "Si"
+                                                                    },
+                                                                    {
+                                                                        "id": 15,
+                                                                        "value": "Si"
+                                                                    }
+                                                                ],
+                                                                "coordinates": [
+                                                                    {
+                                                                        "id": 0,
+                                                                        "value": [
+                                                                            0.0,
+                                                                            0.0,
+                                                                            0.125001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 1,
+                                                                        "value": [
+                                                                            0.75,
+                                                                            0.75,
+                                                                            0.250001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 2,
+                                                                        "value": [
+                                                                            0.0,
+                                                                            0.5,
+                                                                            0.375001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 3,
+                                                                        "value": [
+                                                                            0.75,
+                                                                            0.25,
+                                                                            1e-06
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 4,
+                                                                        "value": [
+                                                                            0.5,
+                                                                            0.0,
+                                                                            0.375001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 5,
+                                                                        "value": [
+                                                                            0.25,
+                                                                            0.75,
+                                                                            1e-06
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 6,
+                                                                        "value": [
+                                                                            0.5,
+                                                                            0.5,
+                                                                            0.125001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 7,
+                                                                        "value": [
+                                                                            0.25,
+                                                                            0.25,
+                                                                            0.250001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 8,
+                                                                        "value": [
+                                                                            0.0,
+                                                                            0.0,
+                                                                            0.625001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 9,
+                                                                        "value": [
+                                                                            0.75,
+                                                                            0.75,
+                                                                            0.750001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 10,
+                                                                        "value": [
+                                                                            0.0,
+                                                                            0.5,
+                                                                            0.875001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 11,
+                                                                        "value": [
+                                                                            0.75,
+                                                                            0.25,
+                                                                            0.500001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 12,
+                                                                        "value": [
+                                                                            0.5,
+                                                                            0.0,
+                                                                            0.875001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 13,
+                                                                        "value": [
+                                                                            0.25,
+                                                                            0.75,
+                                                                            0.500001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 14,
+                                                                        "value": [
+                                                                            0.5,
+                                                                            0.5,
+                                                                            0.625001
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "id": 15,
+                                                                        "value": [
+                                                                            0.25,
+                                                                            0.25,
+                                                                            0.750001
+                                                                        ]
+                                                                    }
+                                                                ],
+                                                                "units": "crystal",
+                                                                "labels": [],
+                                                                "constraints": []
+                                                            },
+                                                            "lattice": {
+                                                                "a": 5.468728962,
+                                                                "b": 5.468728962,
+                                                                "c": 10.937457924,
+                                                                "alpha": 90.0,
+                                                                "beta": 90.0,
+                                                                "gamma": 90.0,
+                                                                "units": {
+                                                                    "length": "angstrom",
+                                                                    "angle": "degree"
+                                                                },
+                                                                "type": "TRI"
+                                                            },
+                                                            "isNonPeriodic": false,
+                                                            "hash": "93a5ddd4c47817b91a7cf0b6de4d3a93",
+                                                            "scaledHash": "b590ceba4b1528113ebdeca8b98c27dd"
+                                                        },
+                                                        "type": "VacuumConfiguration"
+                                                    }
+                                                ],
+                                                "direction": "z",
+                                                "gaps": [],
+                                                "type": "SlabConfiguration"
+                                            },
+                                            "build_parameters": {
+                                                "use_orthogonal_c": true,
+                                                "xy_supercell_matrix": [
+                                                    [
+                                                        1,
+                                                        0
+                                                    ],
+                                                    [
+                                                        0,
+                                                        1
+                                                    ]
+                                                ]
+                                            }
+                                        }
+                                    ],
+                                    "boundaryConditions": {
+                                        "type": "pbc",
+                                        "offset": 0
+                                    }
+                                },
+                                "name": "Si(001), termination Si_P4/mmm_2, Slab",
+                                "isDefault": false,
+                                "_id": "",
+                                "schemaVersion": "2022.8.16",
+                                "formula": "Si",
+                                "basis": {
+                                    "elements": [
+                                        {
+                                            "id": 0,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 1,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 2,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 3,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 4,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 5,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 6,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 7,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 8,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 9,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 10,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 11,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 12,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 13,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 14,
+                                            "value": "Si"
+                                        },
+                                        {
+                                            "id": 15,
+                                            "value": "Si"
+                                        }
+                                    ],
+                                    "coordinates": [
+                                        {
+                                            "id": 0,
+                                            "value": [
+                                                0.0,
+                                                0.0,
+                                                0.125001
+                                            ]
+                                        },
+                                        {
+                                            "id": 1,
+                                            "value": [
+                                                0.75,
+                                                0.25,
+                                                0.250001
+                                            ]
+                                        },
+                                        {
+                                            "id": 2,
+                                            "value": [
+                                                0.0,
+                                                0.5,
+                                                0.375001
+                                            ]
+                                        },
+                                        {
+                                            "id": 3,
+                                            "value": [
+                                                0.75,
+                                                0.75,
+                                                1e-06
+                                            ]
+                                        },
+                                        {
+                                            "id": 4,
+                                            "value": [
+                                                0.5,
+                                                0.0,
+                                                0.375001
+                                            ]
+                                        },
+                                        {
+                                            "id": 5,
+                                            "value": [
+                                                0.25,
+                                                0.25,
+                                                1e-06
+                                            ]
+                                        },
+                                        {
+                                            "id": 6,
+                                            "value": [
+                                                0.5,
+                                                0.5,
+                                                0.125001
+                                            ]
+                                        },
+                                        {
+                                            "id": 7,
+                                            "value": [
+                                                0.25,
+                                                0.75,
+                                                0.250001
+                                            ]
+                                        },
+                                        {
+                                            "id": 8,
+                                            "value": [
+                                                0.0,
+                                                0.0,
+                                                0.625001
+                                            ]
+                                        },
+                                        {
+                                            "id": 9,
+                                            "value": [
+                                                0.75,
+                                                0.25,
+                                                0.750001
+                                            ]
+                                        },
+                                        {
+                                            "id": 10,
+                                            "value": [
+                                                0.0,
+                                                0.5,
+                                                0.875001
+                                            ]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "value": [
+                                                0.75,
+                                                0.75,
+                                                0.500001
+                                            ]
+                                        },
+                                        {
+                                            "id": 12,
+                                            "value": [
+                                                0.5,
+                                                0.0,
+                                                0.875001
+                                            ]
+                                        },
+                                        {
+                                            "id": 13,
+                                            "value": [
+                                                0.25,
+                                                0.25,
+                                                0.500001
+                                            ]
+                                        },
+                                        {
+                                            "id": 14,
+                                            "value": [
+                                                0.5,
+                                                0.5,
+                                                0.625001
+                                            ]
+                                        },
+                                        {
+                                            "id": 15,
+                                            "value": [
+                                                0.25,
+                                                0.75,
+                                                0.750001
+                                            ]
+                                        }
+                                    ],
+                                    "units": "crystal",
+                                    "labels": [
+                                        {
+                                            "id": 0,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 1,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 2,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 3,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 4,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 5,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 6,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 7,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 8,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 9,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 10,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 11,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 12,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 13,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 14,
+                                            "value": 0
+                                        },
+                                        {
+                                            "id": 15,
+                                            "value": 0
+                                        }
+                                    ],
+                                    "constraints": []
+                                },
+                                "lattice": {
+                                    "a": 5.468728962,
+                                    "b": 5.468728962,
+                                    "c": 10.937457924,
+                                    "alpha": 90.0,
+                                    "beta": 90.0,
+                                    "gamma": 90.0,
+                                    "units": {
+                                        "length": "angstrom",
+                                        "angle": "degree"
+                                    },
+                                    "type": "TRI"
+                                },
+                                "isNonPeriodic": false,
+                                "hash": "96ab5451389d8de8e6976746fdce2384",
+                                "scaledHash": "d6e64305785691b9679c811b4e0e0c74"
+                            },
+                            "type": "VacuumConfiguration"
+                        }
+                    ],
+                    "direction": "z",
+                    "xy_shift": [
+                        0.0,
+                        0.0
+                    ],
+                    "gaps": [
+                        {
+                            "id": 0,
+                            "value": 2.5
+                        },
+                        {
+                            "id": 1,
+                            "value": 2.5
+                        }
+                    ],
+                    "type": "InterfaceConfiguration"
+                },
+                "build_parameters": {
+                    "make_primitive": false
+                }
+            }
+        ],
+        "boundaryConditions": {
+            "type": "pbc",
+            "offset": 0
+        }
+    },
+    "name": "HfO2(001)-Si(001) Interface",
+    "isDefault": false,
+    "_id": "",
+    "schemaVersion": "2022.8.16",
+    "basis": {
+        "elements": [
+            {
+                "id": 0,
+                "value": "Si"
+            },
+            {
+                "id": 1,
+                "value": "Si"
+            },
+            {
+                "id": 2,
+                "value": "Si"
+            },
+            {
+                "id": 3,
+                "value": "Si"
+            },
+            {
+                "id": 4,
+                "value": "Si"
+            },
+            {
+                "id": 5,
+                "value": "Si"
+            },
+            {
+                "id": 6,
+                "value": "Si"
+            },
+            {
+                "id": 7,
+                "value": "Si"
+            },
+            {
+                "id": 8,
+                "value": "Si"
+            },
+            {
+                "id": 9,
+                "value": "Si"
+            },
+            {
+                "id": 10,
+                "value": "Si"
+            },
+            {
+                "id": 11,
+                "value": "Si"
+            },
+            {
+                "id": 12,
+                "value": "Si"
+            },
+            {
+                "id": 13,
+                "value": "Si"
+            },
+            {
+                "id": 14,
+                "value": "Si"
+            },
+            {
+                "id": 15,
+                "value": "Si"
+            },
+            {
+                "id": 16,
+                "value": "Hf"
+            },
+            {
+                "id": 17,
+                "value": "Hf"
+            },
+            {
+                "id": 18,
+                "value": "Hf"
+            },
+            {
+                "id": 19,
+                "value": "Hf"
+            },
+            {
+                "id": 20,
+                "value": "O"
+            },
+            {
+                "id": 21,
+                "value": "O"
+            },
+            {
+                "id": 22,
+                "value": "O"
+            },
+            {
+                "id": 23,
+                "value": "O"
+            },
+            {
+                "id": 24,
+                "value": "O"
+            },
+            {
+                "id": 25,
+                "value": "O"
+            },
+            {
+                "id": 26,
+                "value": "O"
+            },
+            {
+                "id": 27,
+                "value": "O"
+            },
+            {
+                "id": 28,
+                "value": "Hf"
+            },
+            {
+                "id": 29,
+                "value": "Hf"
+            },
+            {
+                "id": 30,
+                "value": "Hf"
+            },
+            {
+                "id": 31,
+                "value": "Hf"
+            },
+            {
+                "id": 32,
+                "value": "O"
+            },
+            {
+                "id": 33,
+                "value": "O"
+            },
+            {
+                "id": 34,
+                "value": "O"
+            },
+            {
+                "id": 35,
+                "value": "O"
+            },
+            {
+                "id": 36,
+                "value": "O"
+            },
+            {
+                "id": 37,
+                "value": "O"
+            },
+            {
+                "id": 38,
+                "value": "O"
+            },
+            {
+                "id": 39,
+                "value": "O"
+            }
+        ],
+        "coordinates": [
+            {
+                "id": 0,
+                "value": [
+                    0.0,
+                    0.0,
+                    0.034319851
+                ]
+            },
+            {
+                "id": 1,
+                "value": [
+                    0.75,
+                    0.25,
+                    0.068639427
+                ]
+            },
+            {
+                "id": 2,
+                "value": [
+                    0.0,
+                    0.5,
+                    0.102959004
+                ]
+            },
+            {
+                "id": 3,
+                "value": [
+                    0.75,
+                    0.75,
+                    2.74e-07
+                ]
+            },
+            {
+                "id": 4,
+                "value": [
+                    0.5,
+                    0.0,
+                    0.102959004
+                ]
+            },
+            {
+                "id": 5,
+                "value": [
+                    0.25,
+                    0.25,
+                    2.74e-07
+                ]
+            },
+            {
+                "id": 6,
+                "value": [
+                    0.5,
+                    0.5,
+                    0.034319851
+                ]
+            },
+            {
+                "id": 7,
+                "value": [
+                    0.25,
+                    0.75,
+                    0.068639427
+                ]
+            },
+            {
+                "id": 8,
+                "value": [
+                    0.0,
+                    0.0,
+                    0.171598157
+                ]
+            },
+            {
+                "id": 9,
+                "value": [
+                    0.75,
+                    0.25,
+                    0.205917733
+                ]
+            },
+            {
+                "id": 10,
+                "value": [
+                    0.0,
+                    0.5,
+                    0.24023731
+                ]
+            },
+            {
+                "id": 11,
+                "value": [
+                    0.75,
+                    0.75,
+                    0.13727858
+                ]
+            },
+            {
+                "id": 12,
+                "value": [
+                    0.5,
+                    0.0,
+                    0.24023731
+                ]
+            },
+            {
+                "id": 13,
+                "value": [
+                    0.25,
+                    0.25,
+                    0.13727858
+                ]
+            },
+            {
+                "id": 14,
+                "value": [
+                    0.5,
+                    0.5,
+                    0.171598157
+                ]
+            },
+            {
+                "id": 15,
+                "value": [
+                    0.25,
+                    0.75,
+                    0.205917733
+                ]
+            },
+            {
+                "id": 16,
+                "value": [
+                    0.677077764,
+                    0.457319,
+                    0.338554153
+                ]
+            },
+            {
+                "id": 17,
+                "value": [
+                    0.243654294,
+                    0.957319,
+                    0.327454638
+                ]
+            },
+            {
+                "id": 18,
+                "value": [
+                    0.156626997,
+                    0.542681,
+                    0.393352156
+                ]
+            },
+            {
+                "id": 19,
+                "value": [
+                    0.590050468,
+                    0.042681,
+                    0.40445167
+                ]
+            },
+            {
+                "id": 20,
+                "value": [
+                    0.551112652,
+                    0.742603,
+                    0.302993612
+                ]
+            },
+            {
+                "id": 21,
+                "value": [
+                    0.369619406,
+                    0.242603,
+                    0.363015179
+                ]
+            },
+            {
+                "id": 22,
+                "value": [
+                    0.28259211,
+                    0.257397,
+                    0.428912697
+                ]
+            },
+            {
+                "id": 23,
+                "value": [
+                    0.464085356,
+                    0.757397,
+                    0.368891129
+                ]
+            },
+            {
+                "id": 24,
+                "value": [
+                    0.822389389,
+                    0.330122,
+                    0.386105406
+                ]
+            },
+            {
+                "id": 25,
+                "value": [
+                    0.924288076,
+                    0.830122,
+                    0.41169842
+                ]
+            },
+            {
+                "id": 26,
+                "value": [
+                    0.011315372,
+                    0.669878,
+                    0.345800903
+                ]
+            },
+            {
+                "id": 27,
+                "value": [
+                    0.909416685,
+                    0.169878,
+                    0.320207888
+                ]
+            },
+            {
+                "id": 28,
+                "value": [
+                    0.503023172,
+                    0.457319,
+                    0.470349188
+                ]
+            },
+            {
+                "id": 29,
+                "value": [
+                    0.069599701,
+                    0.957319,
+                    0.459249673
+                ]
+            },
+            {
+                "id": 30,
+                "value": [
+                    0.982572405,
+                    0.542681,
+                    0.525147191
+                ]
+            },
+            {
+                "id": 31,
+                "value": [
+                    0.415995876,
+                    0.042681,
+                    0.536246705
+                ]
+            },
+            {
+                "id": 32,
+                "value": [
+                    0.37705806,
+                    0.742603,
+                    0.434788647
+                ]
+            },
+            {
+                "id": 33,
+                "value": [
+                    0.195564813,
+                    0.242603,
+                    0.494810215
+                ]
+            },
+            {
+                "id": 34,
+                "value": [
+                    0.108537517,
+                    0.257397,
+                    0.560707732
+                ]
+            },
+            {
+                "id": 35,
+                "value": [
+                    0.290030763,
+                    0.757397,
+                    0.500686164
+                ]
+            },
+            {
+                "id": 36,
+                "value": [
+                    0.648334797,
+                    0.330122,
+                    0.517900441
+                ]
+            },
+            {
+                "id": 37,
+                "value": [
+                    0.750233484,
+                    0.830122,
+                    0.543493455
+                ]
+            },
+            {
+                "id": 38,
+                "value": [
+                    0.83726078,
+                    0.669878,
+                    0.477595938
+                ]
+            },
+            {
+                "id": 39,
+                "value": [
+                    0.735362093,
+                    0.169878,
+                    0.452002923
+                ]
+            }
+        ],
+        "units": "crystal",
+        "labels": [
+            {
+                "id": 0,
+                "value": 0
+            },
+            {
+                "id": 1,
+                "value": 0
+            },
+            {
+                "id": 2,
+                "value": 0
+            },
+            {
+                "id": 3,
+                "value": 0
+            },
+            {
+                "id": 4,
+                "value": 0
+            },
+            {
+                "id": 5,
+                "value": 0
+            },
+            {
+                "id": 6,
+                "value": 0
+            },
+            {
+                "id": 7,
+                "value": 0
+            },
+            {
+                "id": 8,
+                "value": 0
+            },
+            {
+                "id": 9,
+                "value": 0
+            },
+            {
+                "id": 10,
+                "value": 0
+            },
+            {
+                "id": 11,
+                "value": 0
+            },
+            {
+                "id": 12,
+                "value": 0
+            },
+            {
+                "id": 13,
+                "value": 0
+            },
+            {
+                "id": 14,
+                "value": 0
+            },
+            {
+                "id": 15,
+                "value": 0
+            },
+            {
+                "id": 16,
+                "value": 1
+            },
+            {
+                "id": 17,
+                "value": 1
+            },
+            {
+                "id": 18,
+                "value": 1
+            },
+            {
+                "id": 19,
+                "value": 1
+            },
+            {
+                "id": 20,
+                "value": 1
+            },
+            {
+                "id": 21,
+                "value": 1
+            },
+            {
+                "id": 22,
+                "value": 1
+            },
+            {
+                "id": 23,
+                "value": 1
+            },
+            {
+                "id": 24,
+                "value": 1
+            },
+            {
+                "id": 25,
+                "value": 1
+            },
+            {
+                "id": 26,
+                "value": 1
+            },
+            {
+                "id": 27,
+                "value": 1
+            },
+            {
+                "id": 28,
+                "value": 1
+            },
+            {
+                "id": 29,
+                "value": 1
+            },
+            {
+                "id": 30,
+                "value": 1
+            },
+            {
+                "id": 31,
+                "value": 1
+            },
+            {
+                "id": 32,
+                "value": 1
+            },
+            {
+                "id": 33,
+                "value": 1
+            },
+            {
+                "id": 34,
+                "value": 1
+            },
+            {
+                "id": 35,
+                "value": 1
+            },
+            {
+                "id": 36,
+                "value": 1
+            },
+            {
+                "id": 37,
+                "value": 1
+            },
+            {
+                "id": 38,
+                "value": 1
+            },
+            {
+                "id": 39,
+                "value": 1
+            }
+        ],
+        "constraints": []
+    },
+    "lattice": {
+        "a": 5.468728962,
+        "b": 5.468728962,
+        "c": 39.836804059,
+        "alpha": 90.0,
+        "beta": 90.0,
+        "gamma": 90.0,
+        "units": {
+            "length": "angstrom",
+            "angle": "degree"
+        },
+        "type": "TRI"
+    },
+    "isNonPeriodic": false,
+    "hash": "72cc009ddab9e53dc1a8b5a0dde98200",
+    "scaledHash": "6a782db10514508fc72c946e29fb41f7"
+}
