@@ -179,8 +179,9 @@ def test_get_or_create_materials_set_creates_when_missing(is_ordered, expected_e
     )
 
 
-def test_get_or_create_materials_set_reuses_when_found():
-    client = _client_with_list_responses([[ENTITY_SET]])
+@pytest.mark.parametrize("entity_set_type", ["ordered", None])
+def test_get_or_create_materials_set_reuses_when_found(entity_set_type):
+    client = _client_with_list_responses([[{**ENTITY_SET, "entitySetType": entity_set_type}]])
     materials = [MATERIAL_INITIAL, MATERIAL_FINAL]
 
     materials_set = get_or_create_materials_set(
