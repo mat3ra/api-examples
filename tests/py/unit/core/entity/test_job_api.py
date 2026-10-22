@@ -225,6 +225,21 @@ def test_find_job_for_material_matches_the_kgrid_of_the_unit():
     assert RELAX_KGRID_QUERY.items() <= client.jobs.list.call_args.args[0].items()
 
 
+CLUSTER_FQDN = "master-production-20250821-cluster-001.mat3ra.com"
+
+
+def test_find_job_for_material_matches_the_cluster():
+    client = MagicMock()
+    client.jobs.list.return_value = [EXISTING_JOB]
+
+    job = find_job_for_material(
+        client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, cluster_fqdn=CLUSTER_FQDN
+    )
+
+    assert job == EXISTING_JOB
+    assert client.jobs.list.call_args.args[0]["compute.cluster.fqdn"] == CLUSTER_FQDN
+
+
 # The pw_scf unit with a kgrid context, input not rendered yet, and as production job BLmZo5WZfFXKKTb2H stores a job
 # created without a grid: no context, the platform's grid rendered into the input.
 KGRID_CONTEXT: Dict[str, Any] = {
