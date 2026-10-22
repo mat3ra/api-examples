@@ -77,7 +77,7 @@ notebooks:
       - jinja2
       - emfs:/drive/packages/pydantic_core-2.18.2-py3-none-any.whl
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
-      - mat3ra-standata
+      - emfs:/drive/packages/mat3ra_standata-2026.10.7.post1.dev3+g63f75250-py3-none-any.whl  # TEMPORARY: branch wheel until mat3ra/standata#167 is released; revert to mat3ra-standata
       - mat3ra-ide
       - mat3ra-api-client>=2026.10.8.post0
       - requests
