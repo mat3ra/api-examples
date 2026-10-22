@@ -5,6 +5,11 @@ from typing import Any, Dict, Optional, Union
 
 from IPython.display import Javascript, display
 
+try:
+    from pyodide.http import pyfetch  # type: ignore
+except ImportError:
+    pyfetch = None  # type: ignore
+
 from ..core.io import set_data_python
 from ..primitive.logger import log
 
@@ -20,8 +25,6 @@ async def read_from_url_pyodide(url: str, as_bytes: bool = False) -> Union[str, 
     Returns:
         str or bytes: The content.
     """
-    # `http` is a Pyodide module that will be installed in the Pyodide environment by default.
-    from pyodide.http import pyfetch  # type: ignore
 
     # Per https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
     response = await pyfetch(url)
