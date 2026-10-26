@@ -54,15 +54,14 @@ def get_results_table(phase_diagram: PhaseDiagram, entries_data: List[PhaseStabi
         DataFrame with formula, material ID, energies, stability, and decomposition.
     """
     results = []
-    for i, entry in enumerate(phase_diagram.all_entries):
+    for entry in phase_diagram.all_entries:
         energy_above_hull = phase_diagram.get_e_above_hull(entry)
         decomposition = phase_diagram.get_decomposition(entry.composition)
         decomposition_str = " + ".join([e.composition.reduced_formula for e in decomposition])
-        data = entries_data[i]
         results.append(
             {
                 "Formula": entry.composition.reduced_formula,
-                "Material ID": data.get("material_id", ""),
+                "Material ID": entry.entry_id,
                 "E/atom (eV)": round(entry.energy_per_atom, 4),
                 "Eform/atom (eV)": round(phase_diagram.get_form_energy_per_atom(entry), 4),
                 "Above hull (eV)": round(energy_above_hull, 4),
@@ -72,3 +71,28 @@ def get_results_table(phase_diagram: PhaseDiagram, entries_data: List[PhaseStabi
         )
 
     return pd.DataFrame(results).sort_values("Above hull (eV)")
+
+
+def get_chemical_potentials_table(phase_diagram: PhaseDiagram) -> pd.DataFrame:
+    """Build a chemical potentials DataFrame from phase diagram analysis.
+
+    Args:
+        phase_diagram: pymatgen PhaseDiagram object.
+
+    Returns:
+        DataFrame with Δμ per element (eV, relative to the elemental reference)
+        at each corner of every stable compound's stability region.
+    """
+    results = []
+    for entry in sorted(phase_diagram.stable_entries, key=lambda entry: entry.composition.reduced_formula):
+        if entry.is_element:
+            continue
+        for facet_name, chemical_potentials in phase_diagram.get_all_chempots(entry.composition).items():
+            row = {"Formula": entry.composition.reduced_formula, "Phases in equilibrium": facet_name}
+            for element, chemical_potential in chemical_potentials.items():
+                row[f"Δμ_{element} (eV)"] = round(
+                    chemical_potential - phase_diagram.el_refs[element].energy_per_atom, 4
+                )
+            results.append(row)
+
+    return pd.DataFrame(results)

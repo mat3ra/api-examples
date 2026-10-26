@@ -2,9 +2,11 @@
 
 from typing import List
 
+import pytest
 from mat3ra.notebooks_utils.core.entity.property.analysis import (
     PhaseStabilityEntry,
     build_convex_hull,
+    get_chemical_potentials_table,
     get_results_table,
 )
 
@@ -29,6 +31,18 @@ ENTRIES_DATA: List[PhaseStabilityEntry] = [
     },
 ]
 
+# From ENTRIES_DATA: Hf -11.93, Zr -9.28, O -4.93 eV/atom; formation energy HfO2 -11.12, ZrO2 -9.045 eV/formula unit.
+DELTA_MU_METAL_RICH = {"Hf": 0.0, "Zr": 0.0, "O": -5.56}
+DELTA_MU_ZIRCONIUM_RICH = {"Hf": -2.075, "Zr": 0.0, "O": -4.5225}
+DELTA_MU_OXYGEN_RICH = {"Hf": -11.12, "Zr": -9.045, "O": 0.0}
+STABILITY_REGION_CORNERS = [
+    ("HfO2", "Hf-Zr-HfO2", DELTA_MU_METAL_RICH),
+    ("HfO2", "ZrO2-Zr-HfO2", DELTA_MU_ZIRCONIUM_RICH),
+    ("HfO2", "ZrO2-O2-HfO2", DELTA_MU_OXYGEN_RICH),
+    ("ZrO2", "ZrO2-Zr-HfO2", DELTA_MU_ZIRCONIUM_RICH),
+    ("ZrO2", "ZrO2-O2-HfO2", DELTA_MU_OXYGEN_RICH),
+]
+
 
 def test_build_convex_hull():
     phase_diagram = build_convex_hull(ENTRIES_DATA)
@@ -46,6 +60,15 @@ def test_get_results_table():
     assert "Stable" in df.columns
     assert "E/atom (eV)" in df.columns
     assert "Eform/atom (eV)" in df.columns
+
+
+@pytest.mark.parametrize("formula, phases_in_equilibrium, expected_delta_mu", STABILITY_REGION_CORNERS)
+def test_get_chemical_potentials_table(formula, phases_in_equilibrium, expected_delta_mu):
+    df = get_chemical_potentials_table(build_convex_hull(ENTRIES_DATA))
+    assert len(df) == len(STABILITY_REGION_CORNERS)
+    row = df[(df["Formula"] == formula) & (df["Phases in equilibrium"] == phases_in_equilibrium)].iloc[0]
+    delta_mu = {element: row[f"Δμ_{element} (eV)"] for element in expected_delta_mu}
+    assert delta_mu == pytest.approx(expected_delta_mu, abs=1e-4)
 
 
 def test_elemental_entries_on_hull():

@@ -71,7 +71,13 @@ def update_property_holder_value(client: APIClient, property_holder_id: str, val
     return client.properties.update(property_holder_id, {"$set": {"data.value": value}})
 
 
-def find_total_energy_for_material(client: APIClient, material_id: str, source: str = "my_account") -> Optional[dict]:
+def find_total_energy_for_material(
+    client: APIClient,
+    material_id: str,
+    source: str = "my_account",
+    group: Optional[str] = None,
+    precision_value: Optional[float] = None,
+) -> Optional[dict]:
     """
     Find the best-precision total_energy property for a material. Mirrors the
     platform's "Resolve Total Energies for Elemental Materials" subworkflow,
@@ -86,6 +92,9 @@ def find_total_energy_for_material(client: APIClient, material_id: str, source: 
         material_id (str): Material _id to look up the total_energy property for.
         source (str): Source of the total energy property: `my_account` (default), `curators` or
             `public`.
+        group (str, optional): Model identifier the property must carry, e.g. `qe:dft:lda:pz`.
+            Without it a property computed with a different model is returned.
+        precision_value (float, optional): `precision.value` (KPPRA) the property must carry.
 
     Returns:
         The best-precision total_energy property, or None if none exists.
@@ -95,6 +104,10 @@ def find_total_energy_for_material(client: APIClient, material_id: str, source: 
     if not exabyte_id:
         return None
     query = {"exabyteId": exabyte_id, "slug": "total_energy"}
+    if group:
+        query["group"] = group
+    if precision_value is not None:
+        query["precision.value"] = precision_value
     if source == "curators":
         query["owner.slug"] = "curators"
     elif source == "my_account":
