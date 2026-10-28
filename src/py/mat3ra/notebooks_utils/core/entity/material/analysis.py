@@ -9,6 +9,9 @@ import pymatgen.symmetry.analyzer
 from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.slab import SlabMaterialAnalyzer
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
+from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
+from mat3ra.made.tools.modify import filter_by_condition_on_coordinates, interface_get_part
+from mat3ra.made.utils import get_atomic_coordinates_extremum
 
 
 def is_symmetric(slab: pymatgen.core.structure.Structure) -> bool:
@@ -127,3 +130,18 @@ def resolve_bulk_query_from_crystal(bulk_crystal: dict) -> dict:
         return {"hash": Material.create(bulk_crystal).hash}
     except Exception as exc:
         raise ValueError("Could not resolve a bulk query from crystal metadata.") from exc
+
+
+def get_interface_part_by_z_split(interface: Material, structure: Material, part: InterfacePartsEnum) -> Material:
+    """Gets a part of `structure` split at the gap and vacuum midpoints of the labelled `interface`, periodic in z."""
+    substrate = interface_get_part(interface, InterfacePartsEnum.SUBSTRATE)
+    film = interface_get_part(interface, InterfacePartsEnum.FILM)
+    gap_middle = (get_atomic_coordinates_extremum(substrate, "max") + get_atomic_coordinates_extremum(film, "min")) / 2
+    vacuum_middle = (
+        get_atomic_coordinates_extremum(film, "max") + get_atomic_coordinates_extremum(substrate, "min") + 1
+    ) / 2
+    return filter_by_condition_on_coordinates(
+        structure,
+        lambda coordinate: (coordinate[2] - vacuum_middle) % 1 < (gap_middle - vacuum_middle) % 1,
+        invert_selection=part == InterfacePartsEnum.FILM,
+    )

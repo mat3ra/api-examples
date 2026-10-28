@@ -3,11 +3,21 @@
 import pytest
 from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.lattice_planes import CrystalLatticePlanesMaterialAnalyzer
-from mat3ra.made.tools.helpers import create_slab
-from mat3ra.notebooks_utils.core.entity.material.analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
+from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
+from mat3ra.made.tools.helpers import create_interface_simple, create_slab
+from mat3ra.made.tools.modify import interface_displace_part, interface_get_part
+from mat3ra.notebooks_utils.core.entity.material.analysis import (
+    get_interface_part_by_z_split,
+    get_slab_bulk_crystal,
+    resolve_bulk_query_from_crystal,
+)
 from mat3ra.standata.materials import Materials
 
 SILICON = Materials.get_by_name_first_match("Silicon")
+GERMANIUM = Material.create(Materials.get_by_name_first_match("Germanium"))
+INTERFACE = create_interface_simple(Material.create(SILICON), GERMANIUM)
+FILM_LOWERED = interface_displace_part(INTERFACE, [0, 0, -0.5], InterfacePartsEnum.FILM)
+SUBSTRATE_LOWERED_AND_WRAPPED = interface_displace_part(INTERFACE, [0, 0, -0.3], InterfacePartsEnum.SUBSTRATE)
 
 
 @pytest.mark.parametrize(
@@ -46,3 +56,15 @@ def test_slab_bulk_crystal_is_the_material_the_slab_was_built_from():
     slab = create_slab(crystal=primitive, miller_indices=(0, 0, 1), number_of_layers=3)
 
     assert get_slab_bulk_crystal(slab)["hash"] == primitive.hash
+
+
+@pytest.mark.parametrize("labelled_structure", [INTERFACE, FILM_LOWERED, SUBSTRATE_LOWERED_AND_WRAPPED])
+@pytest.mark.parametrize("part", [InterfacePartsEnum.SUBSTRATE, InterfacePartsEnum.FILM])
+def test_get_interface_part_by_z_split(labelled_structure, part):
+    structure = Material.create({**labelled_structure.to_dict(), "metadata": {}})
+    structure.basis.set_labels_from_list([])
+    expected = interface_get_part(labelled_structure, part)
+    result = get_interface_part_by_z_split(INTERFACE, structure, part)
+
+    assert result.basis.elements.values == expected.basis.elements.values
+    assert result.basis.coordinates.values == expected.basis.coordinates.values
