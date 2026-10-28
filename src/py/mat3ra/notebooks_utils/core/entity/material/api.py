@@ -89,8 +89,9 @@ def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) 
     candidates = load_materials_from_folder(folder, verbose=False) if os.path.isdir(folder) else []
     query = {"name": {"$regex": re.escape(name), "$options": "i"}, "owner._id": owner_id}
     candidates += [
-        MaterialWithBuildMetadata.create(data) if MaterialWithBuildMetadata.is_valid(data) else Material.create(data)
+        MaterialWithBuildMetadata.create(data)
         for data in api_client.materials.list(query)
+        if MaterialWithBuildMetadata.is_valid(data)
     ]
     if not any(name.lower() in candidate.name.lower() for candidate in candidates):
         return Material.create(Materials.get_by_name_first_match(name))
