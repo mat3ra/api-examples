@@ -10,12 +10,7 @@ from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.slab import SlabMaterialAnalyzer
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
-from mat3ra.made.tools.modify import (
-    filter_by_condition_on_coordinates,
-    interface_get_part,
-    translate_by_vector,
-    wrap_to_unit_cell,
-)
+from mat3ra.made.tools.modify import filter_by_condition_on_coordinates, interface_get_part
 from mat3ra.made.utils import get_atomic_coordinates_extremum
 
 
@@ -149,7 +144,10 @@ def get_interface_part_by_z_split(interface: Material, structure: Material, part
 
 def translate_slab_to_z_center(material: Material) -> Material:
     """Centers a slab in z, wrap-aware: the middle of its largest vacuum, periodic in z, goes to the cell boundary."""
-    wrapped = wrap_to_unit_cell(material)
-    heights = sorted(z for _, _, z in wrapped.basis.coordinates.values)
+    centered = material.clone()
+    centered.to_crystal()
+    heights = sorted(z % 1 for _, _, z in centered.basis.coordinates.values)
     vacuum, vacuum_bottom = max((upper - lower, lower) for lower, upper in zip(heights, heights[1:] + [heights[0] + 1]))
-    return wrap_to_unit_cell(translate_by_vector(wrapped, [0, 0, 1 - vacuum_bottom - vacuum / 2]))
+    vacuum_middle = vacuum_bottom + vacuum / 2
+    centered.set_coordinates([[x, y, (z - vacuum_middle) % 1] for x, y, z in centered.basis.coordinates.values])
+    return centered
