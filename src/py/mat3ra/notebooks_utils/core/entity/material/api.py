@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from mat3ra.api_client import APIClient
 from mat3ra.made.material import Material
+from mat3ra.made.tools.build_components import MaterialWithBuildMetadata
 from mat3ra.prode import PropertyName
 from mat3ra.standata.materials import Materials
 
@@ -87,7 +88,10 @@ def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) 
     """
     candidates = load_materials_from_folder(folder, verbose=False) if os.path.isdir(folder) else []
     query = {"name": {"$regex": re.escape(name), "$options": "i"}, "owner._id": owner_id}
-    candidates += [Material.create(data) for data in api_client.materials.list(query)]
+    candidates += [
+        MaterialWithBuildMetadata.create(data) if MaterialWithBuildMetadata.is_valid(data) else Material.create(data)
+        for data in api_client.materials.list(query)
+    ]
     if not any(name.lower() in candidate.name.lower() for candidate in candidates):
         return Material.create(Materials.get_by_name_first_match(name))
     return select_material_by_name(candidates, name)

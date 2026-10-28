@@ -73,4 +73,4 @@ def test_get_interface_part_by_z_split(labelled_structure, part):
 
     assert min(heights) + max(heights) == pytest.approx(1)
     assert result.basis.elements.values == expected.basis.elements.values
-    assert np.allclose(result.basis.coordinates.values, expected.basis.coordinates.values)
+    assert np.allclose(result.basis.coordinates.values, expected.basis.coordinates.values, atol=1e-12, rtol=0)
