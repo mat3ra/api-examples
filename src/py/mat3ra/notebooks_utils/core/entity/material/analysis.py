@@ -146,7 +146,7 @@ def translate_slab_to_z_center(material: Material) -> Material:
     """Centers a slab in z, wrap-aware: the middle of its largest vacuum, periodic in z, goes to the cell boundary."""
     centered = material.clone()
     centered.to_crystal()
-    heights = sorted(z % 1 for _, _, z in centered.basis.coordinates.values)
+    heights = sorted(z for _, _, z in centered.basis.coordinates.values)
     vacuum, vacuum_bottom = max((upper - lower, lower) for lower, upper in zip(heights, heights[1:] + [heights[0] + 1]))
     vacuum_middle = vacuum_bottom + vacuum / 2
     centered.set_coordinates([[x, y, (z - vacuum_middle) % 1] for x, y, z in centered.basis.coordinates.values])

@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from mat3ra.api_client import APIClient
 from mat3ra.made.material import Material
 from mat3ra.prode import PropertyName
+from mat3ra.standata.materials import Materials
 
 from ..job.api import get_kgrid_query
 from ..property.api import get_properties_for_job
@@ -70,7 +71,7 @@ def select_material_by_name(materials: List[Material], name: str) -> Material:
 def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) -> Material:
     """
     Loads a material by name from a folder or the owner's platform collection, chosen as in
-    `select_material_by_name`.
+    `select_material_by_name`; from Standata when neither has a match.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -87,6 +88,8 @@ def load_material(api_client: APIClient, folder: str, name: str, owner_id: str) 
     candidates = load_materials_from_folder(folder, verbose=False) if os.path.isdir(folder) else []
     query = {"name": {"$regex": re.escape(name), "$options": "i"}, "owner._id": owner_id}
     candidates += [Material.create(data) for data in api_client.materials.list(query)]
+    if not any(name.lower() in candidate.name.lower() for candidate in candidates):
+        return Material.create(Materials.get_by_name_first_match(name))
     return select_material_by_name(candidates, name)
 
 
