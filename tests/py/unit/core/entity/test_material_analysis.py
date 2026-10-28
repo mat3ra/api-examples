@@ -10,6 +10,7 @@ from mat3ra.notebooks_utils.core.entity.material.analysis import (
     get_interface_part_by_z_split,
     get_slab_bulk_crystal,
     resolve_bulk_query_from_crystal,
+    translate_slab_to_z_center,
 )
 from mat3ra.standata.materials import Materials
 
@@ -63,8 +64,11 @@ def test_slab_bulk_crystal_is_the_material_the_slab_was_built_from():
 def test_get_interface_part_by_z_split(labelled_structure, part):
     structure = Material.create({**labelled_structure.to_dict(), "metadata": {}})
     structure.basis.set_labels_from_list([])
-    expected = interface_get_part(labelled_structure, part)
-    result = get_interface_part_by_z_split(INTERFACE, structure, part)
+    centered_structure = translate_slab_to_z_center(structure)
+    expected = interface_get_part(translate_slab_to_z_center(labelled_structure), part)
+    result = get_interface_part_by_z_split(translate_slab_to_z_center(INTERFACE), centered_structure, part)
+    heights = [z for _, _, z in centered_structure.basis.coordinates.values]
 
+    assert min(heights) + max(heights) == pytest.approx(1)
     assert result.basis.elements.values == expected.basis.elements.values
     assert result.basis.coordinates.values == expected.basis.coordinates.values

@@ -10,7 +10,12 @@ from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.slab import SlabMaterialAnalyzer
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
-from mat3ra.made.tools.modify import filter_by_condition_on_coordinates, interface_get_part
+from mat3ra.made.tools.modify import (
+    filter_by_condition_on_coordinates,
+    interface_get_part,
+    translate_by_vector,
+    wrap_to_unit_cell,
+)
 from mat3ra.made.utils import get_atomic_coordinates_extremum
 
 
@@ -133,15 +138,18 @@ def resolve_bulk_query_from_crystal(bulk_crystal: dict) -> dict:
 
 
 def get_interface_part_by_z_split(interface: Material, structure: Material, part: InterfacePartsEnum) -> Material:
-    """Gets a part of `structure` split at the gap and vacuum midpoints of the labelled `interface`, periodic in z."""
+    """Gets a part of `structure` split at the midpoint of the gap between the parts of the labelled `interface`."""
     substrate = interface_get_part(interface, InterfacePartsEnum.SUBSTRATE)
     film = interface_get_part(interface, InterfacePartsEnum.FILM)
     gap_middle = (get_atomic_coordinates_extremum(substrate, "max") + get_atomic_coordinates_extremum(film, "min")) / 2
-    vacuum_middle = (
-        get_atomic_coordinates_extremum(film, "max") + get_atomic_coordinates_extremum(substrate, "min") + 1
-    ) / 2
     return filter_by_condition_on_coordinates(
-        structure,
-        lambda coordinate: (coordinate[2] - vacuum_middle) % 1 < (gap_middle - vacuum_middle) % 1,
-        invert_selection=part == InterfacePartsEnum.FILM,
+        structure, lambda coordinate: coordinate[2] < gap_middle, invert_selection=part == InterfacePartsEnum.FILM
     )
+
+
+def translate_slab_to_z_center(material: Material) -> Material:
+    """Centers a slab in z, wrap-aware: the middle of its largest vacuum, periodic in z, goes to the cell boundary."""
+    wrapped = wrap_to_unit_cell(material)
+    heights = sorted(z for _, _, z in wrapped.basis.coordinates.values)
+    vacuum, vacuum_bottom = max((upper - lower, lower) for lower, upper in zip(heights, heights[1:] + [heights[0] + 1]))
+    return wrap_to_unit_cell(translate_by_vector(wrapped, [0, 0, 1 - vacuum_bottom - vacuum / 2]))
