@@ -282,8 +282,7 @@ def get_or_create_materials_set(
 
     Raises:
         ValueError: If materials are empty, if an ordered set has fewer than two members,
-            or if an existing set of that name has the opposite `entitySetType` (a set stored
-            without one is reused).
+            or if an existing set of that name has the opposite `entitySetType`.
     """
     if not materials:
         raise ValueError("Materials set needs at least one material.")
@@ -303,7 +302,7 @@ def get_or_create_materials_set(
         print(f"✅ Materials set '{materials_set['name']}' ({entity_set_type}, {materials_set['_id']})")
     else:
         existing_type = materials_set.get("entitySetType")
-        if existing_type not in (None, entity_set_type):
+        if existing_type != entity_set_type:
             raise ValueError(
                 f"Materials set '{materials_set['name']}' already exists as '{existing_type}', but "
                 f"'{entity_set_type}' was requested. Reusing it would silently drop path order."

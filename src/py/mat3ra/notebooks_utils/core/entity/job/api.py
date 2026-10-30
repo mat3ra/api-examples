@@ -180,12 +180,10 @@ def find_job_for_material(
     statuses: Iterable[str] = ("finished",),
     kgrid: Optional[List[int]] = None,
     unit_name: str = "pw_scf",
-    cluster_fqdn: Optional[str] = None,
-    material_ids: Optional[List[str]] = None,
 ) -> Optional[dict]:
     """
     Finds a job for a material and workflow name under the given owner, filtered by status and,
-    optionally, by the k-grid its `unit_name` unit ran on, the cluster it ran on and the materials it holds.
+    optionally, by the k-grid its `unit_name` unit ran on.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -195,8 +193,6 @@ def find_job_for_material(
         statuses (Iterable[str]): Job statuses that count as a match.
         kgrid (List[int], optional): Exact k-grid dimensions the job's `unit_name` unit ran on; None for no condition.
         unit_name (str): Name of the unit the k-grid was set on.
-        cluster_fqdn (str, optional): The job's `compute.cluster.fqdn`; None for no condition.
-        material_ids (List[str], optional): IDs the job's `_materials` must all hold; None for no condition.
 
     Returns:
         dict, optional: The matching job, or None if none exists.
@@ -208,8 +204,6 @@ def find_job_for_material(
             "workflow.name": workflow_name,
             "status": {"$in": list(statuses)},
             **get_kgrid_query(kgrid, unit_name),
-            **({"compute.cluster.fqdn": cluster_fqdn} if cluster_fqdn else {}),
-            **({"_materials._id": {"$all": material_ids}} if material_ids else {}),
         },
         {"limit": 1},
     )
