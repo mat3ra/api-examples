@@ -226,18 +226,24 @@ def test_find_job_for_material_matches_the_kgrid_of_the_unit():
 
 
 CLUSTER_FQDN = "master-production-20250821-cluster-001.mat3ra.com"
+MATERIAL_IDS = [MATERIAL_INITIAL["_id"], MATERIAL_FINAL["_id"]]
 
 
-def test_find_job_for_material_matches_the_cluster():
+@pytest.mark.parametrize(
+    ("options", "expected_condition"),
+    [
+        ({"cluster_fqdn": CLUSTER_FQDN}, {"compute.cluster.fqdn": CLUSTER_FQDN}),
+        ({"material_ids": MATERIAL_IDS}, {"_materials._id": {"$all": MATERIAL_IDS}}),
+    ],
+)
+def test_find_job_for_material_matches_the_option(options, expected_condition):
     client = MagicMock()
     client.jobs.list.return_value = [EXISTING_JOB]
 
-    job = find_job_for_material(
-        client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, cluster_fqdn=CLUSTER_FQDN
-    )
+    job = find_job_for_material(client, MATERIAL_INITIAL["_id"], RELAX_WORKFLOW_NAME, OWNER_ID, **options)
 
     assert job == EXISTING_JOB
-    assert client.jobs.list.call_args.args[0]["compute.cluster.fqdn"] == CLUSTER_FQDN
+    assert expected_condition.items() <= client.jobs.list.call_args.args[0].items()
 
 
 # The pw_scf unit with a kgrid context, input not rendered yet, and as production job BLmZo5WZfFXKKTb2H stores a job

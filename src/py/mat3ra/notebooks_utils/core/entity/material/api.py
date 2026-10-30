@@ -282,7 +282,8 @@ def get_or_create_materials_set(
 
     Raises:
         ValueError: If materials are empty, if an ordered set has fewer than two members,
-            or if an existing set of that name has the opposite `entitySetType`.
+            or if an existing set of that name has the opposite `entitySetType` (a set stored
+            without one is reused).
     """
     if not materials:
         raise ValueError("Materials set needs at least one material.")
