@@ -1,4 +1,5 @@
 import json
+import mimetypes
 from typing import Dict, List, Union
 
 from mat3ra.api_client import APIClient
@@ -35,10 +36,9 @@ def upload_files(api_client: APIClient, files: Dict[str, Union[str, bytes]], acc
     """
     Uploads files to the account's object storage ("Dropbox") folder.
 
-    Text travels inside the request body (`POST /files`). Bytes - a model checkpoint, an archive,
-    anything that is not UTF-8 text or is large - go through a URL the platform signs for the
-    purpose (`POST /files/signed-urls`) and are PUT to storage directly, so neither the JSON body
-    limit nor the text encoding applies.
+    The platform signs one PUT URL per file (`POST /files/signed-urls`, `putObject`) for the declared
+    size and content type, and the content is PUT to storage directly, so no request body limit
+    applies. Text is uploaded as UTF-8.
 
     Args:
         api_client (APIClient): API client instance carrying the authorization context.
@@ -47,30 +47,43 @@ def upload_files(api_client: APIClient, files: Dict[str, Union[str, bytes]], acc
         account_id (str): Account to upload under.
 
     Returns:
-        list[dict]: One cloud file record per upload, with `key`, `size`, `bucket`, `region`
-            and `provider`.
-
+        list[dict]: One cloud file record per upload, with `name`, `key`, `size`, `bucket`,
+            `region` and `provider`.
     """
-    endpoint = _files_endpoint(api_client)
-    headers = endpoint.get_headers(api_client.auth.account_id or "", api_client.auth.auth_token or "")
+    contents = {
+        name: content.encode("utf-8") if isinstance(content, str) else content for name, content in files.items()
+    }
+    targets = _request_upload_urls(api_client, contents, account_id)
 
     uploaded = []
-    for name, content in files.items():
-        if isinstance(content, bytes):
-            record = _upload_bytes(endpoint, headers, name, content, account_id)
-        else:
-            payload = {"name": name, "body": content, "accountId": account_id}
-            record = endpoint.request("POST", "files", data=json.dumps(payload), headers=headers)
+    for (name, content), target in zip(contents.items(), targets):
+        _put(target["signedUrl"], content, target["headers"])
+        record = _to_cloud_file(name, content, target)
         print(f"⬆️  Uploaded {record['key']} ({record['size']} bytes)")
         uploaded.append(record)
     return uploaded
 
 
-def _upload_bytes(endpoint: BaseEndpoint, headers: dict, name: str, content: bytes, account_id: str) -> dict:
-    """Asks the platform for a signed PUT URL for `name`, PUTs the bytes, returns a file record."""
-    payload = {"names": [name], "operation": "putObject", "accountId": account_id}
-    [target] = endpoint.request("POST", "files/signed-urls", data=json.dumps(payload), headers=headers)
-    _put(target["signedUrl"], content)
+def _request_upload_urls(api_client: APIClient, contents: Dict[str, bytes], account_id: str) -> List[dict]:
+    """Asks the platform for one signed PUT URL per file, in the order given."""
+    endpoint = _files_endpoint(api_client)
+    headers = endpoint.get_headers(api_client.auth.account_id or "", api_client.auth.auth_token or "")
+    payload = {
+        "files": [
+            {"name": name, "size": len(content), "contentType": _content_type(name)}
+            for name, content in contents.items()
+        ],
+        "operation": "putObject",
+        "accountId": account_id,
+    }
+    return endpoint.request("POST", "files/signed-urls", data=json.dumps(payload), headers=headers)
+
+
+def _content_type(name: str) -> str:
+    return mimetypes.guess_type(name)[0] or "application/octet-stream"
+
+
+def _to_cloud_file(name: str, content: bytes, target: dict) -> dict:
     return {
         "name": name,
         "key": target["key"],
@@ -81,17 +94,20 @@ def _upload_bytes(endpoint: BaseEndpoint, headers: dict, name: str, content: byt
     }
 
 
-def _put(url: str, data: bytes) -> None:
-    """PUTs bytes to a signed URL - from the browser in JupyterLite, from the process elsewhere."""
+def _put(url: str, data: bytes, headers: Dict[str, str]) -> None:
+    """
+    PUTs bytes to a signed URL - from the browser in JupyterLite, from the process elsewhere. The
+    headers are part of the signature, so they are sent exactly as the platform returned them.
+    """
     if not is_pyodide_environment():
-        put = Request(url, data=data, method="PUT")
-        put.add_header("Content-Type", "application/octet-stream")
-        with urlopen(put) as response:
+        with urlopen(Request(url, data=data, headers=headers, method="PUT")) as response:
             response.read()
         return
 
     request = XMLHttpRequest.new()
     request.open("PUT", url, False)
+    for header, value in headers.items():
+        request.setRequestHeader(header, value)
     request.send(to_js(data))
     if request.status < 200 or request.status >= 300:
         raise RuntimeError(f"PUT to storage failed with HTTP {request.status}: {request.responseText}")

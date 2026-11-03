@@ -2,9 +2,10 @@ import json
 from typing import Any, Dict
 from unittest.mock import MagicMock
 
-from mat3ra.notebooks_utils.core.entity.file.api import to_object_storage_input, upload_files
-
-ACCOUNT_ID = "account-1"
+from mat3ra.notebooks_utils.core.entity.file.api import (
+    to_object_storage_input,
+    upload_files,
+)
 
 CLOUD_FILE: Dict[str, Any] = {
     "key": "my-account/user_script.py",
@@ -17,35 +18,91 @@ CLOUD_FILE: Dict[str, Any] = {
 }
 
 
-def _client(*records):
-    """An APIClient whose files endpoint returns the given records, one per request."""
+SIGNED_UPLOAD = {
+    "signedUrl": "https://s3/put?sig",
+    "headers": {"Content-Type": "application/json"},
+    "bucket": "b",
+    "region": "r",
+    "provider": "aws",
+}
+
+
+def _signed_upload_endpoint(monkeypatch, calls: list, puts: list) -> None:
+    """A files endpoint that signs one upload per requested file; PUTs are recorded, not sent."""
+    from mat3ra.notebooks_utils.core.entity.file import api as file_api
+
+    def request(method, path, data=None, headers=None):
+        payload = json.loads(data)
+        calls.append((method, path, payload))
+        return [{**SIGNED_UPLOAD, "key": f"user-abc/{file['name']}"} for file in payload["files"]]
+
+    endpoint = MagicMock()
+    endpoint.get_headers.return_value = {}
+    endpoint.request.side_effect = request
+    monkeypatch.setattr(file_api, "_files_endpoint", lambda client: endpoint)
+    monkeypatch.setattr(file_api, "_put", lambda url, data, headers: puts.append((url, data, headers)))
+
+
+def _client():
     client = MagicMock()
-    client.host, client.port, client.version, client.secure = "localhost", 3000, "2018-10-01", False
-    client.auth.account_id, client.auth.auth_token = ACCOUNT_ID, "token"
-    client.auth.access_token = None
+    client.auth.account_id = "acc"
+    client.auth.auth_token = "tok"
     return client
 
 
-def test_upload_posts_name_and_body_per_file(monkeypatch):
-    requests = []
+def test_every_file_goes_through_one_signed_put_request(monkeypatch):
+    """Text and bytes alike: one putObject request with size and type, then a PUT per file."""
+    calls: list = []
+    puts: list = []
+    _signed_upload_endpoint(monkeypatch, calls, puts)
 
-    def request(method, path, data=None, headers=None):
-        requests.append((method, path, json.loads(data)))
-        return CLOUD_FILE
+    upload_files(_client(), {"radii.json": '{"Si": 1.1}', "model.bin": b"\x00\x01binary"}, "acc")
 
-    endpoint = MagicMock()
-    endpoint.request.side_effect = request
-    endpoint.get_headers.return_value = {}
-    monkeypatch.setattr("mat3ra.notebooks_utils.core.entity.file.api._files_endpoint", lambda _: endpoint)
-
-    uploaded = upload_files(_client(), {"user_script.py": "print(1)", "radii.json": "{}"}, ACCOUNT_ID)
-
-    assert [r[:2] for r in requests] == [("POST", "files"), ("POST", "files")]
-    assert [r[2] for r in requests] == [
-        {"name": "user_script.py", "body": "print(1)", "accountId": ACCOUNT_ID},
-        {"name": "radii.json", "body": "{}", "accountId": ACCOUNT_ID},
+    assert calls == [
+        (
+            "POST",
+            "files/signed-urls",
+            {
+                "files": [
+                    {"name": "radii.json", "size": 11, "contentType": "application/json"},
+                    {"name": "model.bin", "size": 8, "contentType": "application/octet-stream"},
+                ],
+                "operation": "putObject",
+                "accountId": "acc",
+            },
+        )
     ]
-    assert uploaded == [CLOUD_FILE, CLOUD_FILE]
+    assert puts == [
+        ("https://s3/put?sig", b'{"Si": 1.1}', SIGNED_UPLOAD["headers"]),
+        ("https://s3/put?sig", b"\x00\x01binary", SIGNED_UPLOAD["headers"]),
+    ]
+
+
+def test_text_is_uploaded_as_utf8_bytes(monkeypatch):
+    calls: list = []
+    puts: list = []
+    _signed_upload_endpoint(monkeypatch, calls, puts)
+
+    upload_files(_client(), {"notes.txt": "Å"}, "acc")
+
+    assert calls[0][2]["files"] == [{"name": "notes.txt", "size": 2, "contentType": "text/plain"}]
+    assert puts[0][1] == "Å".encode()
+
+
+def test_upload_returns_records_the_runner_can_fetch(monkeypatch):
+    _signed_upload_endpoint(monkeypatch, [], [])
+
+    [record] = upload_files(_client(), {"model.bin": b"\x00\x01binary"}, "acc")
+
+    assert record == {
+        "name": "model.bin",
+        "key": "user-abc/model.bin",
+        "size": 8,
+        "bucket": "b",
+        "region": "r",
+        "provider": "aws",
+    }
+    assert to_object_storage_input(record)["objectData"]["NAME"] == "user-abc/model.bin"
 
 
 def test_object_storage_input_carries_every_field_the_runner_needs():
@@ -67,70 +124,3 @@ def test_object_storage_basename_is_the_name_the_script_opens():
     nested = {**CLOUD_FILE, "key": "my-account/assets/radii.json"}
 
     assert to_object_storage_input(nested)["basename"] == "radii.json"
-
-
-def test_bytes_go_through_a_signed_put_url(monkeypatch):
-    """Bytes never enter a JSON body: the helper asks for a putObject URL and PUTs the content."""
-    from mat3ra.notebooks_utils.core.entity.file import api as file_api
-
-    calls: list = []
-    puts: list = []
-    endpoint = MagicMock()
-    endpoint.get_headers.return_value = {}
-
-    def request(method, path, data=None, headers=None):
-        calls.append((method, path, json.loads(data)))
-        return [
-            {
-                "key": "user-abc/model.pt",
-                "signedUrl": "https://s3/put?sig",
-                "bucket": "b",
-                "region": "r",
-                "provider": "aws",
-            }
-        ]
-
-    endpoint.request.side_effect = request
-    monkeypatch.setattr(file_api, "_files_endpoint", lambda client: endpoint)
-    monkeypatch.setattr(file_api, "_put", lambda url, data: puts.append((url, data)))
-
-    client = MagicMock()
-    client.auth.account_id = "acc"
-    client.auth.auth_token = "tok"
-    [record] = upload_files(client, {"model.pt": b"\x00\x01binary"}, "acc")
-
-    assert calls == [
-        ("POST", "files/signed-urls", {"names": ["model.pt"], "operation": "putObject", "accountId": "acc"})
-    ]
-    assert puts == [("https://s3/put?sig", b"\x00\x01binary")]
-    assert record == {
-        "name": "model.pt",
-        "key": "user-abc/model.pt",
-        "size": 8,
-        "bucket": "b",
-        "region": "r",
-        "provider": "aws",
-    }
-    assert to_object_storage_input(record)["objectData"]["NAME"] == "user-abc/model.pt"
-
-
-def test_text_still_travels_in_the_body(monkeypatch):
-    from mat3ra.notebooks_utils.core.entity.file import api as file_api
-
-    endpoint = MagicMock()
-    endpoint.get_headers.return_value = {}
-    endpoint.request.return_value = {
-        "key": "user-abc/a.txt",
-        "size": 2,
-        "bucket": "b",
-        "region": "r",
-        "provider": "aws",
-        "name": "a.txt",
-    }
-    monkeypatch.setattr(file_api, "_files_endpoint", lambda client: endpoint)
-    client = MagicMock()
-    client.auth.account_id = "acc"
-    client.auth.auth_token = "tok"
-    upload_files(client, {"a.txt": "hi"}, "acc")
-    method, path = endpoint.request.call_args[0][:2]
-    assert (method, path) == ("POST", "files")
