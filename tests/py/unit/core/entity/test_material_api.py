@@ -60,6 +60,7 @@ EXPECTED_SINGLE_MEMBER_IDS = ["m-initial"]
 SILICON = "Silicon"
 SILICON_RELAXED = "Silicon relaxed"
 SILICON_SUPERCELL = "Silicon 2x2x2"
+GERMANIUM_STANDATA_NAME = Materials.get_by_name_first_match("Germanium")["name"]
 
 
 def _silicon_named(name: str) -> Dict[str, Any]:
@@ -381,6 +382,7 @@ def test_find_relaxed_material_matches_the_relaxation_kgrid():
         ([], [SILICON_SUPERCELL, SILICON], SILICON, SILICON),
         ([], [SILICON_RELAXED], "relaxed", SILICON_RELAXED),
         ([SILICON_RELAXED], [SILICON_RELAXED], "RELAXED", SILICON_RELAXED),
+        ([SILICON], [], "Germanium", GERMANIUM_STANDATA_NAME),
     ],
 )
 def test_load_material_takes_the_exact_name_or_a_unique_partial_one(
@@ -403,7 +405,7 @@ def test_load_material_takes_the_exact_name_or_a_unique_partial_one(
 @pytest.mark.parametrize(
     ("folder_names", "account_names", "name", "error"),
     [
-        ([], [], "Germanium", "No material named 'Germanium'"),
+        ([], [], "Unobtainium", "No matches found for name 'Unobtainium'"),
         ([SILICON_RELAXED], [SILICON_SUPERCELL], "Silicon ", "matches 2 materials"),
     ],
 )
