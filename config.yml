@@ -67,7 +67,7 @@ notebooks:
       - ipywidgets
       - tabulate==0.9.0
       - mat3ra-utils
-      - mat3ra-api-client>=2026.10.8.post0
+      - emfs:/drive/packages/mat3ra_api_client-2026.10.8.post1.dev3+g0e8752d-py3-none-any.whl
   - name: dataframe
     packages_pyodide:
       - jinja2
@@ -80,7 +80,7 @@ notebooks:
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
       - mat3ra-standata
       - mat3ra-ide
-      - mat3ra-api-client>=2026.10.8.post0
+      - emfs:/drive/packages/mat3ra_api_client-2026.10.8.post1.dev3+g0e8752d-py3-none-any.whl
       - requests
       - mat3ra-ade
       - mat3ra-mode
