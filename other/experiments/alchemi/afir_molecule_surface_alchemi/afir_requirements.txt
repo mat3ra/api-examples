@@ -6,7 +6,7 @@ torch==2.11.0+cu128
 torchvision==0.26.0+cu128
 torchaudio==2.11.0+cu128
 warp-lang==1.18.0+cu12
-nvalchemi-toolkit[cu12,mace,ase] @ git+https://github.com/NVIDIA/nvalchemi-toolkit.git@618916442783c152cd53b919164f07f80286f3da
+nvalchemi-toolkit[cu12,mace,ase]==0.3.0
 matplotlib
 numpy
 ase
