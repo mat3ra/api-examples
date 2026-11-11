@@ -78,7 +78,9 @@ def test_relax_material(material, fixed_atom_indices, along_z_only, xy_unchanged
 
 def test_relax_material_honors_material_constraints():
     constrained = Z_DISPLACED.clone()
-    constrained.basis.constraints = ArrayWithIds.from_values([[index != TOP_ATOM] * 3 for index in range(len(_z))])
+    constrained.basis.constraints = ArrayWithIds.from_values(
+        [[index != TOP_ATOM] * 3 for index in range(constrained.basis.number_of_atoms)]
+    )
     relaxed = relax_material(constrained, CALCULATOR, along_z_only=True, **RELAX)
     before, after = _cartesian_positions(constrained), _cartesian_positions(relaxed)
     assert np.allclose(after[TOP_ATOM], before[TOP_ATOM])
