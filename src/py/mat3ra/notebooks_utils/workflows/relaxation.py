@@ -35,7 +35,7 @@ def relax_material(
         RuntimeError: when the optimizer stops before the forces fall below `fmax`.
     """
     atoms = to_ase(material)
-    constraints = []
+    constraints = list(atoms.constraints)
     if fixed_atom_indices:
         constraints.append(FixAtoms(indices=list(fixed_atom_indices)))
     if along_z_only:

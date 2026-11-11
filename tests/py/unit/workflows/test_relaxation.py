@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from ase.calculators.emt import EMT
+from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.made.material import Material
 from mat3ra.made.tools.calculate import calculate_total_energy
 from mat3ra.made.tools.helpers import create_slab
@@ -73,6 +74,14 @@ def test_relax_material(material, fixed_atom_indices, along_z_only, xy_unchanged
     before, after = _cartesian_positions(material), _cartesian_positions(relaxed)
     assert np.allclose(after[fixed_atom_indices], before[fixed_atom_indices])
     assert np.allclose(after[:, :2], before[:, :2], atol=1e-6) == xy_unchanged
+
+
+def test_relax_material_basis_constraints():
+    constrained = Z_DISPLACED.clone()
+    constrained.basis.constraints = ArrayWithIds.from_values([[index != TOP_ATOM] * 3 for index in range(len(_z))])
+    relaxed = relax_material(constrained, CALCULATOR, along_z_only=True, **RELAX)
+    before, after = _cartesian_positions(constrained), _cartesian_positions(relaxed)
+    assert np.allclose(after[TOP_ATOM], before[TOP_ATOM])
 
 
 def test_relax_material_invalid():
