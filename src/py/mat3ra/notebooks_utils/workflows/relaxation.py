@@ -20,7 +20,8 @@ def relax_material(
 ) -> Material:
     """
     Relax atomic positions with an ASE calculator (e.g. from `create_mlff_calculator`) at fixed
-    cell, optionally holding atoms fixed or allowing motion along z only.
+    cell, optionally holding atoms fixed or allowing motion along z only. The material's own
+    `basis.constraints` are honoured as well.
 
     Args:
         material: The structure to relax; labels and build metadata are preserved in the result.
@@ -35,7 +36,7 @@ def relax_material(
         RuntimeError: when the optimizer stops before the forces fall below `fmax`.
     """
     atoms = to_ase(material)
-    constraints = []
+    constraints = list(atoms.constraints)
     if fixed_atom_indices:
         constraints.append(FixAtoms(indices=list(fixed_atom_indices)))
     if along_z_only:

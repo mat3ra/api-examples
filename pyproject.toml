@@ -24,7 +24,7 @@ utils_standata = [
   "mat3ra-standata",
 ]
 api = [
-  "mat3ra-api-client>=2026.11.4.post0",
+  "mat3ra-api-client @ git+https://github.com/mat3ra/api-client@b5f25f755db5c40d7580662affa16ac642a8d67c",
 ]
 materials = [
   # ase >=3.25.0 is required for supercell to be generated,
@@ -36,7 +36,7 @@ materials = [
   "mat3ra-notebooks-utils[utils_standata]",
   "pymatgen==2024.4.13",
   "pymatgen-analysis-defects<=2024.4.23",
-  "mat3ra-made",
+  "mat3ra-made @ git+https://github.com/mat3ra/made@7f26afcbbf57197f613f30d74d4d924becc0c96a",
   "mat3ra-periodic-table"
 ]
 workflows = [
