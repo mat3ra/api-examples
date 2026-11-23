@@ -1,13 +1,13 @@
 import asyncio
 import json
 import urllib.parse
-from typing import Any, Awaitable, List
+from typing import Any, Awaitable, List, Optional, Union
 
 import requests
-from mat3ra.api_client import JobEndpoints
+from mat3ra.api_client import APIClient, JobEndpoints
+from mat3ra.api_client.tools.job import MATERIALS_SET_ENTITY_CLASS
+from mat3ra.api_client.tools.job import create_job as _create_job
 from mat3ra.api_client.tools.job import (
-    MATERIALS_SET_ENTITY_CLASS,
-    create_job,
     find_job_for_material,
     find_job_for_material_with_property,
     get_kgrid_of_job,
@@ -15,6 +15,9 @@ from mat3ra.api_client.tools.job import (
     save_files,
     submit_jobs,
 )
+from mat3ra.ide.compute import Compute
+from mat3ra.made.material import Material
+from mat3ra.wode import Workflow
 
 from ....auth import reauthenticate
 from ....primitive.environment import is_pyodide_environment
@@ -77,6 +80,34 @@ async def get_jobs_statuses_by_ids_async(
         await reauthenticate(endpoint.auth)
         jobs = await asyncio.wait_for(request_jobs(), timeout)
     return [job["status"] for job in jobs]
+
+
+def create_job(
+    api_client: APIClient,
+    materials: List[Union[Material, dict]],
+    workflow: Union[Workflow, dict],
+    project_id: str,
+    owner_id: str,
+    prefix: str,
+    compute: dict,
+    materials_set: Optional[dict] = None,
+    tags: Optional[List[str]] = None,
+) -> dict:
+    """
+    `create_job` of mat3ra.api_client.tools for the materials, workflow and compute dict the notebooks hold,
+    returning the created job as the dict the notebooks read.
+    """
+    return _create_job(
+        api_client,
+        [Material.create(material) for material in materials],
+        Workflow.create(workflow),
+        project_id,
+        owner_id,
+        prefix,
+        Compute.create(compute),
+        materials_set,
+        tags,
+    ).to_dict()
 
 
 __all__ = [
