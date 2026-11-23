@@ -10,10 +10,9 @@ from mat3ra.api_client.tools.material import (
     find_relaxed_material,
     get_final_structure_for_job,
     get_or_create_material,
-    get_or_create_materials_set,
-    list_materials_by_set,
-    list_materials_in_set,
 )
+from mat3ra.api_client.tools.material import get_or_create_materials_set as _get_or_create_materials_set
+from mat3ra.api_client.tools.material import list_materials_by_set, list_materials_in_set
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build_components import MaterialWithBuildMetadata
 from mat3ra.standata.materials import Materials
@@ -22,6 +21,17 @@ from ..job.api import get_kgrid_query
 from ..property.api import get_properties_for_job
 from .analysis import get_slab_bulk_crystal, resolve_bulk_query_from_crystal
 from .io import load_materials_from_folder
+
+
+def get_or_create_materials_set(
+    api_client: APIClient, owner_id: str, material_set_name: str, materials: List[dict], is_ordered: bool = False
+) -> dict:
+    """
+    `get_or_create_materials_set` of mat3ra.api_client.tools for the saved material dicts the notebooks hold.
+    """
+    return _get_or_create_materials_set(
+        api_client, owner_id, material_set_name, [Material.create(material) for material in materials], is_ordered
+    )
 
 
 def select_material_by_name(materials: List[Material], name: str) -> Material:

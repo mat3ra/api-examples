@@ -5,7 +5,11 @@ from unittest.mock import MagicMock
 
 import pytest
 from mat3ra.made.material import Material
-from mat3ra.notebooks_utils.core.entity.material.api import load_material, select_material_by_name
+from mat3ra.notebooks_utils.core.entity.material.api import (
+    get_or_create_materials_set,
+    load_material,
+    select_material_by_name,
+)
 from mat3ra.standata.materials import Materials
 
 OWNER_ID = "account-1"
@@ -88,3 +92,12 @@ def test_select_material_by_name_takes_the_exact_name_or_a_unique_partial_one(na
 def test_select_material_by_name_raises_when_the_name_is_missing_or_ambiguous(names, name, error):
     with pytest.raises(ValueError, match=error):
         select_material_by_name([Material.create(_silicon_named(candidate)) for candidate in names], name)
+
+
+def test_get_or_create_materials_set_takes_saved_material_dicts():
+    client = MagicMock()
+    client.materials.list.return_value = [{"_id": "set-1", "name": SILICON, "entitySetType": "unordered"}]
+
+    get_or_create_materials_set(client, OWNER_ID, SILICON, [{**_silicon_named(SILICON), "_id": "m-1"}])
+
+    client.materials.move_to_set.assert_called_once_with("m-1", "", "set-1")
