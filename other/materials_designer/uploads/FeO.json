@@ -1,0 +1,98 @@
+{
+  "name": "FeO, Iron Oxide, MCLC (C2/m) 3D (Bulk), mp-1274279",
+  "lattice": {
+    "a": 3.102294,
+    "b": 3.106957,
+    "c": 5.318943,
+    "alpha": 74.1154,
+    "beta": 73.5743,
+    "gamma": 61.1527,
+    "units": {
+      "length": "angstrom",
+      "angle": "degree"
+    },
+    "type": "MCLC"
+  },
+  "basis": {
+    "elements": [
+      {
+        "id": 0,
+        "value": "Fe"
+      },
+      {
+        "id": 1,
+        "value": "Fe"
+      },
+      {
+        "id": 2,
+        "value": "O"
+      },
+      {
+        "id": 3,
+        "value": "O"
+      }
+    ],
+    "coordinates": [
+      {
+        "id": 0,
+        "value": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "id": 1,
+        "value": [
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "id": 2,
+        "value": [
+          0.773765,
+          0.7675405,
+          0.7483255
+        ]
+      },
+      {
+        "id": 3,
+        "value": [
+          0.226235,
+          0.2324595,
+          0.2516745
+        ]
+      }
+    ],
+    "units": "crystal",
+    "constraints": [],
+    "labels": [
+      {
+        "id": 0,
+        "value": 1
+      },
+      {
+        "id": 1,
+        "value": 2
+      },
+      {
+        "id": 2,
+        "value": 3
+      },
+      {
+        "id": 3,
+        "value": 3
+      }
+    ]
+  },
+  "external": {
+    "id": "mp-1274279",
+    "source": "MaterialsProject",
+    "doi": null,
+    "url": "https://next-gen.materialsproject.org/materials/mp-1274279",
+    "origin": true
+  },
+  "isNonPeriodic": false
+}
