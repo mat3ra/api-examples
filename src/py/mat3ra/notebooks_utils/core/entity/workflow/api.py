@@ -1,4 +1,10 @@
-from mat3ra.api_client import APIClient, BankWorkflowEndpoints
+from mat3ra.api_client import APIClient
+from mat3ra.api_client.tools.workflow import (
+    CUSTOM_SCRIPT_RUNNER,
+    CUSTOM_SCRIPT_RUNNER_SH,
+    copy_bank_workflow_by_system_name,
+    set_execution_unit_input,
+)
 from mat3ra.wode import Workflow
 
 
@@ -23,65 +29,10 @@ def get_or_create_workflow(api_client: APIClient, workflow: Workflow, owner_id: 
     return created
 
 
-def copy_bank_workflow_by_system_name(endpoint: BankWorkflowEndpoints, system_name: str, account_id: str) -> dict:
-    """
-    Copies a bank workflow with given system name into the account's workflows.
-
-    Args:
-        endpoint (BankWorkflowEndpoints): an instance of BankWorkflowEndpoints class
-        system_name (str): workflow system name.
-        account_id (str): ID of account to copy the bank workflow into.
-
-    Returns:
-        dict: new account's workflow
-    """
-    bank_workflow_id = endpoint.list({"systemName": system_name})[0]["_id"]
-    return endpoint.copy(bank_workflow_id, account_id)["_id"]
-
-
-CUSTOM_SCRIPT_RUNNER = '''import json
-
-with open("material.json", "w") as file:
-    json.dump(json.loads(r"""{{ MATERIAL | default({}) | tojson }}"""), file)
-
-with open("user_script.py") as file:
-    exec(compile(file.read(), "user_script.py", "exec"))
-'''
-
-
-# The shell twin, rendered as `hello_world.sh`. The user's script is *sourced*, not run in a
-# subshell, so `module` stays available - rupy runs the runner the same way.
-CUSTOM_SCRIPT_RUNNER_SH = """#!/bin/bash
-cat > material.json <<'MATERIAL_JSON_EOF'
-{{ MATERIAL | default({}) | tojson }}
-MATERIAL_JSON_EOF
-
-. ./user_script.sh
-"""
-
-
-def set_execution_unit_input(unit: dict, template_name: str, content: str) -> None:
-    """
-    Replaces one input file of an execution unit with fixed content.
-
-    `isManuallyChanged` stops the platform re-rendering the file at job creation, which is what
-    lets the runner keep its `{{ ... }}` placeholders for the compute node to resolve, and keeps a
-    user's requirements verbatim. Inputs are matched by template name rather than position, so
-    adding a file to the flavor cannot silently write content into the wrong one.
-
-    Args:
-        unit (dict): Execution unit config from a workflow.
-        template_name (str): Name of the input file to replace, e.g. "script.py".
-        content (str): Content to write.
-
-    Raises:
-        KeyError: If the unit has no input with that template name.
-    """
-    for unit_input in unit["input"]:
-        if unit_input["template"]["name"] == template_name:
-            unit_input["template"]["content"] = content
-            unit_input["rendered"] = content
-            unit_input["isManuallyChanged"] = True
-            return
-    available = [unit_input["template"]["name"] for unit_input in unit["input"]]
-    raise KeyError(f"No input named '{template_name}' in unit '{unit.get('name')}'. Available: {available}")
+__all__ = [
+    "CUSTOM_SCRIPT_RUNNER",
+    "CUSTOM_SCRIPT_RUNNER_SH",
+    "copy_bank_workflow_by_system_name",
+    "get_or_create_workflow",
+    "set_execution_unit_input",
+]

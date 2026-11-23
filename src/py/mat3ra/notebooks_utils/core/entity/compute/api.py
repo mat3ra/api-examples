@@ -1,7 +1,3 @@
-import json
-import os
+from mat3ra.api_client.tools.compute import get_cluster_name
 
-
-def get_cluster_name(name: str = "cluster-001") -> str:
-    clusters = json.loads(os.environ.get("CLUSTERS", "[]") or "[]")
-    return clusters[0] if clusters else name
+__all__ = ["get_cluster_name"]
