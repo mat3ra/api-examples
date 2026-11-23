@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 import requests
 from mat3ra.api_client import ACCESS_TOKEN_ENV_VAR, AuthContext
-from mat3ra.api_client.tools import token_store as file_token_store
+from mat3ra.api_client.tools.auth import token as file_token_store
 from mat3ra.notebooks_utils import auth, token_store
 from mat3ra.notebooks_utils.api.job import wait_for_jobs_to_finish_async
 

@@ -5,7 +5,7 @@ Switches storage between file (Python) and IndexedDB (Pyodide).
 
 from typing import Optional
 
-from mat3ra.api_client.tools.token_store import add_token_to_cache, get_token_from_cache
+from mat3ra.api_client.tools.auth.token import add_token_to_cache, get_token_from_cache
 
 from .primitive.environment import is_pyodide_environment
 

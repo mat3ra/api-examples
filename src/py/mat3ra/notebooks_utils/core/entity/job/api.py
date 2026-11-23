@@ -10,14 +10,13 @@ from mat3ra.api_client.tools.job import create_job as _create_job
 from mat3ra.api_client.tools.job import (
     find_job_for_material,
     find_job_for_material_with_property,
-    get_kgrid_of_job,
-    get_kgrid_query,
     save_files,
     submit_jobs,
 )
 from mat3ra.ide.compute import Compute
 from mat3ra.made.material import Material
 from mat3ra.wode import Workflow
+from mat3ra.wode.workflows.workflow import get_kgrid_of_job, get_kgrid_query
 
 from ....auth import reauthenticate
 from ....primitive.environment import is_pyodide_environment
