@@ -36,7 +36,7 @@ async def completed_device_login(show_popup):
     ],
 )
 async def test_wait_for_jobs_to_finish_async(monkeypatch, tmp_path, status_results, expectation, expected_access_token):
-    monkeypatch.setattr(file_token_store, "_FILE_PATH", str(tmp_path / "oidc_token_cache.json"))
+    monkeypatch.setattr(file_token_store, "OIDC_TOKEN_CACHE_FILENAME", str(tmp_path / "oidc_token_cache.json"))
     monkeypatch.setattr(auth, "authenticate_oidc", completed_device_login)
     monkeypatch.setenv(ACCESS_TOKEN_ENV_VAR, CACHED_TOKEN_DATA["access_token"])
     auth_context = AuthContext(access_token=CACHED_TOKEN_DATA["access_token"])
@@ -57,7 +57,7 @@ async def test_wait_for_jobs_to_finish_async(monkeypatch, tmp_path, status_resul
     ],
 )
 async def test_authenticate(monkeypatch, tmp_path, environment_token, token_check_error, checked_token, expected_token):
-    monkeypatch.setattr(file_token_store, "_FILE_PATH", str(tmp_path / "oidc_token_cache.json"))
+    monkeypatch.setattr(file_token_store, "OIDC_TOKEN_CACHE_FILENAME", str(tmp_path / "oidc_token_cache.json"))
     monkeypatch.setattr(auth, "authenticate_oidc", completed_device_login)
     api_client = MagicMock()
     api_client.authenticate.return_value.list_accounts.side_effect = token_check_error

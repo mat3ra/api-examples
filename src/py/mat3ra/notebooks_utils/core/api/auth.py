@@ -4,14 +4,11 @@ import urllib.parse
 from typing import Any, Awaitable, Callable, Optional
 
 from mat3ra.api_client import CLIENT_ID, SCOPE
-from mat3ra.api_client.tools.auth import (
-    FORM_HEADERS,
-    REFRESH_TOKEN_ENV_VAR,
-    TOKEN_REQUEST_TIMEOUT_SECONDS,
-    get_oidc_base_url,
+from mat3ra.api_client.tools.auth import get_oidc_base_url, request_device_flow_state
+from mat3ra.api_client.tools.auth.settings import FORM_HEADERS, REFRESH_TOKEN_ENV_VAR, TOKEN_REQUEST_TIMEOUT_SECONDS
+from mat3ra.api_client.tools.auth.token import (
     get_token_data_from_response,
     get_token_request_form_data,
-    request_device_flow_state,
     request_token_data,
     store_token_data_in_environment,
 )
