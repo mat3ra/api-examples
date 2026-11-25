@@ -29,8 +29,11 @@ notebooks:
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
       - mp-pyrho==0.5.1
       - pymatgen-analysis-defects<=2024.4.23
-      - mat3ra-periodic-table
-      - mat3ra-made
+      - mat3ra-periodic-table==2026.2.6.post0
+      - mat3ra-esse==2026.11.1.post0
+      - mat3ra-code==2026.11.24.post1
+      - mat3ra-utils==2026.11.6.post0
+      - mat3ra-made==2026.11.24.post1
   # packages below are used when made is installed from GH wheel (made should be installed from below)
   #    - https://exabyte-io.github.io/made/mat3ra_made-0.1.dev1+ge64d360b8-py3-none-any.whl
   #    - mat3ra-code
@@ -66,8 +69,8 @@ notebooks:
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
       - ipywidgets
       - tabulate==0.9.0
-      - mat3ra-utils
-      - mat3ra-api-client>=2026.11.4.post0
+      - mat3ra-utils==2026.11.6.post0
+      - mat3ra-api-client==2026.11.4.post0
   - name: dataframe
     packages_pyodide:
       - jinja2
@@ -78,14 +81,16 @@ notebooks:
       - jinja2
       - emfs:/drive/packages/pydantic_core-2.18.2-py3-none-any.whl
       - emfs:/drive/packages/pydantic-2.7.1-py3-none-any.whl
-      - mat3ra-standata
-      - mat3ra-ide
-      - mat3ra-api-client>=2026.11.4.post0
+      - mat3ra-esse==2026.11.1.post0
+      - mat3ra-code==2026.11.24.post1
+      - mat3ra-standata==2026.11.23.post0
+      - mat3ra-ide==2026.11.1.post0
+      - mat3ra-api-client==2026.11.4.post0
       - requests
-      - mat3ra-ade
-      - mat3ra-mode
-      - mat3ra-wode
-      - mat3ra-prode
+      - mat3ra-ade==2026.8.18.post0
+      - mat3ra-mode==2026.10.9.post1
+      - mat3ra-wode==2026.11.23.post0
+      - mat3ra-prode==2026.11.2.post1
   - name: torch
     packages_pyodide:
       - emfs:/drive/packages/torch-2.1.0a0-cp311-cp311-emscripten_3_1_45_wasm32.whl
