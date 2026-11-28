@@ -36,7 +36,7 @@ materials = [
   "mat3ra-notebooks-utils[utils_standata]",
   "pymatgen==2024.4.13",
   "pymatgen-analysis-defects<=2024.4.23",
-  "mat3ra-made @ git+https://github.com/mat3ra/made.git@69192852495d7e7ddd8cd54ce403a25215b7ca25",  # made #308; unpin on release
+  "mat3ra-made @ git+https://github.com/mat3ra/made.git@44c84c6c84d89059aa716fe013e3432578b058dd",  # made #308; unpin on release
   "mat3ra-periodic-table"
 ]
 workflows = [
