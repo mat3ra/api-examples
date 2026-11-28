@@ -79,6 +79,7 @@ Workflow notebooks that run simulations.
 | [Surface Energy](other/materials_designer/workflows/surface_energy.ipynb) | Calculate surface formation energy. |
 | [Interfacial Energy](other/materials_designer/workflows/interfacial_energy.ipynb) | Calculate interfacial energy γ at a heterostructure. |
 | [Valence Band Offset](other/materials_designer/workflows/valence_band_offset.ipynb) | Determine the valence band offset at an interface. |
+| [Valence Band Offset (Bulk Method)](other/materials_designer/workflows/valence_band_offset_bulk.ipynb) | Determine the valence band offset of a periodic superlattice from bulk references. |
 
 ### `notebooks_utils` — Python Utility Package
 
